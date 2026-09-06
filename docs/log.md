@@ -4,6 +4,27 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the day column floor, raised to 8.5rem.** rux asked whether a
+minimum width would do, given the grid already scrolls past it. It does, and
+the exact threshold was measured rather than picked: at 8.5rem the 1fr share
+of 138px still wins on a 1440 window and nothing changes, at 9rem the floor
+binds and pushes 42px of overflow. So 8.5rem is free where the week fits and
+worth 24px a column where it does not - 112px of text at the old 7rem against
+136px now.
+
+**What a floor cannot do, said plainly.** It only binds when the columns would
+otherwise be narrower, so it buys nothing on a wide window; only a floor ABOVE
+the 1fr share could, and that scrolls the whole week at every size. Measured
+over 30 single-day bars across two weeks of real data, a destination needs
+113px at the median, 167px at the third quartile and 349px at the worst
+("Harlingen Convention Center Shuttle to UTRGV"). Fitting three quarters of
+them means a 191px column, which is 1425px of grid before the bus column.
+
+**The lever that would actually pay is vertical, not horizontal.** The bar has
+five fixed rows and the time row is empty on most trips here; spending that
+row on a second line of destination would roughly double the characters at no
+horizontal cost. Not done, and not decided.
+
 **2026-09-06 - one size, no switcher, on rux's call.** The bar shipped with
 two density tiers behind a Carbon content switcher, compact at label-01 and
 comfortable at label-02. The second tier is gone and compact is the only one:

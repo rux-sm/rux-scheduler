@@ -23,7 +23,17 @@
 .sch {
   --sch-days: 7;
   --sch-head-w: 5.5rem;
-  --sch-day-min: 7rem;
+  /* THE FLOOR A DAY COLUMN WILL NOT GO BELOW, and the grid scrolls rather
+     than squeezing past it. 8.5rem is the largest value that changes nothing
+     on a 1440 window -- measured, the threshold is between 8.5rem where the
+     1fr share of 138px still wins and 9rem where the floor binds and pushes
+     42px of overflow. So this is free where the week fits and worth 24px a
+     column where it does not: 112px of text at 7rem against 136px here,
+     against a median destination needing 113px over 30 single-day bars in
+     two weeks of real data. It does NOT widen anything on a wide window --
+     only a floor above the 1fr share could, and that forces the whole week
+     to scroll. */
+  --sch-day-min: 8.5rem;
   --sch-bar-rows: 5;
   --sch-fs: var(--rux-label-01-font-size);
   --sch-ls: var(--rux-label-01-letter-spacing);
