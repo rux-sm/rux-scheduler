@@ -342,40 +342,15 @@
        standalone link is an <a> on its own. -->
   <nav class="rux--side-nav__navigation rux--side-nav rux--side-nav--ux rux--side-nav--hidden" aria-label="Side navigation">
     <ul class="rux--side-nav__items">
-      <li class="rux--side-nav__item rux--side-nav__item--active">
+      <!-- THE NAV LISTS WHAT EXISTS. Drivers, Fleet, Customers, Requests and
+           Settings all pointed at this page, so clicking one silently reloaded
+           the schedule -- worse than not offering it. Carbon compiles no disabled
+           state for a side-nav link, and inventing one is not this app's to do,
+           so each returns when its page does. -->
+<li class="rux--side-nav__item rux--side-nav__item--active">
         <a class="rux--side-nav__link rux--side-nav__link--current" href="./" aria-current="page">
           <div class="rux--side-nav__icon"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-calendar"/></svg></div>
           <span class="rux--side-nav__link-text">Schedule</span>
-        </a>
-      </li>
-      <li class="rux--side-nav__item">
-        <a class="rux--side-nav__link" href="./">
-          <div class="rux--side-nav__icon"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-list"/></svg></div>
-          <span class="rux--side-nav__link-text">Drivers</span>
-        </a>
-      </li>
-      <li class="rux--side-nav__item">
-        <a class="rux--side-nav__link" href="./">
-          <div class="rux--side-nav__icon"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-grid"/></svg></div>
-          <span class="rux--side-nav__link-text">Fleet</span>
-        </a>
-      </li>
-      <li class="rux--side-nav__item">
-        <a class="rux--side-nav__link" href="./">
-          <div class="rux--side-nav__icon"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-user--avatar"/></svg></div>
-          <span class="rux--side-nav__link-text">Customers</span>
-        </a>
-      </li>
-      <li class="rux--side-nav__item">
-        <a class="rux--side-nav__link" href="./">
-          <div class="rux--side-nav__icon"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-document"/></svg></div>
-          <span class="rux--side-nav__link-text">Requests</span>
-        </a>
-      </li>
-      <li class="rux--side-nav__item">
-        <a class="rux--side-nav__link" href="./">
-          <div class="rux--side-nav__icon"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-edit"/></svg></div>
-          <span class="rux--side-nav__link-text">Settings</span>
         </a>
       </li>
     </ul>
@@ -421,8 +396,10 @@
           <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-next" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
           <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-today">Today</button>
           <h2 class="sch-toolbar__range rux--type-heading-compact-02" id="sch-range">&nbsp;</h2>
-          <span class="sch-toolbar__spacer"></span>
-          <button type="button" class="rux--btn rux--btn--primary rux--layout--size-sm" disabled>New trip<svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg></button>
+          <!-- NEW TRIP IS NOT HERE YET, and a disabled primary button is a worse
+               answer than none: it was the most prominent thing on the page and it
+               did nothing. It comes back, right-aligned after this spacer, on the
+               day the trip editor does. -->
           </div>
         </div>
         <div class="sch" id="sch" role="region" aria-label="Week of 7 September 2026">

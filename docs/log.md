@@ -4,6 +4,39 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the correctness pass: feedback, failure, and two dead
+controls.**
+
+**Week navigation said nothing while it worked.** Measured: 120ms after
+pressing the arrow, the label, the bars and the status were all still the
+previous week's, so two presses read as a page that had not noticed. The week
+being asked for is known the moment the button is pressed, so the label moves
+first and the grid dims to 0.55 with `aria-busy` set. **Dimmed, not cleared**
+- the week on screen is still worth reading while the next one loads.
+
+**A failed week no longer takes the last good one with it.** It hid the grid
+outright, so one dropped request wiped what was there. The rendered week is
+tracked separately from the one being fetched: on a failure the label goes
+back to what is actually drawn and the notice says which week failed and that
+the old one still stands. Only a first load with nothing drawn stays empty.
+
+**A stalled read had no end.** Trying to test the failure path is what found
+it: with the network blocked the grid sat dimmed and busy past seven seconds
+with no error and no way back but a reload, because a hanging connection
+never rejects. `read` loses a race against 15 seconds now. Verified end to
+end with a fetch that never settles: the timeout fires, the error reads "The
+schedule did not answer within 15 seconds. Still showing the week that did
+load.", the grid keeps its 19 bars, the label returns to the drawn week, busy
+and the dim clear, and pressing the arrow again is a working retry.
+
+**Two controls that did nothing are gone.** New trip was the most prominent
+thing on the page and was disabled; it returns, right-aligned, the day the
+trip editor does. Five of the six side-nav items pointed at this page, so
+clicking Drivers silently reloaded the schedule - worse than not offering it.
+Carbon compiles no disabled state for a side-nav link and inventing one is
+not this app's to do, so **the nav lists what exists** and each returns when
+its page does.
+
 **2026-09-06 - toolbar buttons to the small size, and a height bug it
 uncovered.** All four are `layout--size-sm`, 32px rather than 40, which is
 Carbon's own size for a dense context and takes the toolbar row from 40px to

@@ -89,6 +89,12 @@
 }
 .sch-row { display: contents; }
 
+/* STALE, NOT EMPTY. While a week is being read the grid keeps the last one on
+   screen and dims it; clearing it would throw away something still worth
+   reading, and showing nothing at all is what made two presses of the arrow
+   look like a page that had not noticed. */
+.sch-grid--busy { opacity: .55; }
+
 .sch-corner,
 .sch-day {
   position: sticky;

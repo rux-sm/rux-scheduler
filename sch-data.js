@@ -140,6 +140,21 @@
     'trip_stops(position,leg,type,depart_prev,arrive,spot)',
   ].join(',');
 
+  // A STALLED REQUEST HAS TO END SOMEWHERE. A rejected fetch surfaces at once,
+  // but a connection that simply hangs does not: measured 2026-09-06 with the
+  // network blocked, the grid sat dimmed and marked busy past seven seconds
+  // with no error and no way back except a reload. The read loses after this,
+  // the catch runs, and pressing the arrow again is a retry. The abandoned
+  // request may still land; nothing reads it, because a second read cannot
+  // start while one is in flight.
+  const READ_TIMEOUT = 15000;
+  const withTimeout = promise => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(
+      () => reject(new Error(`The schedule did not answer within ${READ_TIMEOUT / 1000} seconds.`)),
+      READ_TIMEOUT)),
+  ]);
+
   async function read(weekStart) {
     const weekEnd = addDays(weekStart, 6);
     // A trip that STARTED before this week can still run through it, so the
@@ -149,13 +164,25 @@
     const hi = iso(weekEnd);
     const unwrap = r => { if (r.error) throw new Error(r.error.message); return r.data ?? []; };
 
-    const [buses, trips, drivers, oos] = await Promise.all([
+    const [buses, trips, drivers, oos] = await withTimeout(Promise.all([
       client.from('buses').select('id,number,capacity,type,status,sort_order,ada_lift,sleeper').order('sort_order').then(unwrap),
       client.from('trips').select(TRIP_COLUMNS).gte('start_date', lo).lte('start_date', hi).order('start_date').then(unwrap),
       client.from('drivers').select('id,name,short_name').then(unwrap),
       client.from('bus_out_of_service').select('bus_id,start_date,end_date,reason').lte('start_date', hi).gte('end_date', iso(weekStart)).then(unwrap),
-    ]);
+    ]));
     return { buses, trips, drivers, oos, weekStart, weekEnd };
+  }
+
+  // formatRange, not two formatted dates joined by a dash: only it knows that
+  // a week inside one month is "September 7 - 13, 2026" here and "7-13
+  // September 2026" elsewhere. Building it by hand read "7 - September 13,
+  // 2026", which is what sent me looking.
+  function setRange(weekStart, weekEnd) {
+    if (!rangeEl) return;
+    const fmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+    rangeEl.textContent = typeof fmt.formatRange === 'function'
+      ? fmt.formatRange(weekStart, weekEnd)
+      : `${fmt.format(weekStart)} - ${fmt.format(weekEnd)}`;
   }
 
   // -- placing --------------------------------------------------------------
@@ -410,13 +437,7 @@
     // that a week inside one month is "September 7 - 13, 2026" here and
     // "7-13 September 2026" elsewhere. Building it by hand read
     // "7 - September 13, 2026", which is what sent me looking.
-    if (rangeEl) {
-      const opts = { day: 'numeric', month: 'long', year: 'numeric' };
-      const fmt = new Intl.DateTimeFormat(undefined, opts);
-      rangeEl.textContent = typeof fmt.formatRange === 'function'
-        ? fmt.formatRange(weekStart, weekEnd)
-        : `${fmt.format(weekStart)} - ${fmt.format(weekEnd)}`;
-    }
+    setRange(weekStart, weekEnd);
 
     const barCount = [...tracks.values()].reduce((n, list) => n + list.length, 0);
     if (!barCount) say('info', 'Nothing this week', 'No trip touches these seven days.');
@@ -431,6 +452,7 @@
   // -- the week, and moving between them ------------------------------------
   let cursor = mondayOf(new Date());
   let loading = false;
+  let shown = null;   // the week actually on screen, which is not `cursor` mid-fetch
 
   async function show() {
     if (!client) {
@@ -439,13 +461,37 @@
     }
     if (loading) return;
     loading = true;
+
+    // SAY SO BEFORE THE FETCH, NOT AFTER IT. The week being asked for is known
+    // the moment the button is pressed and the read takes a few hundred
+    // milliseconds, during which nothing used to change at all -- measured
+    // 2026-09-06, 120ms after a press the label, the bars and the status were
+    // all the previous week's. Two presses read as nothing happening. The
+    // label moves now and the grid dims, which says stale rather than empty:
+    // clearing it would throw away a week the person can still read.
+    const asked = cursor;
+    setRange(asked, addDays(asked, 6));
+    schEl.setAttribute('aria-busy', 'true');
+    gridEl.classList.add('sch-grid--busy');
+
     try {
-      render(await read(cursor));
+      render(await read(asked));
+      shown = asked;
     } catch (e) {
-      schEl.hidden = true;
-      say('error', 'Could not load the week', String(e && e.message ? e.message : e));
+      // A FAILED WEEK DOES NOT TAKE THE LAST GOOD ONE WITH IT. Hiding the grid
+      // meant one dropped request wiped what was on screen. What is drawn is
+      // still `shown`, so the label goes back to it and the notice says which
+      // week failed; only a first load with nothing drawn yet stays empty.
+      if (shown) setRange(shown, addDays(shown, 6));
+      else schEl.hidden = true;
+      const why = String(e && e.message ? e.message : e);
+      say('error', 'Could not load that week', shown
+        ? `${why} Still showing the week that did load.`
+        : why);
     } finally {
       loading = false;
+      schEl.removeAttribute('aria-busy');
+      gridEl.classList.remove('sch-grid--busy');
     }
   }
 
