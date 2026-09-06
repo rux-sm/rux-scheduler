@@ -1,0 +1,4 @@
+#!/bin/sh
+# rux-ds's commit-message hook, vendored with the pin. Arm once per clone:
+#   git config core.hooksPath .githooks
+exec bash "$(dirname "$0")/../vendor/rux-ds/githooks/commit-msg" "$@"

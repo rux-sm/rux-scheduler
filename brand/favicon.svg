@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" role="img" aria-label="Rux">
+<title>Rux</title>
+<style>
+svg{fill:#161616}
+@media (prefers-color-scheme:dark){svg{fill:#f4f4f4}}
+</style>
+<path d="M2 9L12 9L12 13L2 13L2 9Z"/>
+<path d="M8 3L13 3L13 4L8 4L8 3Z"/>
+<path d="M1 5L2 5L2 9L1 9L1 5Z"/>
+<path d="M4 13L5 13L5 14L4 14L4 13Z"/>
+<path d="M11 12L12 12L12 14L11 14L11 12Z"/>
+<path d="M9 12L10 12L10 14L9 14L9 12Z"/>
+<path d="M2 12L3 12L3 14L2 14L2 12Z"/>
+<path d="M5 4L7 4L7 8L5 8L5 4Z"/>
+<path d="M12 3L13 3L13 7L12 7L12 3Z"/>
+<path d="M10 3L11 3L11 8L10 8L10 3Z"/>
+<path d="M8 3L9 3L9 8L8 8L8 3Z"/>
+<path d="M8 6L12 6L12 10L8 10L8 6Z"/>
+<path d="M8 6L15 6L15 8L8 8L8 6Z"/>
+<path d="M6 4L9 4L9 5L6 5L6 4Z"/>
+</svg>

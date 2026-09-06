@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="#f4f4f4">
+<title>Rux</title>
+<!-- Official mark from Brand.svg, drawn by rux on a 16-pixel grid.
+     Visible geometry and placement preserved exactly; redundant paths removed.
+     86 filled cells, bounds x=1..15 and y=3..14.
+     Gray-10 for dark surfaces; generated light icons use gray-100.
+     Whole device pixels at sizes divisible by 16. The 24 CSS-pixel
+     header has 1.5px cells at 1x and 3px cells at 2x. -->
+<path d="M2 9L12 9L12 13L2 13L2 9Z"/>
+<path d="M8 3L13 3L13 4L8 4L8 3Z"/>
+<path d="M1 5L2 5L2 9L1 9L1 5Z"/>
+<path d="M4 13L5 13L5 14L4 14L4 13Z"/>
+<path d="M11 12L12 12L12 14L11 14L11 12Z"/>
+<path d="M9 12L10 12L10 14L9 14L9 12Z"/>
+<path d="M2 12L3 12L3 14L2 14L2 12Z"/>
+<path d="M5 4L7 4L7 8L5 8L5 4Z"/>
+<path d="M12 3L13 3L13 7L12 7L12 3Z"/>
+<path d="M10 3L11 3L11 8L10 8L10 3Z"/>
+<path d="M8 3L9 3L9 8L8 8L8 3Z"/>
+<path d="M8 6L12 6L12 10L8 10L8 6Z"/>
+<path d="M8 6L15 6L15 8L8 8L8 6Z"/>
+<path d="M6 4L9 4L9 5L6 5L6 4Z"/>
+</svg>
