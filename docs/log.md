@@ -4,6 +4,37 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the bus reassignment drag: the first thing this page writes.**
+Step 3 of `docs/screen-inventory.md` section 5. It writes ONE column,
+`trip_assignments.bus_id`, on one row. Vertical only, as rux-ui's own drag is:
+a trip's dates belong to the itinerary and are changed in an editor, never by
+sliding a bar sideways.
+
+Its rules are taken from that drag rather than invented, and each was driven
+and measured:
+
+- **A threshold before it counts** - a 2px move leaves the bar unflagged, so a
+  press that does not travel still selects.
+- **The Unassigned row is revealed for the duration** and hidden again after,
+  because the week's first unassigned trip needs a rectangle to land on.
+- **A double booking is a warning, not a wall.** Dragging a Thursday bar over
+  a bus already working that Thursday lit the row in the warning tone rather
+  than the interactive one, and the drop would still go through: the
+  dispatcher can see what this page cannot. Out of service reads the same.
+- **The Unassigned row can never be a conflict.**
+- **Dropping on the row it came from does nothing** - released on its own
+  track, no highlight, no write, `aria-busy` never set.
+
+**No ghost and no optimistic move.** The source dims where it sits, the target
+row lights, and on release the week is read back from the server, so what is
+on screen after a move is what the database holds rather than what this page
+hoped.
+
+**Driven against real data, and put back.** The South Padre Island assignment
+moved from bus 218 to 763 through the interface, the row was confirmed changed
+by reading the table directly, and the original bus was written back the same
+way. Nothing in production is left altered.
+
 **2026-09-06 - why every bar was grey, and the rule that fixes it.** rux
 asked. The cause: only the OVERRIDE colour was wired. rux-ui's rule has three
 levels, in its own `--_tone` declaration and the one rule beneath it -

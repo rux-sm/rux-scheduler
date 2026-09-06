@@ -263,6 +263,12 @@
     bar.tabIndex = 0;
     bar.setAttribute('aria-pressed', 'false');
     bar.dataset.tripId = trip.id;
+    if (assign) {
+      bar.dataset.assignmentId = assign.id;
+      bar.dataset.busId = assign.bus_id ?? '';
+      bar.dataset.start = place.start;
+      bar.dataset.span = place.span;
+    }
     if (trip.confirmed === false) bar.classList.add('sch-bar--unconfirmed');
     if (place.fromPrev) bar.classList.add('sch-bar--from-prev');
     if (place.toNext) bar.classList.add('sch-bar--to-next');
@@ -340,7 +346,10 @@
     const rows = buses
       .filter(b => b.status === 'active' || used.has(b.id))
       .map(b => ({ id: b.id, bus: b }));
-    if (tracks.has(UNASSIGNED)) rows.push({ id: UNASSIGNED, bus: null });
+    // ALWAYS PRESENT, HIDDEN WHEN EMPTY. A drag has to be able to drop the
+    // week's FIRST unassigned trip somewhere, and a row that is not in the
+    // document has no rectangle to aim at.
+    rows.push({ id: UNASSIGNED, bus: null, empty: !tracks.has(UNASSIGNED) });
 
     gridEl.replaceChildren();
     gridEl.appendChild(el('div', 'sch-corner', 'Bus'));
@@ -369,6 +378,7 @@
       const bars = tracks.get(r.id) ?? [];
       const lanes = bars.length ? assignLanes(bars) : 1;
       const rowEl = el('div', 'sch-row' + (r.id === UNASSIGNED ? ' sch-row--unassigned' : ''));
+      if (r.empty) rowEl.hidden = true;
 
       // THE HEAD IS THE NUMBER AND THE EQUIPMENT ICONS. Capacity, type and a
       // non-active status are not dropped, they move to the cell's title, so
@@ -414,6 +424,7 @@
 
       const track = el('div', 'sch-track');
       track.style.setProperty('--sch-lanes', lanes);
+      if (r.bus) track.dataset.busId = r.bus.id; else track.dataset.unassigned = 'true';
       for (const w of windows) {
         const place = clip(w.start_date, w.end_date, weekStart, weekEnd);
         const span = el('div', 'sch-oos');
@@ -423,7 +434,7 @@
         span.setAttribute('aria-label', `Out of service, ${w.reason || 'no reason given'}`);
         track.appendChild(span);
       }
-      for (const b of bars) track.appendChild(barEl(b, driversById));
+      for (const b of bars) { const el = barEl(b, driversById); installDrag(el); track.appendChild(el); }
 
       rowEl.append(head, track);
       gridEl.appendChild(rowEl);
@@ -458,6 +469,123 @@
     // grid and changes how much height is left for it. sch.js owns that sum;
     // this says when to redo it rather than leaving it to an observer.
     window.Rux?.schedule?.fit?.();
+  }
+
+  /* ── MOVING A TRIP TO ANOTHER BUS ─────────────────────────────────────────
+     THE ONE THING THIS PAGE WRITES, and it writes one column:
+     `trip_assignments.bus_id`. Vertical only, exactly as rux-ui's own drag is
+     -- a trip's DATES are the itinerary's business and are changed in the
+     editor, never by sliding a bar sideways.
+
+     ITS RULES, TAKEN FROM THAT DRAG RATHER THAN INVENTED:
+       * a threshold before it counts, so a press that does not move still
+         selects the bar;
+       * the Unassigned row is revealed for the duration, because the week's
+         first unassigned trip needs somewhere to land;
+       * a double booking and an out-of-service stretch are WARNINGS, not
+         walls -- the row says so and the drop still goes through, because the
+         dispatcher can see something this page cannot;
+       * the Unassigned row can never be a conflict;
+       * dropping on the row it came from does nothing.
+
+     WHAT IT DOES NOT DO: no ghost that re-lays-out a multi-day bar, no
+     optimistic move. The source dims, the target row lights, and on release
+     the week is read again from the server -- so what is on screen after a
+     move is what the database actually holds, not what this page hoped.
+     ────────────────────────────────────────────────────────────────────────*/
+  const DRAG_THRESHOLD = 4;
+
+  const overlaps = (aStart, aSpan, bStart, bSpan) =>
+    aStart < bStart + bSpan && bStart < aStart + aSpan;
+
+  // Read off the rendered week rather than the data, because the rendered
+  // week is exactly the seven days being asked about.
+  function targetWarns(track, start, span) {
+    if (track.dataset.unassigned) return false;
+    for (const other of track.querySelectorAll('.sch-bar')) {
+      if (overlaps(start, span, +other.dataset.start, +other.dataset.span)) return true;
+    }
+    for (const oos of track.querySelectorAll('.sch-oos')) {
+      const s = parseFloat(oos.style.getPropertyValue('--sch-start'));
+      const n = parseFloat(oos.style.getPropertyValue('--sch-span'));
+      if (overlaps(start, span, s, n)) return true;
+    }
+    return false;
+  }
+
+  async function moveToBus(assignmentId, busId) {
+    const { error } = await client.from('trip_assignments').update({ bus_id: busId }).eq('id', assignmentId);
+    if (error) throw new Error(error.message);
+  }
+
+  function installDrag(bar) {
+    if (!bar.dataset.assignmentId) return;   // an unfilled slot owns no row to move
+    bar.addEventListener('pointerdown', down => {
+      if (down.button !== 0) return;
+      const startY = down.clientY;
+      const start = +bar.dataset.start, span = +bar.dataset.span;
+      const fromBus = bar.dataset.busId || null;
+      let moved = false, target = null, tracks = [], unassignedRow = null;
+
+      const clear = () => {
+        for (const { track } of tracks) track.classList.remove('sch-track--drop', 'sch-track--warn');
+      };
+
+      const move = ev => {
+        if (!moved) {
+          if (Math.abs(ev.clientY - startY) < DRAG_THRESHOLD) return;
+          moved = true;
+          unassignedRow = gridEl.querySelector('.sch-row--unassigned');
+          if (unassignedRow?.hidden) { unassignedRow.hidden = false; unassignedRow.dataset.revealed = 'true'; }
+          tracks = [...gridEl.querySelectorAll('.sch-track')].map(t => ({ track: t, rect: t.getBoundingClientRect() }));
+          bar.classList.add('sch-bar--dragging');
+          document.body.style.cursor = 'grabbing';
+          bar.setPointerCapture(down.pointerId);
+        }
+        ev.preventDefault();
+        const hit = tracks.find(({ rect }) => ev.clientY >= rect.top && ev.clientY <= rect.bottom);
+        const next = hit?.track ?? null;
+        if (next === target) return;
+        clear();
+        target = next;
+        const sameRow = target && (target.dataset.busId ?? null) === fromBus;
+        if (target && !sameRow) {
+          target.classList.add(targetWarns(target, start, span) ? 'sch-track--warn' : 'sch-track--drop');
+        }
+      };
+
+      const up = async () => {
+        bar.removeEventListener('pointermove', move);
+        bar.removeEventListener('pointerup', up);
+        bar.removeEventListener('pointercancel', up);
+        if (!moved) return;
+        document.body.style.cursor = '';
+        bar.classList.remove('sch-bar--dragging');
+        clear();
+        if (unassignedRow?.dataset.revealed) { unassignedRow.hidden = true; delete unassignedRow.dataset.revealed; }
+        // The browser fires a click after this; suppress the one that would
+        // otherwise toggle selection at the end of a drag.
+        bar.addEventListener('click', e => e.stopPropagation(), { capture: true, once: true });
+
+        const toBus = target ? (target.dataset.busId ?? null) : fromBus;
+        if (!target || toBus === fromBus) return;
+        try {
+          schEl.setAttribute('aria-busy', 'true');
+          gridEl.classList.add('sch-grid--busy');
+          await moveToBus(bar.dataset.assignmentId, toBus);
+        } catch (e) {
+          say('error', 'Could not move that trip', String(e && e.message ? e.message : e));
+        } finally {
+          schEl.removeAttribute('aria-busy');
+          gridEl.classList.remove('sch-grid--busy');
+        }
+        show();   // read it back, rather than trusting the move landed
+      };
+
+      bar.addEventListener('pointermove', move);
+      bar.addEventListener('pointerup', up);
+      bar.addEventListener('pointercancel', up);
+    });
   }
 
   // -- the week, and moving between them ------------------------------------
