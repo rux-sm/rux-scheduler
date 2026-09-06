@@ -210,7 +210,17 @@
      `--sched-calendar-header-bg`. */
   background: var(--rux-layer-accent-01);
   border-inline-end: 1px solid var(--rux-border-subtle-01);
-  border-block-end: 1px solid var(--rux-border-subtle-01);
+  /* NO ROW RULES INSIDE THE FRAME, for the same reason the day band has no
+     column rules: on `layer-accent-01` the subtle tokens collapse into the
+     background -- this one measured 1.00:1 in g10, invisible -- and the only
+     token that survives all five, `border-strong-01`, reads 2.5:1 against the
+     band where the body's own rules read 1.3:1 against the pane, so the frame
+     would carry heavier lines than the grid it frames.
+
+     So neither axis draws grid lines and both are clean strips. The frame is
+     already separated by its own surface and its two edges; a row begins
+     where its number does, with the body's rule immediately to the right.
+     Symmetric with the day band, where the column rules start below it. */
   padding: var(--rux-spacing-03);
   display: flex;
   flex-direction: column;

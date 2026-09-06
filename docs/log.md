@@ -4,6 +4,26 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the frame's own rules, and why neither axis has any.** rux
+noticed the bus column still had lines between rows while the day band had
+none, and asked whether that was deliberate. It was not, and it was worse
+than inconsistent: **those column rules are invisible in g10** - measured at
+1.00:1 against their own background, the same collapse that took the day
+band's rules out an hour earlier, and for the same reason. Putting the column
+on `layer-accent-01` moved it onto a surface the subtle tokens cannot draw on.
+
+`border-strong-01` is the only token that survives all five themes there, and
+it is the wrong answer: it reads 2.5:1 against the band where the body's own
+rules read 1.3:1 against the pane, so the frame would carry heavier lines than
+the grid it frames.
+
+**So neither axis draws grid lines.** Both are clean strips. The frame is
+already separated by its own surface and its two edges; a row begins where its
+number does, with the body's rule immediately to its right - symmetric with
+the day band, where the column rules start below it. Verified: the column has
+no bottom border, the band has no shadow, and both keep the one edge that
+divides them from the grid.
+
 **2026-09-06 - the two sticky axes are one frame now.** rux asked whether the
 bus column should be styled like the day band. It is, and the two precedents
 disagree, so the reasoning is worth keeping.
