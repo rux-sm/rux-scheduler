@@ -4,6 +4,43 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the panel was open the whole time, and `hidden` could not
+close it.** rux asked whether the panel is always open like that even when
+empty. It was, on every load, and the entry below this one did not notice:
+it recorded the open state in detail and never looked at the closed one.
+
+**An author rule beats the browser's.** `.rux--side-panel` sets
+`display: grid`, and the user-agent's `[hidden] { display: none }` is the
+weakest rule in the cascade, so marking the element hidden did nothing at
+all. Carbon has no closed state to reach for because its React version does
+not render one - closed means absent from the document - and this app keeps
+the element and toggles it, which is the arrangement Carbon never had to
+style. Measured before the fix: `hidden` true and `display: grid` at 480px
+wide with the page already giving up its 30rem.
+
+`rux-overrides.css` gets its first rule, one line at Carbon's own
+specificity: `hidden` means hidden. **The same trap as `.sch-row`**, whose
+`display: contents` swallowed the attribute the same way when the empty bus
+rows were meant to collapse; that one is in the stylesheet's header, and
+this is the second instance, so it is a rule rather than a coincidence -
+any Carbon class that sets `display` needs a `[hidden]` companion before
+the attribute is used to hide it.
+
+**Carbon's own animation classes now drive both directions**, since the
+element persists: `--open` goes on after `hidden` comes off, and `--closing`
+runs for 150ms before `hidden` goes back on, so the panel leaves rather than
+vanishing. Verified live in all four states: at load `display: none` with
+width 0; open, `display: grid` at 480 with `--open` set and the title
+reading the clicked trip; mid-close, `--closing` present and not yet hidden;
+closed, both classes cleared, `hidden` true, `display: none`, page padding
+back to 0 and the day columns back to 181.
+
+One measurement note, because it nearly produced a second wrong answer: the
+first read after the close returned `display: grid` from a stale computed
+style. Forcing a reflow first returns `none`. The same trap the pane has
+shown before, and it makes a fixed thing look broken rather than the other
+way round.
+
 **2026-09-06 - the trip panel, read only.** Step 4 of
 `docs/screen-inventory.md` section 5, and the first thing that makes clicking
 a bar lead anywhere. It shows a trip; it changes nothing yet. Editing goes in

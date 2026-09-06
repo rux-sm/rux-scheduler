@@ -4,3 +4,17 @@
    component rules at Carbon's own specificity with no !important
    (rux-overrides.css). Empty is the normal state. rux-ds AGENTS.md, "Where a
    change goes". */
+
+/* A CLOSED SIDE PANEL IS NOT IN CARBON'S CSS, because Carbon's React version
+   does not render one -- closed means absent from the document. `.rux--side-
+   panel` sets `display: grid`, which is an author rule and therefore beats the
+   browser's own `[hidden] { display: none }`, so a static page that keeps the
+   element around and marks it hidden gets an empty panel sitting open. Seen
+   2026-09-06 on the schedule, and the same trap as `.sch-row`'s
+   `display: contents`.
+
+   One class, at Carbon's own specificity, no !important: `hidden` means
+   hidden. The animation classes -- `--open` on the way in, `--closing` on the
+   way out -- still do their work, because `hidden` only comes off before the
+   first and goes on after the second. */
+.rux--side-panel[hidden] { display: none; }

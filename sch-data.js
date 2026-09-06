@@ -645,7 +645,14 @@
 
   function closePanel(returnFocus = true) {
     if (panelEl.hidden) return;
-    panelEl.hidden = true;
+    // Carbon's own pair: --closing runs the exit, then the element goes back
+    // to hidden. Without the wait the panel would vanish rather than leave.
+    panelEl.classList.remove('rux--side-panel--open');
+    panelEl.classList.add('rux--side-panel--closing');
+    setTimeout(() => {
+      panelEl.classList.remove('rux--side-panel--closing');
+      panelEl.hidden = true;
+    }, 150);
     pageEl?.classList.remove('sch-page--with-panel');
     for (const b of document.querySelectorAll('.sch-bar[aria-pressed="true"]')) b.setAttribute('aria-pressed', 'false');
     const opener = panelOpener;
@@ -726,7 +733,9 @@
     if (trip.notes) panelBody.appendChild(section('Notes', el('p', null, trip.notes)));
 
     panelOpener = bar;
+    panelEl.classList.remove('rux--side-panel--closing');
     panelEl.hidden = false;
+    panelEl.classList.add('rux--side-panel--open');
     pageEl?.classList.add('sch-page--with-panel');
     window.Rux?.schedule?.fit?.();
     document.getElementById('sch-panel-close')?.focus();
