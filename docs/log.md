@@ -4,6 +4,41 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the grid, tightened, and what was actually wrong.** The bars
+were never mis-PLACED: measured against the day header columns at eight
+viewport widths, the worst error was 0.02px, because the seven columns are
+equal `1fr` and the track spans exactly them, so a percentage of the track
+lands on a column boundary. Four things around that were wrong, all found
+by measuring rather than looking.
+
+1. **The gap was asymmetric**: 2px left and right against 4px above and
+   below. One `--sch-gap` at `spacing-02` now governs all four sides.
+2. **The bar's text did not line up with the day header's label**: 10px
+   from the day boundary against 13px. The header's rule was a
+   `border-inline-start`, which sits INSIDE the cell and pushes its label
+   one pixel right of everything else measured from that boundary. It is an
+   inset box-shadow now, which paints on the same pixel and moves nothing;
+   with the 4px gap plus the bar's own 8px padding both now sit at 12px.
+3. **Every rule in the body sat one pixel left of the rule above it.** The
+   track paints its day rules with a repeating gradient, and it painted the
+   LAST pixel of each day (`calc(14.2857% - 1px)` to `14.2857%`, read off the
+   resolved `background-image`) while a `border-inline-start` paints a day's
+   FIRST. Start-aligned now, so header and body draw the same line.
+4. **A bar continuing from the previous week was one gap short.** It went
+   flush to the left edge but still subtracted both gaps from its width, so
+   it ended 4px before every other bar in that day.
+
+**The gap is 4px because of what it buys**, not because it looked right:
+two bars in neighbouring days sit 8px apart plus the rule, it is the same
+number already separating stacked bars in a lane, and it is what puts the
+bar's first character on the day header's own text edge. It costs 4px of
+text width per bar, which matters at the 7rem minimum column where
+destinations already truncate. 2px everywhere would buy that back and lose
+all three.
+
+Not changed and deliberate: a bar keeps five rows even when a row is empty,
+so every bar in a lane is the same height. That is the old app's rule 1.1.
+
 **2026-09-06 - the bus column, narrowed to what it says.** It held "Bus 218"
 over "52 pax - Motorcoach" and took 9rem of a grid whose job is the seven
 days beside it. Now the number alone, with the equipment as icons under it:
