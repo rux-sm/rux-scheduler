@@ -22,7 +22,7 @@
 
 .sch {
   --sch-days: 7;
-  --sch-head-w: 5.5rem;
+  --sch-head-w: 3.5rem;
   /* THE FLOOR A DAY COLUMN WILL NOT GO BELOW, and the grid scrolls rather
      than squeezing past it. 8.5rem is the largest value that changes nothing
      on a 1440 window -- measured, the threshold is between 8.5rem where the
@@ -89,7 +89,14 @@
   line-height: var(--rux-label-01-line-height);
   color: var(--rux-text-secondary);
 }
-.sch-corner { inset-inline-start: 0; z-index: 4; border-inline-end: 1px solid var(--rux-border-subtle); }
+/* The corner takes the ROW HEAD's inline padding, not the day cells', so the
+   word Bus starts on the same pixel as the numbers under it. */
+.sch-corner {
+  inset-inline-start: 0;
+  z-index: 4;
+  border-inline-end: 1px solid var(--rux-border-subtle);
+  padding-inline: var(--rux-spacing-03);
+}
 /* THE RULE IS PAINTED, NOT LAID OUT. As border-inline-start it sat inside the
    cell and pushed the label 1px right of every other thing measured from the
    day boundary; as an inset shadow it draws on the same pixel and moves
@@ -136,9 +143,16 @@
    whole job is the seven days to its right. The number alone identifies the
    row -- the corner cell already says these are buses -- and the equipment
    became two icons, so capacity and type moved to the row's title where a
-   hover still reaches them. 5.5rem, not the 5rem tried first: three digits
-   fit either way, but "Unassigned" measured 66px against 63px of content box
-   and clipped, and the row is worth its own word rather than an abbreviation. */
+   hover still reaches them.
+
+   3.5rem, DOWN FROM 5.5rem, and the icons are not what made that possible.
+   Measured at 88px: two icons side by side were 36px, a three-digit number
+   26px, and the word "Unassigned" 66px against 71px of content box -- so the
+   LABEL was the column's width, and stacking the icons under a number that is
+   narrower than they were would have saved nothing on its own. The label is
+   "No bus" now, which wraps, and with the icons in a column the widest thing
+   left is the number. 3.5rem carries a four-digit one; the floor is the
+   corner's own "Bus" at 39px. */
 .sch-row-head {
   position: sticky;
   inset-inline-start: 0;
@@ -161,9 +175,14 @@
 /* The equipment row: one icon per thing the bus has, in the order a
    dispatcher asks for them. An absent icon means the bus does not have it,
    which is why nothing here is a placeholder. */
+/* STACKED, NOT IN A ROW. Side by side the pair was 36px and set a floor the
+   column could not go under; in a column the number above them is the widest
+   thing in the cell. Three stacked icons -- a lift, a sleeper and an
+   out-of-service mark -- come to 56px, well inside the 96px a single-lane row
+   is already tall. */
 .sch-row-head__kit {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--rux-spacing-02);
   color: var(--rux-text-secondary);
 }

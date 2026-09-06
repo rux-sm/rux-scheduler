@@ -4,6 +4,25 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the bus column, 5.5rem to 3.5rem, and what actually made it
+possible.** rux asked whether stacking the equipment icons would let the
+column be narrower. Measured first, and it would not have: at 88px the two
+icons side by side came to 36px, a three-digit number to 26px, and the word
+"Unassigned" to 66px against a 71px content box. **The LABEL was the column's
+width.** Stacking icons that were already narrower than the number above them
+saves nothing on its own.
+
+So both: the icons are in a column, and the row is labelled "No bus", which
+wraps to two lines and puts the full sense in the row's title. The widest
+thing left is the number, and 3.5rem carries a four-digit one; the floor
+below that is the corner's own "Bus" at 39px. The corner also took the row
+head's inline padding rather than the day cells', so that word starts on the
+same pixel as the numbers under it - measured, both at 329px.
+
+The 32px goes to the days: a day column reads 143px at 1440 against 138px
+before, and 119px of text against 114px. Nothing clips at 1440, 1000 or 900,
+and "No bus" wraps to two lines at all three.
+
 **2026-09-06 - the day column floor, raised to 8.5rem.** rux asked whether a
 minimum width would do, given the grid already scrolls past it. It does, and
 the exact threshold was measured rather than picked: at 8.5rem the 1fr share

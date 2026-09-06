@@ -303,7 +303,11 @@
       // non-active status are not dropped, they move to the cell's title, so
       // the column can be narrow and a hover still answers "which bus is this".
       const head = el('div', 'sch-row-head');
-      head.append(el('div', 'sch-row-head__num', r.bus ? String(r.bus.number) : 'Unassigned'));
+      // "No bus", not "Unassigned": the word was the widest thing in the
+      // column and set its width on its own. This one wraps, and the row's
+      // title carries the full sense.
+      head.append(el('div', 'sch-row-head__num', r.bus ? String(r.bus.number) : 'No bus'));
+      if (!r.bus) head.title = 'Trips with no bus yet';
       if (r.bus) {
         head.title = [
           `Bus ${r.bus.number}`,
