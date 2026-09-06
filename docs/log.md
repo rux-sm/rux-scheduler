@@ -4,6 +4,33 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the grid was a layer step too dim, both ways.** rux compared
+it to the sink's own data table in g90 and was right twice: the table's rules
+are brighter and its header lighter. Measured, table against grid: header
+#525252 against #393939, row rule #6f6f6f against #525252.
+
+**The cause is that Carbon's tokens are layer-aware and the grid ignored it.**
+The un-suffixed `--rux-border-subtle` is the border for content sitting on the
+page background. This grid does not sit there: its pane is `--rux-layer`,
+which IS layer-01, so its rules are `border-subtle-01` and its header band is
+`layer-accent-01`. Ten rules moved up a step and the header band with them.
+Both now read the same as the table in every theme.
+
+**Lifting the header cost it its vertical rules, and they are gone for good.**
+On `layer-accent-01` the rule and its own background land on the same colour
+in g10; the step up, `border-subtle-02`, collapses the same way in white and
+rux, both measured at 1.00:1. `border-strong-01` survives all five at 2.3 to
+2.5, but a header rule heavier than the body's breaks the single line each
+boundary is meant to draw from top to bottom. **Carbon's own table header has
+no vertical rules either.** So the band has none: its bottom edge divides it
+from the grid, the sticky column's edge divides it from the bus numbers, and
+the day labels sit at the same 12px as the bar text below them, which is what
+actually says where a column starts.
+
+**And the Unassigned row moved off `layer-accent`**, which is the header
+band's surface now; two accent bands at opposite ends of the grid read as two
+headers. It takes the hover step instead.
+
 **2026-09-06 - the bus reassignment drag: the first thing this page writes.**
 Step 3 of `docs/screen-inventory.md` section 5. It writes ONE column,
 `trip_assignments.bus_id`, on one row. Vertical only, as rux-ui's own drag is:

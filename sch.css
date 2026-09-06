@@ -70,7 +70,7 @@
   max-block-size: max(24rem, calc(100dvh - 15rem));
   overscroll-behavior: contain;
   background: var(--rux-layer);
-  border: 1px solid var(--rux-border-subtle);
+  border: 1px solid var(--rux-border-subtle-01);
 }
 /* The grid: one label column, then one column per day. A row is
    display: contents so its head and its track are both grid children and
@@ -98,13 +98,21 @@
    look like a page that had not noticed. */
 .sch-grid--busy { opacity: .55; }
 
+/* THE HEADER BAND IS layer-accent-01, THE RULES ARE border-subtle-01, and
+   both were a step too dim until 2026-09-06. Carbon's tokens are LAYER-AWARE:
+   the un-suffixed `--rux-border-subtle` is the border for content sitting on
+   the page background, and this grid does not sit there -- its pane is
+   `--rux-layer`, which is layer-01, so its borders are `border-subtle-01` and
+   its header is `layer-accent-01`. Measured against the sink's own data table
+   in g90: table header #525252 against this grid's #393939, table row rule
+   #6f6f6f against this grid's #525252. Both now match the table exactly. */
 .sch-corner,
 .sch-day {
   position: sticky;
   inset-block-start: 0;
   z-index: 3;
-  background: var(--rux-layer);
-  border-block-end: 1px solid var(--rux-border-subtle);
+  background: var(--rux-layer-accent-01);
+  border-block-end: 1px solid var(--rux-border-subtle-01);
   padding: var(--rux-spacing-03) var(--rux-spacing-04);
   font-size: var(--rux-label-01-font-size);
   letter-spacing: var(--rux-label-01-letter-spacing);
@@ -116,36 +124,31 @@
 .sch-corner {
   inset-inline-start: 0;
   z-index: 4;
-  border-inline-end: 1px solid var(--rux-border-subtle);
+  border-inline-end: 1px solid var(--rux-border-subtle-01);
   padding-inline: var(--rux-spacing-03);
 }
 /* THE RULE IS PAINTED, NOT LAID OUT. As border-inline-start it sat inside the
    cell and pushed the label 1px right of every other thing measured from the
    day boundary; as an inset shadow it draws on the same pixel and moves
    nothing. Measured before: label 13px from the cell edge, bar text 10px. */
-.sch-day { box-shadow: inset 1px 0 0 var(--rux-border-subtle); }
-/* THE FIRST DAY DRAWS NO RULE. The sticky Bus column already ends in one, and
-   a day rule at the same boundary put two hairlines side by side -- 2px where
-   every other boundary is 1px. The column's border has to be the one that
-   survives: it is what separates the frozen column from the days while they
-   scroll under it. */
-.sch-corner + .sch-day { box-shadow: none; }
+/* THE HEADER BAND CARRIES NO VERTICAL RULES, which is what Carbon's own data
+   table header does. It had them until 2026-09-06, drawn in the same token as
+   the body's; lifting the band to `layer-accent-01` put the rule and its own
+   background on the same colour in g10, and the step up, `border-subtle-02`,
+   collapses the same way in white and rux -- measured 1.00:1 in both cases.
+   `border-strong-01` survives all five at 2.3 to 2.5, but a header rule
+   heavier than the body's breaks the line each boundary is supposed to draw
+   from top to bottom. So the band has none: its own bottom edge divides it
+   from the grid, the sticky column's edge divides it from the bus numbers,
+   and the day labels sit at the same 12px as the bar text below them, which
+   is what actually says where a column starts. */
 .sch-day__num { display: block; font-size: var(--rux-body-compact-01-font-size); line-height: var(--rux-body-compact-01-line-height); color: var(--rux-text-primary); font-variant-numeric: tabular-nums; }
 .sch-day--weekend { color: var(--rux-text-placeholder); }
 /* BOTH SHADOWS, because they are one property. Moving the day rule off
    border-inline-start and onto an inset shadow on 2026-09-06 meant this rule
    -- later in the file, same specificity -- replaced it, and today's column
    silently lost its left rule. */
-.sch-day--today {
-  box-shadow: inset 1px 0 0 var(--rux-border-subtle),
-              inset 0 -2px 0 var(--rux-border-interactive);
-}
-/* Monday being today is the one case where both rules above apply, and
-   box-shadow is a single property: without this it keeps the day rule it
-   should not have, or loses the underline it should. */
-.sch-corner + .sch-day.sch-day--today {
-  box-shadow: inset 0 -2px 0 var(--rux-border-interactive);
-}
+.sch-day--today { box-shadow: inset 0 -2px 0 var(--rux-border-interactive); }
 .sch-day--today .sch-day__num { color: var(--rux-text-primary); font-weight: 600; }
 
 /* NO NOW-LINE, REMOVED 2026-09-06. A 2px rule down today's column was
@@ -180,8 +183,8 @@
   inset-inline-start: 0;
   z-index: 2;
   background: var(--rux-layer);
-  border-inline-end: 1px solid var(--rux-border-subtle);
-  border-block-end: 1px solid var(--rux-border-subtle);
+  border-inline-end: 1px solid var(--rux-border-subtle-01);
+  border-block-end: 1px solid var(--rux-border-subtle-01);
   padding: var(--rux-spacing-03);
   display: flex;
   flex-direction: column;
@@ -210,7 +213,10 @@
 }
 .sch-row-head__kit svg { display: block; }
 .sch-row-head__oos { color: var(--rux-support-warning); display: inline-flex; }
-.sch-row--unassigned .sch-row-head { background: var(--rux-layer-accent); }
+/* NOT layer-accent any more: that is the header band's surface since the
+   header lifted, and two accent bands at opposite ends of the grid read as
+   two headers. The hover step is a lift the header does not use. */
+.sch-row--unassigned .sch-row-head { background: var(--rux-layer-hover-01); }
 .sch-row--unassigned .sch-row-head__num {
   color: var(--rux-text-secondary);
   font-weight: 400;
@@ -219,13 +225,13 @@
   line-height: var(--rux-helper-text-01-line-height);
   letter-spacing: var(--rux-helper-text-01-letter-spacing);
 }
-.sch-row--unassigned .sch-track { background-color: var(--rux-layer-accent); }
+.sch-row--unassigned .sch-track { background-color: var(--rux-layer-hover-01); }
 
 .sch-track {
   position: relative;
   grid-column: span var(--sch-days);
   min-block-size: calc(var(--sch-gap-clear) + var(--sch-lanes, 1) * var(--sch-bar-h) + (var(--sch-lanes, 1) - 1) * var(--sch-lane-gap) + var(--sch-gap));
-  border-block-end: 1px solid var(--rux-border-subtle);
+  border-block-end: 1px solid var(--rux-border-subtle-01);
 }
 
 /* THE DAY RULES: THE SIX BOUNDARIES BETWEEN DAYS, AND NEITHER EDGE.
@@ -247,8 +253,8 @@
   inset-inline-end: 0;
   pointer-events: none;
   background-image: repeating-linear-gradient(to right,
-    var(--rux-border-subtle) 0,
-    var(--rux-border-subtle) 1px,
+    var(--rux-border-subtle-01) 0,
+    var(--rux-border-subtle-01) 1px,
     transparent 1px,
     transparent calc(100% / (var(--sch-days) - 1)));
 }
