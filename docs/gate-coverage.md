@@ -9,6 +9,25 @@ a rux-ds clone, sweeping, and deleting them again. That is what was done
 below, and it is a gap worth closing upstream: an app on a tag cannot check
 its own rendering without a checkout of the design system beside it.
 
+## Re-swept 2026-09-06 at `9151235`
+
+The bar's default fill became blue, the selection ring moved to
+`layer-selected-inverse`, and the drag added its own `sch-` classes. **Every
+reading is unchanged from the first sweep below**, which is the answer those
+changes should give: none of them touches a Carbon component's box, and the
+new classes are the app's own, which `check-runtime-classes` does not track.
+
+| Gate | `index.html` | `specimen.html` |
+|---|---|---|
+| `check-runtime-classes` | 60 / 55, 5 stripped, 0 added | 56 / 56, 0 stripped, 0 added |
+| `check-a11y` | 0 findings, 0 notes, ring check live | 0 findings, 0 notes, ring check live |
+| `check-spacing` | 29 / 28, 1 diverges, 1 not comparable, 9 no reference | 30 / 29, 1 diverges, 1 not comparable, 9 no reference |
+
+The contrast the colour change introduced was measured separately rather than
+left to this gate, which does not read colour: label on fill 5.94:1 in all
+five themes, selection ring on fill 7.09:1 on the dark pair and 13.79:1 on the
+light three. `docs/log.md` carries the numbers.
+
 ## Swept 2026-09-06 at `092f8f3`
 
 Both pages, white theme asserted by `--rux-field-hover` (#e8e8e8) read in the
