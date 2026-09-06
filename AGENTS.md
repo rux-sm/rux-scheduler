@@ -22,8 +22,9 @@ it.
   `rux-overrides.css` at Carbon's own specificity; never `!important`.
 - **App components are yours, prefixed `sch-`.** Carbon has no schedule grid
   and no trip bar, so this app owns them: markup in the page, rules in
-  `sch.css`, every value a `--rux-*` token, no invented token and no rule on
-  a `rux--*` class there. `check.mjs` fails on an invented token; it cannot
+  `sch.css`, every colour, size and space a `--rux-*` token; a `--sch-*`
+  variable carries a count or a position only. No rule on a `rux--*` class
+  there. `check.mjs` fails on an invented token; it cannot
   see a bad `sch-` rule, so open the page. A `sch-` class is never a way to
   restyle a Carbon part — that is a request to rux-ds (added 2026-09-06).
 - The app list is the hub's `switcher.json`, and `/switcher.js` fills the

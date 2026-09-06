@@ -1,0 +1,212 @@
+/* sch.css — this app's two components: the week grid and the trip bar.
+   Carbon has neither. Every colour, size and space below is a --rux-* token
+   read from the vendored css, so all five themes hold without a rule here
+   per theme. --sch-* variables carry counts and geometry only (days, a
+   bar's start and span in days, its lane), never a colour or a size a token
+   names. Rules on rux--* classes do not belong here (AGENTS.md).
+
+   Ported 2026-09-06 from rux-ui scheduler/css/layout/scheduler.css and
+   features/trip-bar.css with these changes, each a Carbon rule over the old
+   one: fills are Carbon's tag tints with the tag's own text colour, not a
+   saturated fill with white text (old rule 2.12); corners are square (old
+   2.2 used a radius token this system does not have); selected is the
+   border-interactive token as an inset ring, focus is the focus token; the
+   type role is label-01 compact and label-02 comfortable, the two tiers old
+   rule 2.8 allows, with the row height equal to the line height (old 2.7)
+   so a bar's height is rows times that and nothing else. */
+
+.sch {
+  --sch-days: 7;
+  --sch-today: -1;
+  --sch-head-w: 9rem;
+  --sch-day-min: 7rem;
+  --sch-bar-rows: 5;
+  --sch-fs: var(--rux-label-01-font-size);
+  --sch-ls: var(--rux-label-01-letter-spacing);
+  --sch-row-h: calc(var(--rux-label-01-font-size) * var(--rux-label-01-line-height));
+  --sch-bar-h: calc(var(--sch-bar-rows) * var(--sch-row-h) + 2 * var(--rux-spacing-02));
+  --sch-lane-gap: var(--rux-spacing-02);
+  position: relative;
+  overflow: auto;
+  background: var(--rux-layer);
+  border: 1px solid var(--rux-border-subtle);
+}
+.sch--lg {
+  --sch-fs: var(--rux-label-02-font-size);
+  --sch-ls: var(--rux-label-02-letter-spacing);
+  --sch-row-h: calc(var(--rux-label-02-font-size) * var(--rux-label-02-line-height));
+}
+
+/* The grid: one label column, then one column per day. A row is
+   display: contents so its head and its track are both grid children and
+   every row shares the same columns. The track spans the days and is the
+   containing block the bars are placed in by percentage. */
+.sch-grid {
+  display: grid;
+  grid-template-columns: var(--sch-head-w) repeat(var(--sch-days), minmax(var(--sch-day-min), 1fr));
+  min-inline-size: 100%;
+}
+.sch-row { display: contents; }
+
+.sch-corner,
+.sch-day {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 3;
+  background: var(--rux-layer);
+  border-block-end: 1px solid var(--rux-border-subtle);
+  padding: var(--rux-spacing-03) var(--rux-spacing-04);
+  font-size: var(--rux-label-01-font-size);
+  letter-spacing: var(--rux-label-01-letter-spacing);
+  line-height: var(--rux-label-01-line-height);
+  color: var(--rux-text-secondary);
+}
+.sch-corner { inset-inline-start: 0; z-index: 4; border-inline-end: 1px solid var(--rux-border-subtle); }
+.sch-day { border-inline-start: 1px solid var(--rux-border-subtle); }
+.sch-day__num { display: block; font-size: var(--rux-body-compact-01-font-size); line-height: var(--rux-body-compact-01-line-height); color: var(--rux-text-primary); font-variant-numeric: tabular-nums; }
+.sch-day--weekend { color: var(--rux-text-placeholder); }
+.sch-day--today { box-shadow: inset 0 -2px 0 var(--rux-border-interactive); }
+.sch-day--today .sch-day__num { color: var(--rux-text-primary); font-weight: 600; }
+
+.sch-row-head {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  background: var(--rux-layer);
+  border-inline-end: 1px solid var(--rux-border-subtle);
+  border-block-end: 1px solid var(--rux-border-subtle);
+  padding: var(--rux-spacing-03) var(--rux-spacing-04);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rux-spacing-01);
+}
+.sch-row-head__num {
+  font-size: var(--rux-label-02-font-size);
+  line-height: var(--rux-label-02-line-height);
+  letter-spacing: var(--rux-label-02-letter-spacing);
+  font-weight: 600;
+  color: var(--rux-text-primary);
+  display: flex; align-items: center; gap: var(--rux-spacing-02);
+}
+.sch-row-head__meta {
+  font-size: var(--rux-helper-text-01-font-size);
+  line-height: var(--rux-helper-text-01-line-height);
+  letter-spacing: var(--rux-helper-text-01-letter-spacing);
+  color: var(--rux-text-secondary);
+}
+.sch-row-head__oos { color: var(--rux-support-warning); display: inline-flex; }
+.sch-row--unassigned .sch-row-head { background: var(--rux-layer-accent); }
+.sch-row--unassigned .sch-row-head__num { color: var(--rux-text-secondary); font-weight: 400; font-style: italic; }
+.sch-row--unassigned .sch-track { background-color: var(--rux-layer-accent); }
+
+.sch-track {
+  position: relative;
+  grid-column: span var(--sch-days);
+  min-block-size: calc(var(--sch-lanes, 1) * (var(--sch-bar-h) + var(--sch-lane-gap)) + var(--sch-lane-gap));
+  border-block-end: 1px solid var(--rux-border-subtle);
+  /* The day dividers, drawn rather than laid out: one hairline at the end
+     of each day's share of the width. */
+  background-image: repeating-linear-gradient(to right,
+    transparent 0,
+    transparent calc(100% / var(--sch-days) - 1px),
+    var(--rux-border-subtle) calc(100% / var(--sch-days) - 1px),
+    var(--rux-border-subtle) calc(100% / var(--sch-days)));
+}
+
+/* Out of service: a striped span the bars sit over. */
+.sch-oos {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--sch-start) * (100% / var(--sch-days)));
+  inline-size: calc(var(--sch-span) * (100% / var(--sch-days)));
+  background: repeating-linear-gradient(135deg,
+    transparent 0, transparent 6px,
+    var(--rux-support-warning) 6px, var(--rux-support-warning) 7px);
+  opacity: .45;
+  pointer-events: none;
+}
+
+/* The now line, standard mode: the centre of today's column. */
+.sch-now {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 2px;
+  background: var(--rux-border-interactive);
+  inset-inline-start: calc(var(--sch-head-w) + (100% - var(--sch-head-w)) * (var(--sch-today) + .5) / var(--sch-days) - 1px);
+  z-index: 1;
+  pointer-events: none;
+}
+.sch[style*="--sch-today:-1"] .sch-now { display: none; }
+
+/* ── the trip bar ─────────────────────────────────────────────────────── */
+.sch-bar {
+  --sch-bg: var(--rux-tag-background-gray);
+  --sch-fg: var(--rux-tag-color-gray);
+  --sch-hover: var(--rux-tag-hover-gray);
+  --sch-border: var(--rux-tag-border-gray);
+  position: absolute;
+  inset-block-start: calc(var(--sch-lane-gap) + var(--sch-lane, 0) * (var(--sch-bar-h) + var(--sch-lane-gap)));
+  inset-inline-start: calc(var(--sch-start) * (100% / var(--sch-days)) + var(--rux-spacing-01));
+  inline-size: calc(var(--sch-span) * (100% / var(--sch-days)) - 2 * var(--rux-spacing-01));
+  block-size: var(--sch-bar-h);
+  box-sizing: border-box;
+  padding: var(--rux-spacing-02) var(--rux-spacing-03);
+  background: var(--sch-bg);
+  color: var(--sch-fg);
+  font-size: var(--sch-fs);
+  letter-spacing: var(--sch-ls);
+  line-height: var(--sch-row-h);
+  font-weight: 400;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
+}
+.sch-bar:hover { background: var(--sch-hover); }
+.sch-bar:focus-visible { outline: 2px solid var(--rux-focus); outline-offset: -2px; }
+.sch-bar[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--rux-border-interactive); }
+.sch-bar[aria-pressed="true"]:hover { background: var(--sch-bg); }
+
+.sch-bar--blue      { --sch-bg: var(--rux-tag-background-blue);      --sch-fg: var(--rux-tag-color-blue);      --sch-hover: var(--rux-tag-hover-blue);      --sch-border: var(--rux-tag-border-blue); }
+.sch-bar--cyan      { --sch-bg: var(--rux-tag-background-cyan);      --sch-fg: var(--rux-tag-color-cyan);      --sch-hover: var(--rux-tag-hover-cyan);      --sch-border: var(--rux-tag-border-cyan); }
+.sch-bar--teal      { --sch-bg: var(--rux-tag-background-teal);      --sch-fg: var(--rux-tag-color-teal);      --sch-hover: var(--rux-tag-hover-teal);      --sch-border: var(--rux-tag-border-teal); }
+.sch-bar--green     { --sch-bg: var(--rux-tag-background-green);     --sch-fg: var(--rux-tag-color-green);     --sch-hover: var(--rux-tag-hover-green);     --sch-border: var(--rux-tag-border-green); }
+.sch-bar--purple    { --sch-bg: var(--rux-tag-background-purple);    --sch-fg: var(--rux-tag-color-purple);    --sch-hover: var(--rux-tag-hover-purple);    --sch-border: var(--rux-tag-border-purple); }
+.sch-bar--magenta   { --sch-bg: var(--rux-tag-background-magenta);   --sch-fg: var(--rux-tag-color-magenta);   --sch-hover: var(--rux-tag-hover-magenta);   --sch-border: var(--rux-tag-border-magenta); }
+.sch-bar--red       { --sch-bg: var(--rux-tag-background-red);       --sch-fg: var(--rux-tag-color-red);       --sch-hover: var(--rux-tag-hover-red);       --sch-border: var(--rux-tag-border-red); }
+.sch-bar--cool-gray { --sch-bg: var(--rux-tag-background-cool-gray); --sch-fg: var(--rux-tag-color-cool-gray); --sch-hover: var(--rux-tag-hover-cool-gray); --sch-border: var(--rux-tag-border-cool-gray); }
+.sch-bar--warm-gray { --sch-bg: var(--rux-tag-background-warm-gray); --sch-fg: var(--rux-tag-color-warm-gray); --sch-hover: var(--rux-tag-hover-warm-gray); --sch-border: var(--rux-tag-border-warm-gray); }
+
+/* States. Unconfirmed is hollow with the hue's border; a partial PO has the
+   warning border; a leg that continues past the week has no edge on that
+   side and runs to it. */
+.sch-bar--unconfirmed { background: var(--rux-layer); border: 1px dashed var(--sch-border); padding-block: calc(var(--rux-spacing-02) - 1px); }
+.sch-bar--unconfirmed:hover { background: var(--rux-layer-hover); }
+.sch-bar--partial-po { border: 1px solid var(--rux-support-warning); padding-block: calc(var(--rux-spacing-02) - 1px); }
+.sch-bar--from-prev { inset-inline-start: 0; border-inline-start: 3px dotted var(--sch-border); }
+.sch-bar--to-next { inset-inline-end: 0; inline-size: auto; border-inline-end: 3px dotted var(--sch-border); }
+
+.sch-bar__row { display: flex; justify-content: space-between; gap: var(--rux-spacing-03); block-size: var(--sch-row-h); white-space: nowrap; overflow: hidden; }
+.sch-bar__row > * { overflow: hidden; text-overflow: ellipsis; }
+.sch-bar__dest { font-weight: 600; }
+.sch-bar__ref, .sch-bar__time { font-variant-numeric: tabular-nums; }
+.sch-bar__ref { opacity: .75; flex: none; }
+.sch-bar__client, .sch-bar__reqs { opacity: .85; }
+
+/* A double booking: a strip over the last row, in the error tokens. */
+.sch-bar__conflict {
+  position: absolute; inset-inline: 0; inset-block-end: 0;
+  block-size: var(--sch-row-h);
+  padding-inline: var(--rux-spacing-03);
+  background: var(--rux-support-error);
+  color: var(--rux-text-on-color);
+  display: flex; align-items: center; gap: var(--rux-spacing-02);
+  white-space: nowrap; overflow: hidden;
+}
+.sch-bar__conflict svg { flex: none; }
+
+/* Toolbar around the grid, built from Carbon parts; only the arrangement
+   is this app's. */
+.sch-toolbar { display: flex; align-items: center; gap: var(--rux-spacing-03); flex-wrap: wrap; }
+.sch-toolbar__range { margin-inline: var(--rux-spacing-03); font-variant-numeric: tabular-nums; }
+.sch-toolbar__spacer { flex: 1; }
+.sch-toolbar__sizes { inline-size: 14rem; }
