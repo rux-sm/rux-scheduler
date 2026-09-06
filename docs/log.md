@@ -4,6 +4,35 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the now-line removed, on rux's call.** Reported as landing on
+the wrong day when the window is narrow, and it was: measured at 900px, the
+line sat at 785px, inside Friday, with today on Sunday. **The cause is that
+a grid container is only as wide as its own containing block.** The line was
+positioned as a percentage of `.sch-grid`, whose box measured 770px while its
+seven columns totalled 872px and overflowed it. Everything else on the page
+is placed inside `.sch-track`, a grid ITEM spanning those columns, whose
+width IS their total -- which is why bar placement measured exact at every
+width and only this one drifted.
+
+**Nothing replaces it, and that is the better answer anyway.** A grid placed
+by DAY has no position within a day to point at, so a rule down the middle of
+a column claims a precision the data does not have. Today is the header
+cell's own accent: the interactive underline, the bold date, and
+`aria-current="date"`.
+
+**One bug found while removing it.** Moving the day rule from
+`border-inline-start` to an inset shadow earlier the same day meant
+`.sch-day--today`'s own shadow -- later in the file, same specificity --
+REPLACED it, so today's column had silently lost its left rule. Both shadows
+are on the one property now.
+
+**And one thing the removal made necessary.** With the header cell the only
+mark, it has to be on screen: a Sunday sits past the right edge of a narrow
+window. The grid now scrolls today's column into view after a render, only
+when it is actually out of view and never behind the sticky bus column.
+Measured at 900px: scrollLeft 102, today fully visible; at 1440px it does not
+scroll at all.
+
 **2026-09-06 - the grid, tightened, and what was actually wrong.** The bars
 were never mis-PLACED: measured against the day header columns at eight
 viewport widths, the worst error was 0.02px, because the seven columns are

@@ -17,7 +17,6 @@
 
 .sch {
   --sch-days: 7;
-  --sch-today: -1;
   --sch-head-w: 5.5rem;
   --sch-day-min: 7rem;
   --sch-bar-rows: 5;
@@ -89,8 +88,27 @@
 .sch-day { box-shadow: inset 1px 0 0 var(--rux-border-subtle); }
 .sch-day__num { display: block; font-size: var(--rux-body-compact-01-font-size); line-height: var(--rux-body-compact-01-line-height); color: var(--rux-text-primary); font-variant-numeric: tabular-nums; }
 .sch-day--weekend { color: var(--rux-text-placeholder); }
-.sch-day--today { box-shadow: inset 0 -2px 0 var(--rux-border-interactive); }
+/* BOTH SHADOWS, because they are one property. Moving the day rule off
+   border-inline-start and onto an inset shadow on 2026-09-06 meant this rule
+   -- later in the file, same specificity -- replaced it, and today's column
+   silently lost its left rule. */
+.sch-day--today {
+  box-shadow: inset 1px 0 0 var(--rux-border-subtle),
+              inset 0 -2px 0 var(--rux-border-interactive);
+}
 .sch-day--today .sch-day__num { color: var(--rux-text-primary); font-weight: 600; }
+
+/* NO NOW-LINE, REMOVED 2026-09-06. A 2px rule down today's column was
+   positioned as a percentage of .sch-grid, and a grid container is only as
+   wide as its own containing block: at 900px the box measured 770px while its
+   columns totalled 872px, so the line landed at 785px -- inside Friday, two
+   days off. Every other thing here is placed inside .sch-track, a grid ITEM
+   spanning the seven day columns, whose width IS their total, which is why
+   only this one drifted. It is not coming back in another form either: a
+   grid placed by DAY has no position within a day to point at, so a rule down
+   the middle of a column claims a precision the data does not have. Today is
+   the header cell's own accent -- the interactive underline, the bold date,
+   and aria-current="date" -- and nothing else. */
 
 /* THE BUS COLUMN IS THE NUMBER AND WHAT THE BUS CARRIES, nothing else.
    It held "Bus 218" over "52 pax · Motorcoach" and cost 9rem of a grid whose
@@ -169,17 +187,6 @@
     transparent 0, transparent 6px,
     var(--rux-support-warning) 6px, var(--rux-support-warning) 7px);
   opacity: .45;
-  pointer-events: none;
-}
-
-/* The now line, standard mode: the centre of today's column. */
-.sch-now {
-  position: absolute;
-  inset-block: 0;
-  inline-size: 2px;
-  background: var(--rux-border-interactive);
-  inset-inline-start: calc(var(--sch-head-w) + (100% - var(--sch-head-w)) * (var(--sch-today) + .5) / var(--sch-days) - 1px);
-  z-index: 1;
   pointer-events: none;
 }
 

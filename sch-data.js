@@ -274,13 +274,16 @@
     gridEl.replaceChildren();
     gridEl.appendChild(el('div', 'sch-corner', 'Bus'));
 
+    // TODAY IS THE HEADER CELL AND NOTHING ELSE. There was a rule down the
+    // column until 2026-09-06; sch.css says why it went and why nothing
+    // replaces it.
     const today = iso(new Date());
-    let todayIndex = -1;
+    let todayCell = null;
     for (let i = 0; i < 7; i++) {
       const d = addDays(weekStart, i);
       const cell = el('div', 'sch-day');
       if (i >= 5) cell.classList.add('sch-day--weekend');
-      if (iso(d) === today) { cell.classList.add('sch-day--today'); cell.setAttribute('aria-current', 'date'); todayIndex = i; }
+      if (iso(d) === today) { cell.classList.add('sch-day--today'); cell.setAttribute('aria-current', 'date'); todayCell = cell; }
       cell.append(
         document.createTextNode(d.toLocaleDateString(undefined, { weekday: 'short' })),
         el('span', 'sch-day__num', String(d.getDate())),
@@ -351,13 +354,20 @@
       gridEl.appendChild(rowEl);
     }
 
-    const now = el('div', 'sch-now');
-    now.setAttribute('aria-hidden', 'true');
-    now.hidden = todayIndex < 0;
-    gridEl.appendChild(now);
-
-    schEl.style.setProperty('--sch-today', todayIndex);
     schEl.hidden = false;
+
+    // THE ONLY MARK FOR TODAY IS ITS HEADER CELL, so the grid brings that cell
+    // into view rather than leaving it past the right edge -- which is where a
+    // Sunday sits on a narrow window. Only when it is actually out of view, and
+    // never past the sticky bus column, which covers the pane's left edge.
+    if (todayCell) {
+      const sticky = gridEl.querySelector('.sch-corner')?.offsetWidth ?? 0;
+      const visible = schEl.clientWidth;
+      const left = todayCell.offsetLeft;
+      const right = left + todayCell.offsetWidth;
+      if (right > schEl.scrollLeft + visible) schEl.scrollLeft = right - visible;
+      else if (left < schEl.scrollLeft + sticky) schEl.scrollLeft = Math.max(0, left - sticky);
+    }
 
     // formatRange, not two formatted dates joined by a dash: only it knows
     // that a week inside one month is "September 7 - 13, 2026" here and
