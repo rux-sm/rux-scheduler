@@ -113,7 +113,16 @@
   z-index: 3;
   background: var(--rux-layer-accent-01);
   border-block-end: 1px solid var(--rux-border-subtle-01);
-  padding: var(--rux-spacing-03) var(--rux-spacing-04);
+  /* ONE ROW OF 2rem, THE SAME 32px THE TOOLBAR'S BUTTONS ARE. It was two
+     stacked lines and 51px; the day and its date read as one thing, so they
+     sit on one line and the 19px goes to the grid, which measures its own
+     height. */
+  block-size: 2rem;
+  display: flex;
+  align-items: center;
+  gap: var(--rux-spacing-02);
+  padding-block: 0;
+  padding-inline: var(--rux-spacing-04);
   font-size: var(--rux-label-01-font-size);
   letter-spacing: var(--rux-label-01-letter-spacing);
   line-height: var(--rux-label-01-line-height);
@@ -142,7 +151,12 @@
    from the grid, the sticky column's edge divides it from the bus numbers,
    and the day labels sit at the same 12px as the bar text below them, which
    is what actually says where a column starts. */
-.sch-day__num { display: block; font-size: var(--rux-body-compact-01-font-size); line-height: var(--rux-body-compact-01-line-height); color: var(--rux-text-primary); font-variant-numeric: tabular-nums; }
+/* BESIDE THE DAY NAME, NOT SPREAD TO THE FAR EDGE. The band has no vertical
+   rules any more, so a date pushed to the right of its own cell would sit
+   24px from the NEXT day's name and 117px from its own -- it would read as
+   belonging to the wrong column. Kept together, the pair is one label: the
+   name secondary, the date primary. */
+.sch-day__num { font-size: var(--rux-body-compact-01-font-size); line-height: var(--rux-body-compact-01-line-height); color: var(--rux-text-primary); font-variant-numeric: tabular-nums; }
 .sch-day--weekend { color: var(--rux-text-placeholder); }
 /* BOTH SHADOWS, because they are one property. Moving the day rule off
    border-inline-start and onto an inset shadow on 2026-09-06 meant this rule

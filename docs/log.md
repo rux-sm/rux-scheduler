@@ -4,6 +4,24 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the day header is one 32px row, and the date sits beside the
+day.** It was two stacked lines at 51px. It is `2rem` now, the same 32px the
+toolbar's buttons are, with the name and the number on one line: they name one
+thing, so they read as one label, the name in the secondary colour and the
+date in the primary. The 19px goes to the grid inside the pane, which is more
+of the last bus row rather than a whole new one.
+
+**Not spread to the far edge, which is what rux sketched, and the reason is
+the rules that came out an hour earlier.** With no vertical rules in the band,
+a date pushed to the right of its own cell sits 24px from the NEXT day's name
+and 117px from its own -- measured on a 179px column - so it would read as
+belonging to the wrong column. Kept together the pair is unambiguous. Spread
+becomes the better arrangement again the day the band gets its rules back,
+and it is a one-line change either way.
+
+Corner and day cells both measure 32px, "Bus" still starts on the same pixel
+as the bus numbers, and the today underline is unaffected.
+
 **2026-09-06 - the grid was a layer step too dim, both ways.** rux compared
 it to the sink's own data table in g90 and was right twice: the table's rules
 are brighter and its header lighter. Measured, table against grid: header
