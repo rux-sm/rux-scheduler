@@ -4,6 +4,40 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the browser gates, swept for the first time.** `docs/gate-
+coverage.md` is the record. Both pages, white theme asserted from a resolved
+token, focus taken with Tab then blurred, transitions suppressed, Plex
+serving, pointer parked, page looked at. **Two findings, both adjudicated,
+nothing to fix.**
+
+- **Five stripped classes on `index.html`** are the pre-JS loading spinner in
+  `#sch-status`. `sch-data.js` replaces the status contents on the first read,
+  so they live in the file and never in the settled page - which is the point
+  of them, and not a defect.
+- **One spacing divergence on both pages**, `rux--header__name` at 8px of
+  inline start padding where Carbon's capture has 16. Carbon's own rule causes
+  it: it tightens the app name when the hamburger sits beside it, and the
+  captured story has the toggle hidden because it was taken at desktop. This
+  app shows it at every width, so the rule fires and the value is right.
+
+`check-a11y` read 0 on both, and **the red run was done** rather than assumed:
+stripping every focus outline and shadow took it to 21 findings and restoring
+them returned it to 0. `check-rendered` and `check-behaviour` are N/A here for
+the same reason they are on rux-ds's own templates - one measures kitchen-sink
+sections, the other drives modules these pages do not carry.
+
+**A gap for rux-ds, raised not acted on: the browser gates are not vendored.**
+`vendor/rux-ds/tools/` carries the app check and the server. Sweeping meant
+copying three gates and a 360KB capture out of a rux-ds clone and deleting
+them after, so an app on a tag cannot check its own rendering without a
+checkout of the design system beside it.
+
+**And a second thing to raise there.** `js/ui-shell.js` says a desktop
+hamburger "invents a state IBM's design does not have". Carbon ships
+`.rux--header__menu-toggle:not(.__hidden) ~ .rux--header__name`, a rule whose
+only purpose is to space the app name when that toggle is visible. It is the
+divergence above, and it is evidence the other way.
+
 **2026-09-06 - the correctness pass: feedback, failure, and two dead
 controls.**
 
