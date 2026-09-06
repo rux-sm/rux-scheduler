@@ -337,4 +337,6 @@
    is this app's. */
 .sch-toolbar { display: flex; align-items: center; gap: var(--rux-spacing-03); flex-wrap: wrap; }
 .sch-toolbar__range { margin-inline: var(--rux-spacing-03); font-variant-numeric: tabular-nums; }
+/* Everything before this sits left, everything after it right. */
+.sch-toolbar__spacer { flex: 1; }
 

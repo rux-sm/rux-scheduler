@@ -408,21 +408,21 @@
         <h1 class="rux--visually-hidden">Trip bar specimen</h1>
         <p>Every state the grid can draw, on invented trips and no network. This page is the design reference for <code>sch.css</code>: the live <a class="rux--link" href="./">Schedule</a> shows only the states this week happens to contain. Not linked from the side nav on purpose.</p>
         <div class="sch-toolbar">
-          <button type="button" class="rux--btn rux--btn--primary rux--layout--size-md">New trip<svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg></button>
-          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" aria-label="Previous week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
-          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-md">Today</button>
-          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
-          <h2 class="sch-toolbar__range rux--type-heading-compact-02">7 – 13 September 2026</h2>
-          <div style="position:relative">
-            <button type="button" class="rux--overflow-menu" aria-expanded="false" aria-haspopup="true" aria-label="View options">
-              <svg class="rux--overflow-menu__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg>
-            </button>
-            <ul class="rux--overflow-menu-options" role="menu">
-              <li class="rux--overflow-menu-options__option" role="none"><button type="button" class="rux--overflow-menu-options__btn" role="menuitem" tabindex="0"><div class="rux--overflow-menu-options__option-content">Time-aligned</div></button></li>
-              <li class="rux--overflow-menu-options__option" role="none"><button type="button" class="rux--overflow-menu-options__btn" role="menuitem" tabindex="-1"><div class="rux--overflow-menu-options__option-content">Start on Sunday</div></button></li>
-              <li class="rux--overflow-menu-options__option" role="none"><button type="button" class="rux--overflow-menu-options__btn" role="menuitem" tabindex="-1"><div class="rux--overflow-menu-options__option-content">Two weeks</div></button></li>
-              <li class="rux--overflow-menu--divider rux--overflow-menu-options__option" role="none"><button type="button" class="rux--overflow-menu-options__btn" role="menuitem" tabindex="-1"><div class="rux--overflow-menu-options__option-content">Print schedule</div></button></li>
-            </ul>
+          <!-- ORDER: MOVE, THEN READ, THEN ACT. The two arrows are neighbours
+               because paging back and forth is the most repeated gesture here and
+               Today between them put a 70px hop between the pair. The label sits
+               straight after the controls that change it, and NEVER before them:
+               "August 31 - September 6, 2026" is wider than "September 7 - 13,
+               2026", so anything after it in the flow would slide sideways as the
+               week changes, moving the very buttons being clicked. New trip is
+               pushed right, which is Carbon's own place for a primary action and
+               keeps creating a trip clear of the paging controls. -->
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-prev" aria-label="Previous week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-next" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-md" id="sch-today">Today</button>
+          <h2 class="sch-toolbar__range rux--type-heading-compact-02" id="sch-range">&nbsp;</h2>
+          <span class="sch-toolbar__spacer"></span>
+          <button type="button" class="rux--btn rux--btn--primary rux--layout--size-md" disabled>New trip<svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg></button>
           </div>
         </div>
         <div class="sch" id="sch" role="region" aria-label="Week of 7 September 2026">

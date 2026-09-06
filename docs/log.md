@@ -4,6 +4,27 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the toolbar reordered: move, then read, then act.** It ran
+New trip, prev, Today, next, label. It now runs prev, next, Today, label,
+then New trip on the right.
+
+- **The two arrows are neighbours** because paging back and forth is the most
+  repeated gesture on the page, and Today between them put a 70px hop between
+  the pair.
+- **The label stays after the controls that change it, never before.** This is
+  the constraint that decided the order: "August 31 - September 6, 2026" is
+  wider than "September 7 - 13, 2026", so anything placed after the label
+  slides sideways as the week changes, moving the very buttons being clicked.
+  Verified over three weeks - the arrows and Today hold at 64, 112 and 160px
+  and New trip's right edge at 1376 while the label changes width under them.
+- **New trip is right-aligned**, flush with the grid's right edge, which is
+  Carbon's own place for a primary action and keeps creating a trip clear of
+  the paging controls.
+
+Considered and rejected: the label as a left-hand title with every control on
+the right, which reads well but puts 1200px between reading the week and
+changing it, for the action repeated most.
+
 **2026-09-06 - the page heading goes to the outline, and the grid takes the
 room.** Two changes, and only together do they pay.
 
