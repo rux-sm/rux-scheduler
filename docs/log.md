@@ -4,6 +4,31 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the empty time row, and why it was empty.** rux asked why no
+times showed. The bar was reading `trips.departure_time` and `return_time`,
+and those columns are **null on all 743 rows** - counted, not sampled. They
+are dead columns; nothing has ever written them.
+
+The times live in the itinerary. A leg's first `pickup` stop holds the
+departure in `depart_prev` and its last `return` stop holds the arrival in
+`arrive`. That is rux-ui's own rule, `extractTripTimes`, with one correction:
+it read a trip's stops without regard to leg, and a bar here IS a leg, so the
+return leg of a drop-off now reads its own stops. The trip columns stay as
+the fallback they were written to be.
+
+Measured over a 90-day window: 99 trips, 80 with stops, 72 with both a
+departure and a return derivable, 74KB for the nested query. On the current
+week 18 of 19 bars now carry a time and none of them clips.
+
+**The SPOT time is read and deliberately not drawn.** The row is one line in a
+column of about 119px and two times already fill it; three would not fit. It
+belongs on the trip editor, which does not exist yet.
+
+**Not handled: a return after midnight.** "Banquete, TX 12:23 - 01:38" is real
+data and the bar gives no sign that the arrival is the next day. Day
+granularity cannot show it; the old app only distinguished it in time-aligned
+mode, which is later.
+
 **2026-09-06 - the bus column, 5.5rem to 3.5rem, and what actually made it
 possible.** rux asked whether stacking the equipment icons would let the
 column be narrower. Measured first, and it would not have: at 88px the two

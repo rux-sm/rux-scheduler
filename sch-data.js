@@ -129,6 +129,15 @@
     'trip_type', 'confirmed', 'trip_bar_color', 'bus_count', 'return_bus_count',
     'req_sleeper', 'req_ada', 'req_56pax',
     'trip_assignments(id,bus_id,position,leg,trip_drivers(driver_id,role))',
+    // THE TIMES ARE HERE, NOT ON THE TRIP. `trips.departure_time`,
+    // `return_time` and `spot_time` are null on all 743 rows -- counted
+    // 2026-09-06, not sampled -- so a bar reading them showed an empty row on
+    // every trip. The itinerary carries them: a leg's first `pickup` stop
+    // holds the departure in `depart_prev`, its last `return` stop holds the
+    // arrival in `arrive`. That is rux-ui's own rule (extractTripTimes), with
+    // one correction: it read a trip's stops without regard to leg, and a bar
+    // here IS a leg, so the return leg of a drop-off must read its own.
+    'trip_stops(position,leg,type,depart_prev,arrive,spot)',
   ].join(',');
 
   async function read(weekStart) {
@@ -150,10 +159,25 @@
   }
 
   // -- placing --------------------------------------------------------------
+  // A leg's clock, from its own stops. The trip columns stay as the fallback
+  // they were written to be, though every one of them is null today.
+  const timesOf = (trip, leg) => {
+    const stops = (trip.trip_stops || [])
+      .filter(s => (s.leg || 'outbound') === leg)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    const pickup = stops.find(s => s.type === 'pickup') ?? stops[0];
+    const back = [...stops].reverse().find(s => s.type === 'return');
+    return {
+      depart: pickup?.depart_prev || (leg === 'outbound' ? trip.departure_time : trip.return_time) || null,
+      back: back?.arrive || null,
+      spot: pickup?.spot || null,
+    };
+  };
+
   const legsOf = trip => {
     const legs = [];
-    if (trip.start_date) legs.push({ leg: 'outbound', from: trip.start_date, to: trip.end_date || trip.start_date, count: trip.bus_count || 1, time: trip.departure_time });
-    if (trip.return_start_date) legs.push({ leg: 'return', from: trip.return_start_date, to: trip.return_end_date || trip.return_start_date, count: trip.return_bus_count || trip.bus_count || 1, time: trip.return_time });
+    if (trip.start_date) legs.push({ leg: 'outbound', from: trip.start_date, to: trip.end_date || trip.start_date, count: trip.bus_count || 1, ...timesOf(trip, 'outbound') });
+    if (trip.return_start_date) legs.push({ leg: 'return', from: trip.return_start_date, to: trip.return_end_date || trip.return_start_date, count: trip.return_bus_count || trip.bus_count || 1, ...timesOf(trip, 'return') });
     return legs;
   };
 
@@ -215,8 +239,17 @@
     addRow(bar, 'sch-bar__dest', el('span', null, trip.destination || 'No destination'), el('span', 'sch-bar__ref', ref));
     addRow(bar, 'sch-bar__client', el('span', null, trip.customer || ''));
 
+    // Departure and return on one line, an en dash between them. The SPOT
+    // time -- be at the yard -- is read above and deliberately not drawn: the
+    // row is one line in a column of about 119px, and three times do not fit
+    // where two already fill it. It belongs on the trip editor, which does not
+    // exist yet.
+    const dep = hhmm(leg.depart), back = hhmm(leg.back);
     const legDays = daysBetween(parseISO(leg.from), parseISO(leg.to)) + 1;
-    const when = hhmm(leg.time) ? `Dep ${hhmm(leg.time)}` : (legDays > 1 ? `${legDays} days` : '');
+    const when = dep && back ? `${dep} \u2013 ${back}`
+      : dep ? `Dep ${dep}`
+      : back ? `Ret ${back}`
+      : (legDays > 1 ? `${legDays} days` : '');
     addRow(bar, 'sch-bar__time', el('span', null, when));
 
     const reqs = [
