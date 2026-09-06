@@ -22,7 +22,13 @@
 
 .sch {
   --sch-days: 7;
-  --sch-head-w: 3.5rem;
+  /* AS NARROW AS ITS CONTENT, measured by the browser rather than guessed at.
+     `max-content` here is the widest of: the corner's "Bus", the longest bus
+     number, and the stacked "No bus" -- 29px, 29px and 28px today, so 45px
+     with its 8px of padding either side. It follows a four-digit bus number
+     on its own, which a hand-set 45px would have clipped by 10.
+     sch.js reads the rendered width rather than this token. */
+  --sch-head-w: max-content;
   /* THE FLOOR A DAY COLUMN WILL NOT GO BELOW, and the grid scrolls rather
      than squeezing past it. 8.5rem is the largest value that changes nothing
      on a 1440 window -- measured, the threshold is between 8.5rem where the
@@ -254,6 +260,10 @@
    two headers. The hover step is a lift the header does not use. */
 .sch-row--unassigned .sch-row-head { background: var(--rux-layer-hover-01); }
 .sch-row--unassigned .sch-row-head__num {
+  /* ALWAYS TWO LINES. Left to wrap on its own the label is 53px on one line
+     and sets the column's width single-handed -- wider than the bus numbers
+     it sits under. Broken at the space it is 28px, and the numbers decide. */
+  white-space: pre-line;
   color: var(--rux-text-secondary);
   font-weight: 400;
   font-style: italic;

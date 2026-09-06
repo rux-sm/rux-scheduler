@@ -387,7 +387,7 @@
       // "No bus", not "Unassigned": the word was the widest thing in the
       // column and set its width on its own. This one wraps, and the row's
       // title carries the full sense.
-      head.append(el('div', 'sch-row-head__num', r.bus ? String(r.bus.number) : 'No bus'));
+      head.append(el('div', 'sch-row-head__num', r.bus ? String(r.bus.number) : 'No\nbus'));
       if (!r.bus) head.title = 'Trips with no bus yet';
       if (r.bus) {
         head.title = [

@@ -31,12 +31,15 @@
      columns themselves land between pixels, and the browser then paints every
      bar edge, and every day rule, across two of them.
 
-     THE REMAINDER GOES TO THE BUS COLUMN, not to a day. Flooring the day width
-     leaves up to six pixels over; parking them in the last day would make one
-     column visibly wider than its neighbours, and leaving them at the right
-     edge would open a gap inside the pane's border. The bus column carries no
-     alignment of its own, so growing it by a few pixels is invisible and the
-     grid still fills its pane exactly.
+     THE REMAINDER GOES OUTSIDE THE PANE. Flooring the day width leaves up to
+     six pixels over. They cannot go in a day column -- one column wider than
+     its neighbours breaks the placement every bar is measured against. They
+     went into the bus column until 2026-09-06, and that column is now exactly
+     as wide as its content, so the leftover showed as up to 6px of extra space
+     to the right of the bus number: measured 8px of glyph padding on the left
+     against 9 to 14 on the right as the window moved. So the PANE gets that
+     much narrower instead, and the leftover sits beyond its border in the
+     page's own 32px of padding, where nothing reads it as part of the grid.
 
      WHEN THE FLOOR BINDS this does nothing but round: the columns are already
      at --sch-day-min and the grid scrolls, so there is no remainder to place.
@@ -77,9 +80,18 @@
 
   function fitColumns(sch) {
     // The stylesheet's own values, read back rather than duplicated here.
-    sch.style.removeProperty('--sch-head-w');
+    // Cleared first so every measurement below is of the pane at its natural
+    // size; reading a width this function set last time would shrink the grid
+    // a little further on every pass.
+    sch.style.removeProperty('inline-size');
     sch.style.removeProperty('--sch-day-track');
-    const headBase = px(sch, '--sch-head-w');
+    // MEASURED, NOT PARSED. The bus column is `max-content` in the stylesheet
+    // so it is exactly as wide as the widest thing in it -- there is no length
+    // to read, and hand-setting one would clip the day a four-digit bus number
+    // appears. The corner cell IS that column, so its rendered width is the
+    // base, whatever the content turns out to be.
+    const corner = sch.querySelector('.sch-corner');
+    const headBase = corner ? Math.ceil(corner.getBoundingClientRect().width) : NaN;
     const dayMin = px(sch, '--sch-day-min');
     const days = parseInt(getComputedStyle(sch).getPropertyValue('--sch-days'), 10) || 7;
     const pane = sch.clientWidth;
@@ -87,12 +99,16 @@
 
     const available = pane - headBase;
     let day = Math.floor(available / days);
-    let head = headBase;
-    if (day < dayMin) day = Math.floor(dayMin);     // floor binds; the grid scrolls
-    else head = headBase + (available - day * days);
-
+    if (day < dayMin) {
+      // The floor binds and the grid scrolls: there is no leftover to place,
+      // and the pane keeps every pixel it has.
+      day = Math.floor(dayMin);
+      sch.style.removeProperty('inline-size');
+    } else {
+      const border = sch.offsetWidth - sch.clientWidth;   // its own 1px each side
+      sch.style.inlineSize = `${headBase + day * days + border}px`;
+    }
     sch.style.setProperty('--sch-day-track', `${day}px`);
-    sch.style.setProperty('--sch-head-w', `${head}px`);
   }
 
   const sch = document.getElementById('sch');

@@ -4,6 +4,38 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the bus column at 42px, with the padding actually equal.**
+Three answers to three questions from rux.
+
+**"No bus" is broken at the space and always two lines.** Left to wrap on its
+own it is 53px wide and set the column single-handed, wider than the numbers
+it sits under. Stacked it is 28px and the numbers decide.
+
+**The column sizes itself.** It is `max-content` in the stylesheet and
+`sch.js` measures the corner's rendered width rather than parsing a token, so
+the column is exactly the widest of the corner's "Bus", the longest bus number
+and the stacked label, plus 8px either side. 42px today. A four-digit bus
+number widens it on its own, where a hand-set 45px would have clipped one by
+10px.
+
+**The whole-pixel remainder moved out of that column, which is what made the
+padding uneven.** Flooring the day width leaves up to 6px over; it used to go
+into the bus column, and once that column was exactly its content the leftover
+showed as extra space to the right of the number - measured 8px of glyph
+padding on the left against 9 to 14 on the right as the window moved. The pane
+is that much narrower now instead, so the leftover falls beyond its border in
+the page's own 32px of padding, where nothing reads it as part of the grid.
+Measured at 1440, 1441, 1443, 1445, 1447 and 1520: the column holds at 42px
+with **8px each side at every width**, every day column an equal integer, and
+the grid filling the pane exactly. Where the floor binds and the grid scrolls
+there is no leftover and the pane keeps every pixel.
+
+**And the corner's borders are deliberate.** It carries exactly two, its right
+and its bottom, which are the frame's own two edges - the right continuous
+with the bus column's, the bottom continuous with the day band's. The first
+day cell draws no left rule, so there is no doubling: verified, 1px each and
+no shadow on the neighbour.
+
 **2026-09-06 - the frame's own rules, and why neither axis has any.** rux
 noticed the bus column still had lines between rows while the day band had
 none, and asked whether that was deliberate. It was not, and it was worse
