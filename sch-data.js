@@ -440,6 +440,11 @@
       gridEl.appendChild(rowEl);
     }
 
+    // The pane's own border closes the grid, so whichever row ends up last on
+    // screen must not draw a rule of its own.
+    const shownRows = [...gridEl.querySelectorAll('.sch-row')].filter(r => !r.hidden);
+    shownRows[shownRows.length - 1]?.classList.add('sch-row--last');
+
     schEl.hidden = false;
 
     // THE ONLY MARK FOR TODAY IS ITS HEADER CELL, so the grid brings that cell

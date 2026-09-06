@@ -4,6 +4,27 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the doubled bottom edge, and the one cell that was not the
+frame's colour.** Both reported by rux, both real.
+
+**The last row drew a rule into the pane's own border**, so the bottom of the
+grid was 2px where every other row boundary is 1. The last VISIBLE row is
+marked by `sch-data.js` rather than by `:last-child`, which would land on the
+Unassigned row on the weeks it is hidden and leave the real last row still
+drawing one. Verified: last track 0px, every other track 1px, pane border 1px.
+
+**The Unassigned row's head had its own surface** and was the only cell in the
+sticky column that was not the column's colour. It takes the frame's
+`layer-accent-01` now, like every other head; the row is already told apart by
+its italic label and by the tint on its track, which is where a row's own
+identity belongs.
+
+That is the third instance today of the same shape of fault - two edges
+meeting on one boundary - after the day rules beside the bus column and the
+day rules in the header band. **The rule that falls out of all three: a line
+belongs to exactly one of the two things it separates, and the frame's own
+border always wins.**
+
 **2026-09-06 - the bus column at 42px, with the padding actually equal.**
 Three answers to three questions from rux.
 

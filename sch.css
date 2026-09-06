@@ -97,6 +97,12 @@
 /* `display: contents` beats the UA's own [hidden] rule, so an empty
    Unassigned row would still take a slot in the grid without this. */
 .sch-row[hidden] { display: none; }
+/* THE LAST ROW DRAWS NO RULE: the pane's own bottom border already closes the
+   grid, and the two together read as a 2px line where every other row
+   boundary is 1px. The class is set by sch-data.js on the last row it
+   actually shows -- `:last-child` would land on the Unassigned row on the
+   weeks it is hidden, leaving the visible last row still drawing one. */
+.sch-row--last .sch-track { border-block-end: 0; }
 
 /* STALE, NOT EMPTY. While a week is being read the grid keeps the last one on
    screen and dims it; clearing it would throw away something still worth
@@ -258,7 +264,11 @@
 /* NOT layer-accent any more: that is the header band's surface since the
    header lifted, and two accent bands at opposite ends of the grid read as
    two headers. The hover step is a lift the header does not use. */
-.sch-row--unassigned .sch-row-head { background: var(--rux-layer-hover-01); }
+/* THE FRAME'S SURFACE, LIKE EVERY OTHER ROW HEAD. It had its own step, which
+   made the one cell in the sticky column that is not the column's colour --
+   the row is already told apart by its italic label and by the tint on its
+   track, which is where a row's own identity belongs. */
+.sch-row--unassigned .sch-row-head { background: var(--rux-layer-accent-01); }
 .sch-row--unassigned .sch-row-head__num {
   /* ALWAYS TWO LINES. Left to wrap on its own the label is 53px on one line
      and sets the column's width single-handed -- wider than the bus numbers
