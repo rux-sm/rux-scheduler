@@ -4,6 +4,34 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - toolbar buttons to the small size, and a height bug it
+uncovered.** All four are `layout--size-sm`, 32px rather than 40, which is
+Carbon's own size for a dense context and takes the toolbar row from 40px to
+32. The 8px goes to the grid, because the pane's height is measured now
+rather than guessed. The smallest target is 32x32, comfortably over the 24px
+WCAG 2.5.8 minimum, and this is a pointer-driven dispatch board.
+
+**The bug: the height only followed a window resize.** The pane's own box and
+the block above it can change without one, and the case that matters is the
+status notification - a week with no trips draws one, the grid starts 80px
+lower, and its height has to follow or it runs off the bottom. Reproduced by
+hand: the pane's top went 128 to 208 and its cap stayed where it was,
+overflowing the viewport.
+
+`sch.js` exposes `Rux.schedule.fit` and `sch-data.js` calls it right after
+the line that shows or hides that notification, so the renderer says when
+rather than leaving it to be noticed. Measured after: pushed down, the cap
+tracks 790 to 710 and leaves exactly 32px below; restored, back to 790.
+
+**A ResizeObserver is also wired, and it is UNVERIFIED.** This browser pane
+does not render while hidden and ResizeObserver delivers at paint, so no
+callback ever arrived in testing - a probe observer added by hand counted
+zero over a change that moved the pane 80px. It is kept because it is correct
+and free, not because it was seen working, and the explicit call is what the
+behaviour actually rests on. The `window.resize` listener WAS proven, by
+dispatching the event by hand after this harness changed the viewport without
+firing one.
+
 **2026-09-06 - the toolbar reordered: move, then read, then act.** It ran
 New trip, prev, Today, next, label. It now runs prev, next, Today, label,
 then New trip on the right.

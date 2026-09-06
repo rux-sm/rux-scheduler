@@ -100,11 +100,28 @@
     // Observing the PANE, not the grid: the grid's width is what this changes,
     // so observing it would feed its own output back in.
     const fit = () => { fitHeight(sch); fitColumns(sch); };
-    // The pane's own size changes when the grid fills or the window resizes;
-    // the window listener catches a viewport change that leaves the pane's
-    // measured size alone because its cap already absorbed it.
-    new ResizeObserver(fit).observe(sch);
+
+    // THE THREE WAYS THIS IS ASKED TO RUN, and why none of them alone is
+    // enough. `window.resize` is the obvious one and is the only one proven
+    // by hand here. The ResizeObserver covers the pane's own box changing
+    // for a reason the window did not cause. And `Rux.schedule.fit` is the
+    // EXPLICIT call, because the case that matters most is not a resize at
+    // all: the status notification appearing above the grid -- a week with no
+    // trips draws one -- pushes the pane down and takes from its height, and
+    // that always happens inside a render, so the renderer says so rather
+    // than leaving it to be noticed.
+    //
+    // THE OBSERVER PATH IS UNVERIFIED. This browser pane does not render
+    // while it is hidden, and ResizeObserver delivers at paint, so no
+    // callback ever arrived in testing -- a probe observer added by hand
+    // counted zero over a change that moved the pane 80px. It is kept because
+    // it is correct and free, not because it was seen working.
+    const watch = new ResizeObserver(fit);
+    watch.observe(sch);
+    if (sch.parentElement) watch.observe(sch.parentElement);
     window.addEventListener('resize', fit);
+    window.Rux = window.Rux || {};
+    window.Rux.schedule = { fit };
     fit();
   }
 })();

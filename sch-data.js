@@ -421,6 +421,11 @@
     const barCount = [...tracks.values()].reduce((n, list) => n + list.length, 0);
     if (!barCount) say('info', 'Nothing this week', 'No trip touches these seven days.');
     else say(null);
+
+    // The line above just changed what sits ABOVE the grid, which moves the
+    // grid and changes how much height is left for it. sch.js owns that sum;
+    // this says when to redo it rather than leaving it to an observer.
+    window.Rux?.schedule?.fit?.();
   }
 
   // -- the week, and moving between them ------------------------------------
