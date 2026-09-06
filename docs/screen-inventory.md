@@ -124,3 +124,56 @@ The field lists in §2 were read from the old markup's element ids, not from
 a running page, and the trip editor's count is approximate. The keyboard
 handling of each floating window was not traced; only Cmd-K and Escape are
 global there.
+
+## 7. Where a surface lives — added 2026-09-06
+
+Sections 1 and 2 give a verdict per surface. They do not say where the kept
+ones sit relative to each other, and building them one at a time would settle
+that by accident. **Three homes, and one rule for choosing.**
+
+| Home | What goes there |
+|---|---|
+| **The panel** | The detail of the thing you SELECTED, and anything that answers a question about it. One region on the right, one open at a time, Carbon's own `side-panel`. |
+| **A page** | A list, a feed, or a workspace. Something you navigate to rather than something you clicked. |
+| **A menu or a modal** | Options that change how the current page draws, and one-off actions. |
+
+### What that decides
+
+- **Trip, driver, bus, request, customer detail → the panel.** Each is the
+  thing you clicked. **The customer editor moves from modal to the panel**
+  (§2 said modal because it is four fields); one editing surface beats two.
+- **Tasks and History → their own pages.** Tasks is a work queue across many
+  trips and History an audit feed; neither is the detail of anything, and as
+  panels they would hold the panel open permanently while competing with the
+  trip that needs it. History sits below Settings in the nav rather than beside
+  Schedule: it is consulted, not worked in.
+- **View options → a menu in the toolbar.** Time-aligned, start on Sunday, two
+  weeks and the bar-row toggles. §3 said "the menu above" and that menu was
+  dropped when the live grid replaced the specimen, so they are currently
+  homeless.
+- **Jump to a date → the week label becomes a date-picker trigger.** The old
+  right panel carried a mini calendar, which §1-3 never placed. A permanent
+  mini calendar spends standing space on an occasional action; Carbon's date
+  picker is compiled and `templates/schedule-page.html` already uses it.
+- **Print → a modal over the same page**, not a separate window.
+
+### The driver availability grid is PANEL content, not a popover
+
+§2 records it as "later, the popover module", and that is wrong — corrected
+here rather than quietly. **It is coupled to the schedule's selection**: rux's
+own account of the old board is that clicking a trip highlights the row for
+that trip's date, so a dispatcher can read off which drivers are free then.
+That makes it an answer about the selected trip, which is the panel's whole
+job, and it belongs beside the trip's own driver list: who is driving this,
+and who else could.
+
+The same grid appears in two framings, and only one of them is the panel:
+
+| Where | Framing |
+|---|---|
+| The trip panel | Highlighted to the selected trip's dates. For assigning. |
+| The Drivers page | The whole grid, nothing highlighted. For browsing. |
+
+**What does stay a popover is the per-driver card** — the photo, city, phone,
+licence and medical expiry that the old app showed when a cell in that grid
+was clicked. That is the detail of a cell inside a surface, not a surface.

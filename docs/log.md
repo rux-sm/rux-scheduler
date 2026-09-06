@@ -4,6 +4,26 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - where every surface lives, written down before the first panel
+is built.** rux asked whether there was a general plan for the old right
+panel's contents. There were per-surface verdicts and no architecture, so
+`docs/screen-inventory.md` section 7 now carries one: the panel holds the
+detail of the thing you selected, a page holds a list or a feed, a menu or
+modal holds options and one-off actions.
+
+What it settles: Tasks and History become pages, the customer editor moves
+from a modal into the panel so there is one editing surface, the view options
+need a toolbar menu again since the one they were promised was dropped with
+the specimen, and the mini calendar becomes a date-picker trigger on the week
+label rather than standing space.
+
+**And it corrects me on the driver availability grid.** I had it as a popover,
+twice. rux's account of the old board is that clicking a trip highlights the
+row for that trip's DATE, so the grid answers "who is free then" about the
+selected trip - which is the panel's job, beside the trip's own driver list.
+The per-driver card that opened from a cell in that grid does stay a popover:
+that is the detail of a cell, not a surface.
+
 **2026-09-06 - the doubled bottom edge, and the one cell that was not the
 frame's colour.** Both reported by rux, both real.
 
