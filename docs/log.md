@@ -4,6 +4,21 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - one size, no switcher, on rux's call.** The bar shipped with
+two density tiers behind a Carbon content switcher, compact at label-01 and
+comfortable at label-02. The second tier is gone and compact is the only one:
+12px text, 16px rows, an 88px bar. Old rule 2.8 allowed two and this takes
+one, because the larger tier fits FEWER characters into a day column that
+already truncates a destination, and the switcher spent a toolbar control
+saying so. `--sch-fs` and `--sch-row-h` stay as the derivation of the row
+height, not as a knob.
+
+The toolbar is now four controls and the week label. `sch.js` is back to one
+job, selecting a bar, since the switcher was the only thing it drove besides
+that; the spacer that existed only to push the switcher right went with it.
+Measured after: no switcher in either page, no `sch--lg` anywhere, bar text
+12px, row 16px, bar 88px, and selection still sets `aria-pressed`.
+
 **2026-09-06 - the doubled rule beside the Bus column.** Reported and real:
 two hairlines side by side where every other boundary has one. The sticky
 column ends in a border and the first day drew a rule of its own at the same

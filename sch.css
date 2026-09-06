@@ -11,9 +11,14 @@
    saturated fill with white text (old rule 2.12); corners are square (old
    2.2 used a radius token this system does not have); selected is the
    border-interactive token as an inset ring, focus is the focus token; the
-   type role is label-01 compact and label-02 comfortable, the two tiers old
-   rule 2.8 allows, with the row height equal to the line height (old 2.7)
-   so a bar's height is rows times that and nothing else. */
+   type role is label-01, 12px, with the row height equal to its line height
+   (old rule 2.7) so a bar's height is rows times that and nothing else.
+   ONE TIER, NOT TWO. Old rule 2.8 allowed a second, comfortable one at
+   label-02, and it shipped behind a content switcher until 2026-09-06; rux
+   removed it. A 14px tier bought nothing the 12px one does not -- it fits
+   FEWER characters into a day column that already truncates a destination --
+   and the switcher cost a toolbar control to say so. --sch-fs and --sch-row-h
+   stay as the derivation, not as a knob. */
 
 .sch {
   --sch-days: 7;
@@ -47,12 +52,6 @@
   background: var(--rux-layer);
   border: 1px solid var(--rux-border-subtle);
 }
-.sch--lg {
-  --sch-fs: var(--rux-label-02-font-size);
-  --sch-ls: var(--rux-label-02-letter-spacing);
-  --sch-row-h: calc(var(--rux-label-02-font-size) * var(--rux-label-02-line-height));
-}
-
 /* The grid: one label column, then one column per day. A row is
    display: contents so its head and its track are both grid children and
    every row shares the same columns. The track spans the days and is the
@@ -296,5 +295,4 @@
    is this app's. */
 .sch-toolbar { display: flex; align-items: center; gap: var(--rux-spacing-03); flex-wrap: wrap; }
 .sch-toolbar__range { margin-inline: var(--rux-spacing-03); font-variant-numeric: tabular-nums; }
-.sch-toolbar__spacer { flex: 1; }
-.sch-toolbar__sizes { inline-size: 14rem; }
+
