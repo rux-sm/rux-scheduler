@@ -4,6 +4,38 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - whole-pixel day columns, and what "pixel perfect" turned out
+to mean.** rux asked for the bars to be pixel perfect in the grid. Audited
+first: **the placement arithmetic was already exact**, worst deviation 0.016px
+across six viewport widths, because the bars are positioned inside the track
+and the track is a grid item spanning the very columns they are measured
+against.
+
+**The columns themselves were the problem.** `1fr` is a seventh of whatever
+is left over, which is almost never a whole pixel. Measured at 1440 on a 2x
+display: the track 1253.992px, a day 179.1417px, the day boundaries at 121,
+300.141, 479.281, 658.422, 837.57 and so on - and 37 of 38 bar edges missing
+a device pixel, the worst by 0.438 of one. The browser then paints every bar
+edge, and every day rule, across two device pixels.
+
+`sch.js` now floors the day width to whole pixels and **gives the remainder to
+the bus column**. Parking it in the last day would make one column visibly
+wider than its neighbours; leaving it at the right edge would open a gap
+inside the pane's border. The bus column carries no alignment of its own, so
+a few pixels there are invisible and the grid still fills its pane exactly.
+When the floor binds the columns are already at `--sch-day-min` and the grid
+scrolls, so there is no remainder to place.
+
+After: every column exactly 179px at 1440, every boundary an integer, worst
+edge 0.031 device pixels, which is float noise. Checked at 1441, 1443, 1447
+and 1520, where the day lands on 179, 179, 180 and 190 and the grid fills
+each time; at 900 the floor binds at 136px and it scrolls; the specimen gets
+it too, since both pages load this file.
+
+**It is an enhancement, not a requirement.** Without the script the
+stylesheet's own `minmax(--sch-day-min, 1fr)` renders, which is exactly what
+shipped before, so there is no state where the grid depends on it to work.
+
 **2026-09-06 - the side nav is behind the hamburger at every width.** rux's
 question was whether this just makes desktop behave the way the narrow
 breakpoint already does, and it does, with one difference: the scrim stays

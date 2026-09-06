@@ -34,6 +34,7 @@
      only a floor above the 1fr share could, and that forces the whole week
      to scroll. */
   --sch-day-min: 8.5rem;
+  --sch-day-track: minmax(var(--sch-day-min), 1fr);
   --sch-bar-rows: 5;
   --sch-fs: var(--rux-label-01-font-size);
   --sch-ls: var(--rux-label-01-letter-spacing);
@@ -71,7 +72,10 @@
                            scroll port, so it stays on today's column when the
                            week is wider than the viewport and .sch scrolls. */
   display: grid;
-  grid-template-columns: var(--sch-head-w) repeat(var(--sch-days), minmax(var(--sch-day-min), 1fr));
+  /* The day track is a variable so sch.js can replace the fluid default with
+     a WHOLE NUMBER OF PIXELS; see its note. Without that script this is what
+     renders, and it is what rendered until 2026-09-06. */
+  grid-template-columns: var(--sch-head-w) repeat(var(--sch-days), var(--sch-day-track));
   min-inline-size: 100%;
 }
 .sch-row { display: contents; }
