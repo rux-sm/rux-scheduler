@@ -4,6 +4,41 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the flash again, and the cause I had wrong.** rux said it was
+still doing it, and it was. **The entry below this one names the timer as the
+cause and that is wrong.** The timer was a real defect - the exit was being cut
+off at 88% - but it was never what rux could see, and fixing it changed nothing
+for them.
+
+**Carbon TRANSITIONS the panel, and the close was fighting that, not the
+animation.** The base rule carries `transition-property: display, opacity,
+transform` at 150ms with `transition-behavior: allow-discrete`. So ending the
+close removes `--closing`, the exit animation's `forwards` fill goes with it,
+and the panel does not snap out of sight - it TRANSITIONS back, sliding in
+from 320px and fading up to full opacity. `display` is in that same list, so
+`display: none` waits out the 150ms and the panel is on screen for the whole
+return trip. The reappearance IS the removal, animated, which is exactly why
+correcting WHEN the class came off did not help.
+
+`transition: none` alongside the `display: none` already in the `[hidden]`
+rule. It applies only while the attribute is set, so the entrance is untouched.
+
+**Proved without a timer, because timing here cannot be trusted.** The end of a
+close was reproduced by hand and the element asked what it was running.
+Without the rule: `display: grid` with a live `CSSTransition` on `display`.
+With it: `display: none` and nothing running. The opacity and transform return
+is the same mechanism and was not isolated by that run - the synthetic close
+had not moved them - but the `display` transition alone holds the panel on
+screen at full strength, and that is the flash.
+
+**The harness wasted most of this pass and the reason is worth keeping.** The
+browser pane throttles a page it is not showing: timers clamp to 1000ms, CSS
+animations do not run, and `requestAnimationFrame` does not fire. Two
+measurements were taken through that without noticing - a close that "finished
+in 68ms" against a 4000ms animation, and a run with no animation events at
+all. Front the pane before timing anything, and prefer a question that has no
+clock in it: `getAnimations()` answered this one outright.
+
 **2026-09-06 - the flash on close, and a timer that could not win.** rux saw
 the panel appear again for an instant as it closed. It did.
 

@@ -16,5 +16,25 @@
    One class, at Carbon's own specificity, no !important: `hidden` means
    hidden. The animation classes -- `--open` on the way in, `--closing` on the
    way out -- still do their work, because `hidden` only comes off before the
-   first and goes on after the second. */
-.rux--side-panel[hidden] { display: none; }
+   first and goes on after the second.
+
+   AND THE TRANSITION HAS TO GO WITH IT, which is the second half of the same
+   defect and the one that was actually visible. The base rule carries
+
+       transition-behavior: allow-discrete;
+       transition-duration: 150ms;
+       transition-property: display, opacity, transform;
+
+   so `opacity` and `transform` are TRANSITIONED. Ending the close removes
+   `--closing`, and with it the exit animation's `forwards` fill -- and the
+   panel does not snap back out of sight, it TRANSITIONS back: sliding in from
+   320px and fading up to full opacity over 150ms. `display` is in that same
+   list with `allow-discrete`, so `display: none` waits until those 150ms are
+   over and the panel is on screen for the whole return trip. That is the
+   flash rux reported on 2026-09-06, and it is why correcting WHEN the class
+   comes off did not help -- the reappearance IS the removal, animated.
+
+   `transition: none` while hidden makes both immediate: no journey back, and
+   `display: none` at once rather than 150ms later. It applies only while the
+   attribute is set, so the entrance is untouched. */
+.rux--side-panel[hidden] { display: none; transition: none; }
