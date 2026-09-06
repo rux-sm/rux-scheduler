@@ -4,6 +4,16 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 — pin moved to v0.1.7.** The tag was cut in rux-ds at
+`57031cc`, verified there in a clean worktree with all 41 browser cells
+current, nothing removed in `CHANGES.md`. The move brought
+`vendor/rux-ds/tools/` and `githooks/` with it, so `node tools/check.mjs`,
+the commit hook and `node tools/serve.mjs` now run from the vendored copy;
+this is the first commit made under the app's own hook. The drift report
+lists three head resources that are this app's own and a header nav the
+page leaves out on purpose. Pages was enabled by rux with the Actions
+source.
+
 **2026-09-06 — the week grid, static.** `index.html` is the Schedule page:
 Carbon shell and toolbar, and the two app components in `sch.css`, the
 grid and the trip bar, with `sch.js` for selection and the size switcher.
@@ -25,9 +35,9 @@ rux-ds's and were not run here; the `Settings` and `Drivers` nav icons are
 stand-ins from the sprite's forty icons.
 
 **2026-09-06 — repository started.** Scaffolded by rux-ds
-`tools/new-project.sh` from `v0.1.6`; that tag predates the shared app
-check, so `vendor/rux-ds/tools/` is empty and `node tools/check.mjs` fails
-on a missing module until the pin moves to a tag that carries it. Two
+`tools/new-project.sh` from `v0.1.6`; that tag predated the shared app
+check, so `vendor/rux-ds/tools/` was empty and `node tools/check.mjs` failed
+on a missing module until the pin moved, see above. Two
 inventories written from the `rux-backend` snapshot of 2026-09-03 and the
 old app in `rux-ui`. Decisions recorded there: same tables, no schema
 change; platform sign-in from the first commit, which the old app's
