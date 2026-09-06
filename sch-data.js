@@ -175,13 +175,16 @@
     const hi = iso(weekEnd);
     const unwrap = r => { if (r.error) throw new Error(r.error.message); return r.data ?? []; };
 
-    const [buses, trips, drivers, oos] = await withTimeout(Promise.all([
+    const [buses, trips, drivers, oos, timeOff] = await withTimeout(Promise.all([
       client.from('buses').select('id,number,capacity,type,status,sort_order,ada_lift,sleeper').order('sort_order').then(unwrap),
       client.from('trips').select(TRIP_COLUMNS).gte('start_date', lo).lte('start_date', hi).order('start_date').then(unwrap),
       client.from('drivers').select('id,name,short_name').then(unwrap),
       client.from('bus_out_of_service').select('bus_id,start_date,end_date,reason').lte('start_date', hi).gte('end_date', iso(weekStart)).then(unwrap),
+      // OVERLAP, NOT CONTAINMENT: a driver away across the whole fortnight has
+      // neither date inside this week and is still away every day of it.
+      client.from('driver_time_off').select('driver_id,start_date,end_date,reason').lte('start_date', hi).gte('end_date', lo).then(unwrap),
     ]));
-    return { buses, trips, drivers, oos, weekStart, weekEnd };
+    return { buses, trips, drivers, oos, timeOff, weekStart, weekEnd };
   }
 
   // formatRange, not two formatted dates joined by a dash: only it knows that
@@ -323,7 +326,7 @@
   }
 
   function render(data) {
-    const { buses, trips, drivers, oos, weekStart, weekEnd } = data;
+    const { buses, trips, drivers, oos, timeOff, weekStart, weekEnd } = data;
     const driversById = new Map(drivers.map(d => [d.id, d]));
     // What the panel reads when a bar is clicked: the bar carries ids, not
     // objects, and re-fetching a trip already in hand would be a round trip
@@ -455,6 +458,8 @@
     closePanel(false);
 
     schEl.hidden = false;
+    drawAvailability(availabilityRows(data), weekStart);
+    placeAvailability();
 
     // THE ONLY MARK FOR TODAY IS ITS HEADER CELL, so the grid brings that cell
     // into view rather than leaving it past the right edge -- which is where a
@@ -681,6 +686,7 @@
     panelEl.addEventListener('animationend', onExitEnd);
     setTimeout(endClose, 400);
     pageEl?.classList.remove('sch-page--with-panel');
+    markAvailDay(null);
     for (const b of document.querySelectorAll('.sch-bar[aria-pressed="true"]')) b.setAttribute('aria-pressed', 'false');
     const opener = panelOpener;
     panelOpener = null;
@@ -760,6 +766,7 @@
     if (trip.notes) panelBody.appendChild(section('Notes', el('p', null, trip.notes)));
 
     panelOpener = bar;
+    markAvailDay(Number(bar.style.getPropertyValue('--sch-start')));
     panelEl.classList.remove('rux--side-panel--closing');
     panelEl.hidden = false;
     panelEl.classList.add('rux--side-panel--open');
@@ -767,6 +774,155 @@
     window.Rux?.schedule?.fit?.();
     document.getElementById('sch-panel-close')?.focus();
   }
+
+  /* ── DRIVER AVAILABILITY ───────────────────────────────────────────────────
+     ON TRIAL IN TWO PLACES, and the switch exists so rux can decide from the
+     rendered thing rather than from my argument for one of them. One renderer
+     fills one element, and the element is MOVED between the dock and the side
+     slot, so what differs between the two readings is the layout and nothing
+     else. When the answer is in, the loser's slot and the layout button go.
+
+     BUSY IS DERIVED, NOT STORED. There is no per-driver-per-day row anywhere:
+     a driver is busy on a day because an assignment they are on covers it, so
+     this walks the same legs the bars are placed from and marks the days each
+     one spans. That means it is exactly as correct as the board above it, and
+     wrong in the same way if the board is.
+
+     TIME OFF IS STORED, in `driver_time_off`, and beats busy in the cell --
+     a driver both assigned and away is a conflict worth seeing as away. */
+  const availSlots = {
+    dock: document.getElementById('sch-dock'),
+    side: document.getElementById('sch-aside'),
+  };
+  const availEl = document.getElementById('sch-avail');
+  const availGrid = document.getElementById('sch-avail-grid');
+  const availToggle = document.getElementById('sch-avail-toggle');
+  const availLayoutBtn = document.getElementById('sch-avail-layout');
+  let availLayout = localStorage.getItem('sch-avail-layout') || 'dock';
+  let availOn = false;
+  let availRows = [];
+
+  function availabilityRows({ trips, drivers, timeOff, weekStart, weekEnd }) {
+    const rows = (drivers || [])
+      .slice()
+      .sort((a, b) => (a.short_name || a.name || '').localeCompare(b.short_name || b.name || ''))
+      .map(d => ({ driver: d, days: Array.from({ length: 7 }, () => ({ off: null, trips: [] })) }));
+    const byId = new Map(rows.map(r => [r.driver.id, r]));
+
+    for (const trip of trips || []) {
+      for (const leg of legsOf(trip)) {
+        const place = clip(leg.from, leg.to, weekStart, weekEnd);
+        if (!place) continue;
+        for (const a of trip.trip_assignments || []) {
+          if ((a.leg || 'outbound') !== leg.leg) continue;
+          for (const td of a.trip_drivers || []) {
+            const row = byId.get(td.driver_id);
+            if (!row) continue;
+            const what = trip.destination || 'Trip';
+            for (let i = 0; i < place.span; i++) {
+              const day = row.days[place.start + i];
+              if (day && !day.trips.includes(what)) day.trips.push(what);
+            }
+          }
+        }
+      }
+    }
+
+    for (const off of timeOff || []) {
+      const row = byId.get(off.driver_id);
+      if (!row) continue;
+      const place = clip(off.start_date, off.end_date || off.start_date, weekStart, weekEnd);
+      if (!place) continue;
+      for (let i = 0; i < place.span; i++) {
+        const day = row.days[place.start + i];
+        if (day) day.off = off.reason || 'Time off';
+      }
+    }
+    return rows;
+  }
+
+  function drawAvailability(rows, weekStart) {
+    availRows = rows;
+    availGrid.textContent = '';
+
+    const head = el('div', 'sch-avail__days');
+    head.appendChild(el('div', 'sch-avail__day sch-avail__day--head', 'Driver'));
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart.getTime() + i * DAY);
+      const cell = el('div', 'sch-avail__day', d.toLocaleDateString(undefined, { weekday: 'short' }));
+      cell.dataset.day = String(i);
+      head.appendChild(cell);
+    }
+    availGrid.appendChild(head);
+
+    for (const row of rows) {
+      const r = el('div', 'sch-avail__row');
+      r.appendChild(el('div', 'sch-avail__name', row.driver.short_name || row.driver.name || 'Driver'));
+      row.days.forEach((day, i) => {
+        const busy = day.trips.length > 0;
+        const cls = day.off ? 'sch-avail__cell sch-avail__cell--off'
+          : busy ? 'sch-avail__cell sch-avail__cell--busy'
+          : 'sch-avail__cell';
+        const cell = el('div', cls);
+        cell.dataset.day = String(i);
+        cell.appendChild(el('span', null, day.off || day.trips.join(' · ')));
+        if (day.off || busy) cell.title = `${row.driver.name || ''} — ${day.off || day.trips.join(' · ')}`;
+        r.appendChild(cell);
+      });
+      availGrid.appendChild(r);
+    }
+    markAvailDay(currentTripDay());
+  }
+
+  // The selected trip's day, marked down the column so "who is free THEN" does
+  // not need counting. Null clears it.
+  function markAvailDay(index) {
+    for (const c of availGrid.querySelectorAll('.sch-avail__cell--on-day, .sch-avail__day--on-day')) {
+      c.classList.remove('sch-avail__cell--on-day', 'sch-avail__day--on-day');
+    }
+    if (index == null) return;
+    for (const c of availGrid.querySelectorAll(`.sch-avail__cell[data-day="${index}"]`)) c.classList.add('sch-avail__cell--on-day');
+    for (const d of availGrid.querySelectorAll(`.sch-avail__day[data-day="${index}"]`)) d.classList.add('sch-avail__day--on-day');
+  }
+
+  const currentTripDay = () => {
+    const bar = document.querySelector('.sch-bar[aria-pressed="true"]');
+    const start = bar && Number(bar.style.getPropertyValue('--sch-start'));
+    return Number.isFinite(start) && bar ? start : null;
+  };
+
+  function placeAvailability() {
+    availLayoutBtn.textContent = availLayout === 'dock' ? 'Side' : 'Dock';
+    availLayoutBtn.setAttribute('aria-label', availLayout === 'dock' ? 'Move driver availability to the side' : 'Move driver availability below the schedule');
+    for (const [name, slot] of Object.entries(availSlots)) {
+      if (!slot) continue;
+      slot.hidden = !(availOn && availLayout === name);
+      if (availOn && availLayout === name) slot.appendChild(availEl);
+    }
+    availEl.hidden = !availOn;
+    availToggle.setAttribute('aria-pressed', String(availOn));
+    window.Rux?.schedule?.fit?.();
+  }
+
+  /* FIT AGAIN WHEN THE ROOM HAS ACTUALLY CHANGED. `.sch-page` transitions its
+     end padding over 110ms, and the fit() inside openPanel runs at once --
+     measuring the width the page still has, not the one it is going to. With
+     only the grid there that self-corrected on the next resize and nobody
+     noticed. With the side layout it does not: the grid keeps its pre-panel
+     width, the aside is pushed past the panel's edge, and 420px of it sits
+     behind the panel. Measured at 1440: aside right 1380 against a panel left
+     of 960. So the fit is repeated when the transition ends and the numbers
+     are real. */
+  pageEl?.addEventListener('transitionend', e => {
+    if (e.target === pageEl && e.propertyName === 'padding-inline-end') window.Rux?.schedule?.fit?.();
+  });
+
+  availToggle?.addEventListener('click', () => { availOn = !availOn; placeAvailability(); });
+  availLayoutBtn?.addEventListener('click', () => {
+    availLayout = availLayout === 'dock' ? 'side' : 'dock';
+    localStorage.setItem('sch-avail-layout', availLayout);
+    placeAvailability();
+  });
 
   document.getElementById('sch-panel-close')?.addEventListener('click', () => closePanel());
   document.addEventListener('keydown', e => {

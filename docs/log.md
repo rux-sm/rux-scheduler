@@ -4,6 +4,44 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - driver availability, built both ways to be decided from.**
+rux was unsure about section 7's answer and asked to try both. Both are built,
+one renderer fills one element, and the `Side`/`Dock` button moves it. **This
+is a trial, not a decision**: the loser's slot and that button come out
+together.
+
+**It is the week grid again, not a third component.** `.sch-avail__grid`
+carries `.sch-grid` and inherits its column template; the rules add a denser
+row and three cell states, and nothing else. Free is the state with nothing in
+it, because free is what is being looked for. Busy and time off are Carbon's
+tag tints, the same palette the bars use.
+
+**Busy is derived, time off is stored.** No table holds a driver's day: a
+driver is busy because an assignment they are on covers it, so this walks the
+same legs the bars are placed from - as correct as the board above it and
+wrong in the same ways. `driver_time_off` is fetched by OVERLAP, not
+containment, since a fortnight away has neither date inside this week. Read
+live: 40 drivers, 16 busy cells, 4 on time off.
+
+**What my recommendation had wrong, and rux was right to push.** Section 7 says
+a second row group in the grid. That puts it in the SAME scroll container as
+the buses, so it scrolls away exactly when there are enough buses to need it.
+The dock is a separate pane instead: same columns, own scroll.
+
+**Three defects found by building it, all fixed.** `fitHeight` gave the grid
+every remaining pixel, so the dock began at y=950 in a 950px window - 240px
+tall and entirely below the fold. `fit()` runs inside `openPanel` and measured
+the page mid-transition, so the grid kept its pre-panel width; harmless with
+only the grid there, but it pushed the aside to 1380 against a panel edge at
+960. And `.sch-board` sits in Carbon's `rux--stack-vertical`, which is a grid,
+where an item defaults to `min-width: auto` and will not shrink below its
+content: the track was 832 and the box still measured 1316. `min-inline-size:
+0` is load-bearing, and the comment says so.
+
+**One number rux should weigh:** the side layout with the trip panel open
+leaves the schedule 512px, under four day columns. The dock costs 240px of
+height and leaves all seven.
+
 **2026-09-06 - the flash again, and the cause I had wrong.** rux said it was
 still doing it, and it was. **The entry below this one names the timer as the
 cause and that is wrong.** The timer was a real defect - the exit was being cut
