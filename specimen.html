@@ -398,7 +398,14 @@
   <div class="rux--css-grid">
     <div class="rux--css-grid-column rux--col-span-100">
       <div class="rux--stack-vertical rux--stack-scale-5">
-        <h1>Trip bar specimen</h1>
+        <!-- THE PAGE'S NAME IS IN THE OUTLINE, NOT ON THE SCREEN. Three pieces of
+             chrome already say it: the tab title, the app name in the header, and
+             the current item in the side nav. Drawn at 42px in a 50px line it cost
+             66px of a viewport where a bus row is 95px, and the toolbar directly
+             below carries the week, which is the part that changes. The heading
+             stays for the document outline and for anyone arriving by screen
+             reader. -->
+        <h1 class="rux--visually-hidden">Trip bar specimen</h1>
         <p>Every state the grid can draw, on invented trips and no network. This page is the design reference for <code>sch.css</code>: the live <a class="rux--link" href="./">Schedule</a> shows only the states this week happens to contain. Not linked from the side nav on purpose.</p>
         <div class="sch-toolbar">
           <button type="button" class="rux--btn rux--btn--primary rux--layout--size-md">New trip<svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg></button>

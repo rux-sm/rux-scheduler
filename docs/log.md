@@ -4,6 +4,30 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the page heading goes to the outline, and the grid takes the
+room.** Two changes, and only together do they pay.
+
+The heading was 42px type in a 50px line and, with the stack gap under it,
+cost 66px of a viewport where a bus row is 95px. Three pieces of chrome
+already name the page - the tab title, the app name in the header, and the
+current item in the side nav - and the toolbar below carries the week, which
+is the part that changes. It is `rux--visually-hidden` now, so the document
+outline and anyone arriving by screen reader still get it.
+
+**On its own that would have gained nothing**, and this is the part worth
+remembering. The grid's height was capped at `100dvh` minus a hard 15rem, a
+number tuned by hand to whatever chrome happened to sit above it: at 950px
+the pane came out 708px because 950 - 240 - 2 is 708, so the cap decided, not
+the space. `sch.js` measures the pane's own top now and subtracts the content
+region's own bottom padding, which means any change above the grid - a
+heading going, a toolbar wrapping - turns into grid. The stylesheet keeps its
+old cap as the no-script fallback.
+
+Measured after, at 1440x950: pane top 136, height 780 against 708, exactly
+32px left below it, and eight bus rows visible where seven fitted. At
+1200x500 the 24rem floor holds at 382px and both the page and the grid
+scroll. At 1440x1100 it grows to 930 on the resize listener alone.
+
 **2026-09-06 - three pixels clear, evenly, on rux's call.** The gap was 4px
 to every boundary and the clear space was not: 3px left and bottom against
 4px right and top. **Every rule is 1px painted on one side of the boundary it

@@ -52,6 +52,29 @@
     return NaN;
   };
 
+  /* ── THE PANE'S HEIGHT, MEASURED RATHER THAN GUESSED ──────────────────────
+     The stylesheet caps the grid at `100dvh` minus a hard 15rem, which is a
+     number tuned by hand to the chrome that happened to sit above it. That
+     made the cap, not the space, decide: at a 950px viewport the pane came
+     out 708px because 950 - 240 - 2 is 708, and hiding the 66px page heading
+     would have changed nothing at all. Measuring the pane's own top means
+     any change above it -- a heading going, a toolbar wrapping to two rows --
+     turns into grid.
+
+     The bottom margin is the content region's own padding, read from it, so
+     the grid stops where every other page's content stops.
+     ────────────────────────────────────────────────────────────────────────*/
+  function fitHeight(sch) {
+    const content = sch.closest('.rux--content');
+    const below = content ? parseFloat(getComputedStyle(content).paddingBottom) || 0 : 0;
+    const top = sch.getBoundingClientRect().top;
+    // A floor, for the same reason the stylesheet has one: a short window
+    // should scroll the page rather than crush the grid to nothing.
+    const height = Math.max(24 * 16, Math.round(window.innerHeight - top - below));
+    const next = `${height}px`;
+    if (sch.style.maxBlockSize !== next) sch.style.maxBlockSize = next;
+  }
+
   function fitColumns(sch) {
     // The stylesheet's own values, read back rather than duplicated here.
     sch.style.removeProperty('--sch-head-w');
@@ -76,7 +99,12 @@
   if (sch && 'ResizeObserver' in window) {
     // Observing the PANE, not the grid: the grid's width is what this changes,
     // so observing it would feed its own output back in.
-    new ResizeObserver(() => fitColumns(sch)).observe(sch);
-    fitColumns(sch);
+    const fit = () => { fitHeight(sch); fitColumns(sch); };
+    // The pane's own size changes when the grid fills or the window resizes;
+    // the window listener catches a viewport change that leaves the pane's
+    // measured size alone because its cap already absorbed it.
+    new ResizeObserver(fit).observe(sch);
+    window.addEventListener('resize', fit);
+    fit();
   }
 })();

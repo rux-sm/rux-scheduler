@@ -396,7 +396,14 @@
   <div class="rux--css-grid">
     <div class="rux--css-grid-column rux--col-span-100">
       <div class="rux--stack-vertical rux--stack-scale-5">
-        <h1>Schedule</h1>
+        <!-- THE PAGE'S NAME IS IN THE OUTLINE, NOT ON THE SCREEN. Three pieces of
+             chrome already say it: the tab title, the app name in the header, and
+             the current item in the side nav. Drawn at 42px in a 50px line it cost
+             66px of a viewport where a bus row is 95px, and the toolbar directly
+             below carries the week, which is the part that changes. The heading
+             stays for the document outline and for anyone arriving by screen
+             reader. -->
+        <h1 class="rux--visually-hidden">Schedule</h1>
         <div class="sch-toolbar">
           <button type="button" class="rux--btn rux--btn--primary rux--layout--size-md" disabled>New trip<svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg></button>
           <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-prev" aria-label="Previous week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
