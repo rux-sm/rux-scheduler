@@ -4,6 +4,42 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the side nav is behind the hamburger at every width.** rux's
+question was whether this just makes desktop behave the way the narrow
+breakpoint already does, and it does, with one difference: the scrim stays
+below the breakpoint, so at desktop the nav opens over the page with nothing
+dimmed.
+
+**It needed no new CSS and no change in rux-ds.** Three compiled Carbon
+classes and one attribute:
+- `header__menu-toggle__hidden` is OPT-IN, not forced - Carbon hides the
+  button above 66rem only if the markup asks. Removed, so the button shows.
+- `side-nav--hidden` is declared AFTER `--side-nav--ux` and BEFORE
+  `--expanded`, so carrying it permanently makes the nav 0 at every width
+  while the hamburger's own `--expanded` still opens it to 16rem.
+- The page's 18rem content offset, which existed to clear a persistent nav,
+  is gone; the nav is `position: fixed` at z-index 8000 with an opaque
+  background, so it covers the grid rather than pushing it.
+- The button's label is Carbon's own "Open menu", because `js/ui-shell.js`
+  swaps only that known pair and left "Toggle navigation" alone.
+
+`js/ui-shell.js` has no width gate at all - the 66rem in it is comment, not
+code - so the toggle it already ships works at desktop untouched. The earlier
+reading that this would need a change there was wrong and is corrected here.
+
+**A day column goes 143px to 179px, text 119px to 155px**, which is more than
+every other adjustment today put together. Verified at 1440: closed 0 and open
+256 with the grid never reflowing, glyph swapping to the X, aria-expanded
+tracking, Escape closing and restoring the label. At 900: closed 0, open 256,
+scrim 900x850 and active, exactly as before.
+
+**A measurement trap worth recording.** getComputedStyle right after a class
+change returned the PREVIOUS value in this browser pane, which made `--hidden`
+look inert and `--expanded` look like it collapsed the nav - the readings were
+lagging one step. Forcing layout with offsetWidth and waiting two animation
+frames fixed it, and the true readings then matched the stylesheet's own order
+exactly: 256 / 0 / 256 / 256.
+
 **2026-09-06 - the empty time row, and why it was empty.** rux asked why no
 times showed. The bar was reading `trips.departure_time` and `return_time`,
 and those columns are **null on all 743 rows** - counted, not sampled. They

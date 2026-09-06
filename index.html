@@ -16,27 +16,21 @@
 <link rel="stylesheet" href="sch.css">
 <script src="vendor/rux-ds/js/theme.js"></script>
 <style>
-/* THE ONE PIECE OF LAYOUT CARBON DOES NOT SHIP.
-   `.rux--content` is only ever indented by a SIBLING side nav, and the nav in
-   this shell lives inside the header, so none of Carbon's three rules match.
-   IBM hit the same wall: carbondesignsystem.com pads its own main region with
-   a site class, `Main-module--padded`, at `padding: 80px 32px 160px 302.5px`.
-   There is no Carbon class for it to use, and none for this to use either.
+/* NO OFFSET FOR THE NAV, BECAUSE THE NAV IS NOT THERE UNTIL IT IS ASKED FOR.
+   The template reserves 18rem on the left above 66rem -- 16rem of persistent
+   side nav plus .rux--content's own 2rem -- and this page gives that 256rem
+   back to the grid instead. The nav carries `rux--side-nav--hidden`, which
+   Carbon declares AFTER `--side-nav--ux` and BEFORE `--expanded`, so it is 0
+   at every width and the hamburger's own `--expanded` still opens it to 16rem.
+   It is position: fixed at z-index 8000 with an opaque background, so it
+   covers the page rather than pushing it, which is what it already does below
+   the breakpoint. Measured 2026-09-06 with a forced reflow between each step:
+   256 / 0 / 256 / 256 for base, +hidden, +hidden+expanded, +expanded.
 
-   A GRID OFFSET WAS TRIED AND IS WRONG. `lg:col-start-4` indents by three of
-   sixteen columns, which is proportional, while the nav is a fixed 16rem. At
-   1440 that overshoots to 60px of clearance; at 1100 it undershoots and the
-   content starts 4px INSIDE the nav. It also indents one column rather than
-   the region, so anything dropped into `main` outside that column slides
-   under the nav.
-
-   16rem clears the nav and the remaining 2rem is `.rux--content`'s own
-   padding, kept the same on every side. The breakpoint is the one Carbon
-   pairs the nav with. When Phase 4 makes `css/` the source this belongs
-   there as a real class, not here. */
-@media (min-width: 66rem) {
-  .rux--content { padding-inline-start: 18rem; }
-}
+   THE SCRIM STAYS BELOW THE BREAKPOINT. `side-nav__overlay-active` is 100vw
+   only under `max-width: 65.98rem`, so at desktop the nav opens over the page
+   with nothing dimmed. Escape closes it and so does the button; an outside
+   press does not, which is js/ui-shell.js's deliberate choice for a nav. */
 </style>
 </head>
 <body>
@@ -222,7 +216,7 @@
 
        js/ui-shell.js swaps the glyph to a close icon while the nav is open,
        which is the rest of what IBM specifies for this control. -->
-  <button type="button" class="rux--header__action rux--header__menu-trigger rux--header__menu-toggle rux--header__menu-toggle__hidden" aria-label="Toggle navigation" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-menu"/></svg></button>
+  <button type="button" class="rux--header__action rux--header__menu-trigger rux--header__menu-toggle" aria-label="Open menu" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-menu"/></svg></button>
 
   <!-- REPLACE: product name. The mark is brand/logo.svg -- SWAP THE FILE,
        not this markup: every shell here and every page the script exports
@@ -346,7 +340,7 @@
   <!-- REPLACE: the navigation. Every item needs an icon because the rail shows
        nothing else. An expandable category is a <button> plus its <ul>; a
        standalone link is an <a> on its own. -->
-  <nav class="rux--side-nav__navigation rux--side-nav rux--side-nav--ux" aria-label="Side navigation">
+  <nav class="rux--side-nav__navigation rux--side-nav rux--side-nav--ux rux--side-nav--hidden" aria-label="Side navigation">
     <ul class="rux--side-nav__items">
       <li class="rux--side-nav__item rux--side-nav__item--active">
         <a class="rux--side-nav__link rux--side-nav__link--current" href="./" aria-current="page">
