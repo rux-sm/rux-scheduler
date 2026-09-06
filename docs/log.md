@@ -4,6 +4,25 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the doubled rule beside the Bus column.** Reported and real:
+two hairlines side by side where every other boundary has one. The sticky
+column ends in a border and the first day drew a rule of its own at the same
+pixel. Both halves of the grid had it, and start-aligning the body's rules
+earlier the same day is what gave the body its half.
+
+The day rules now cover **the six boundaries between days and neither edge**.
+In the header the first day draws nothing, so the sticky column's own border
+survives - it has to, since it is what divides the frozen column from the days
+sliding under it. In the body the painted layer starts one day in and repeats
+every sixth of its own width, which is exactly one day, so the rules land on
+days 1 to 6 and never on either edge. Measured: the layer starts at 138px and
+runs 828px on a 138px day, and the gradient period reads 16.6667% of that.
+
+**Monday being today needed its own rule**, because box-shadow is one
+property: the first day has to lose the day rule while keeping the accent.
+Checked both ways by forcing the class - Monday gets the underline alone, a
+midweek day gets rule and underline.
+
 **2026-09-06 - the now-line removed, on rux's call.** Reported as landing on
 the wrong day when the window is narrow, and it was: measured at 900px, the
 line sat at 785px, inside Friday, with today on Sunday. **The cause is that
