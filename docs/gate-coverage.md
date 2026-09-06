@@ -9,6 +9,15 @@ a rux-ds clone, sweeping, and deleting them again. That is what was done
 below, and it is a gap worth closing upstream: an app on a tag cannot check
 its own rendering without a checkout of the design system beside it.
 
+## Re-swept 2026-09-06 at `abb971a`
+
+The grid moved onto `border-subtle-01` and `layer-accent-01` and the header
+band lost its vertical rules. **Every reading is unchanged again** - 60/55
+with 5 stripped and 56/56 clean, 0 a11y findings on both with the ring check
+live, 29/28 and 30/29 with the one `header__name` divergence. Colour was the
+whole change and `check-spacing` measures boxes; the contrast that moved was
+measured directly instead, and `docs/log.md` carries it.
+
 ## Re-swept 2026-09-06 at `9151235`
 
 The bar's default fill became blue, the selection ring moved to
