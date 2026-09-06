@@ -4,6 +4,33 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the flash on close, and a timer that could not win.** rux saw
+the panel appear again for an instant as it closed. It did.
+
+**The exit's `forwards` fill is the only thing holding the panel off-screen.**
+Carbon's exit is a 150ms animation; remove `--closing` and the element snaps
+back to opacity 1 at its original position. The close used a
+`setTimeout(150)`, which starts when it is called while the animation starts a
+frame later, so the class came off at about 88% of the way through. Sampled
+every frame: at 143ms the panel was at opacity 0.176 and 263px out, and the
+next frame had it at opacity 1 and x=0.
+
+Now `animationend` ends the exit and the timer is only a fallback, running
+long at 400ms for the case where a stylesheet suppresses animations - which
+the gate sweep does deliberately, and a panel that never hides would be worse
+than one that flashes. **`hidden` goes on before the class comes off**, so the
+snap happens to an element that is already `display: none`.
+
+**The frame sampler could not see this defect, and could not prove the fix.**
+It is worth writing down. The old code set `hidden` in the same statement pair
+as the class removal, so no `requestAnimationFrame` sample ever caught a frame
+that was both visible and at full opacity - the run before the fix looks clean
+in the log. The animation runs on the COMPOSITOR, and cancelling it commits a
+full-strength frame there that the main thread never observes. Visible to the
+eye, invisible to script. What is measurable is that the animation now
+completes - 0.102 at 287px on the last visible frame against 0.176 at 263px
+before - and the rest is structural, confirmed by rux looking at it.
+
 **2026-09-06 - the panel was open the whole time, and `hidden` could not
 close it.** rux asked whether the panel is always open like that even when
 empty. It was, on every load, and the entry below this one did not notice:

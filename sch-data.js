@@ -643,16 +643,43 @@
     return wrap;
   };
 
+  /* THE EXIT IS ENDED BY THE ANIMATION, NEVER BY A TIMER. Carbon's exit is a
+     150ms animation with `forwards`, and that fill is the only thing holding
+     the panel off-screen once it finishes -- remove `--closing` and the
+     element SNAPS back to opacity 1 at its original position. A
+     `setTimeout(150)` loses that race every time: the timer starts when it is
+     called and the animation starts a frame later, so the class came off at
+     about 88% of the way through. Sampled every frame on 2026-09-06: at 143ms
+     the panel was still at opacity 0.176 and 263px out, and the next frame had
+     it back at opacity 1 and x=0. That one full-strength frame is the flash
+     rux reported -- the panel appearing again just as it should have gone.
+
+     ORDER MATTERS AS MUCH AS THE TRIGGER. `hidden` goes on FIRST, while the
+     fill still holds the panel out of sight, and only then does the class come
+     off; the snap happens to an element that is already `display: none`.
+
+     The timer stays as a FALLBACK, not the mechanism. `animationend` does not
+     arrive if a stylesheet suppresses animations -- which the gate sweep does
+     deliberately -- and a panel that never hides is worse than one that
+     flashes. It runs long, and whichever fires first wins. */
+  function endClose() {
+    if (!panelEl.classList.contains('rux--side-panel--closing')) return;
+    panelEl.removeEventListener('animationend', onExitEnd);
+    panelEl.hidden = true;
+    panelEl.classList.remove('rux--side-panel--closing');
+  }
+
+  // NOT `{ once: true }`: the header runs animations of its own and they
+  // bubble, so a listener spent on the first event to arrive would be spent on
+  // the wrong one. This waits for an animation that ended on the panel itself.
+  function onExitEnd(e) { if (e.target === panelEl) endClose(); }
+
   function closePanel(returnFocus = true) {
     if (panelEl.hidden) return;
-    // Carbon's own pair: --closing runs the exit, then the element goes back
-    // to hidden. Without the wait the panel would vanish rather than leave.
     panelEl.classList.remove('rux--side-panel--open');
     panelEl.classList.add('rux--side-panel--closing');
-    setTimeout(() => {
-      panelEl.classList.remove('rux--side-panel--closing');
-      panelEl.hidden = true;
-    }, 150);
+    panelEl.addEventListener('animationend', onExitEnd);
+    setTimeout(endClose, 400);
     pageEl?.classList.remove('sch-page--with-panel');
     for (const b of document.querySelectorAll('.sch-bar[aria-pressed="true"]')) b.setAttribute('aria-pressed', 'false');
     const opener = panelOpener;
