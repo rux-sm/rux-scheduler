@@ -4,6 +4,37 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the trip panel, read only.** Step 4 of
+`docs/screen-inventory.md` section 5, and the first thing that makes clicking
+a bar lead anywhere. It shows a trip; it changes nothing yet. Editing goes in
+field by field, the way the drag did.
+
+Carbon's `side-panel`, and **no rux-ds module claims it**, so opening and
+closing it is this app's own behaviour on Carbon's own markup - the classes
+are compiled and the structure is the sink's; only the open state is ours.
+The slide-in variant, not the default: it drops the shadow because the page
+makes ROOM rather than letting the panel float over the grid. `.sch-page`
+takes the panel's 30rem as end padding and the grid follows on its own,
+because it measures its pane. Measured with it open: page padding 480px, day
+columns at their 136px floor with the week scrolling, grid right edge 896
+against the panel's left at 960, so nothing is covered. Closed, the columns
+go back to 181.
+
+**The spot time finally has somewhere to be.** The bar's one line of times
+holds departure and return and no more; be-at-the-yard is read in the panel,
+along with the full itinerary for that leg, the drivers' full names and roles,
+the requirements, the trip type and the notes.
+
+**Focus is handled, because a panel that drops it is worse than none.** Open
+puts focus on the close button, Escape and the close button both return it to
+the bar that opened it, and the bar's selection clears with it. A render
+replaces every bar, so a panel left open across one closes itself rather than
+pointing at an element no longer in the page.
+
+Not done and deliberate: no editing, no actions in the header yet, and the
+availability section is not built - section 7 says it is a second row group in
+the grid rather than panel content, so it is its own piece of work.
+
 **2026-09-06 - where every surface lives, written down before the first panel
 is built.** rux asked whether there was a general plan for the old right
 panel's contents. There were per-surface verdicts and no architecture, so

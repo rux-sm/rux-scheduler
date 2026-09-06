@@ -138,7 +138,7 @@
     'id', 'destination', 'customer', 'start_date', 'end_date',
     'return_start_date', 'return_end_date', 'departure_time', 'return_time',
     'trip_type', 'confirmed', 'trip_bar_color', 'bus_count', 'return_bus_count',
-    'req_sleeper', 'req_ada', 'req_56pax',
+    'req_sleeper', 'req_ada', 'req_56pax', 'notes',
     'trip_assignments(id,bus_id,position,leg,trip_drivers(driver_id,role))',
     // THE TIMES ARE HERE, NOT ON THE TRIP. `trips.departure_time`,
     // `return_time` and `spot_time` are null on all 743 rows -- counted
@@ -263,6 +263,7 @@
     bar.tabIndex = 0;
     bar.setAttribute('aria-pressed', 'false');
     bar.dataset.tripId = trip.id;
+    bar.dataset.leg = leg.leg;
     if (assign) {
       bar.dataset.assignmentId = assign.id;
       bar.dataset.busId = assign.bus_id ?? '';
@@ -324,6 +325,10 @@
   function render(data) {
     const { buses, trips, drivers, oos, weekStart, weekEnd } = data;
     const driversById = new Map(drivers.map(d => [d.id, d]));
+    // What the panel reads when a bar is clicked: the bar carries ids, not
+    // objects, and re-fetching a trip already in hand would be a round trip
+    // for nothing.
+    panelIndex = { trips: new Map(trips.map(t => [t.id, t])), buses: new Map(buses.map(b => [b.id, b])), driversById };
 
     const tracks = new Map();
     const push = (key, bar) => { if (!tracks.has(key)) tracks.set(key, []); tracks.get(key).push(bar); };
@@ -444,6 +449,10 @@
     // screen must not draw a rule of its own.
     const shownRows = [...gridEl.querySelectorAll('.sch-row')].filter(r => !r.hidden);
     shownRows[shownRows.length - 1]?.classList.add('sch-row--last');
+
+    // Every bar is replaced on a render, so the panel's opener is gone. Close
+    // rather than leave a panel pointing at an element no longer in the page.
+    closePanel(false);
 
     schEl.hidden = false;
 
@@ -592,6 +601,145 @@
       bar.addEventListener('pointercancel', up);
     });
   }
+
+  /* ── THE TRIP PANEL ───────────────────────────────────────────────────────
+     READ ONLY for now: it shows a trip, it changes nothing. Editing goes in
+     field by field, the way the drag went in.
+
+     NO rux-ds MODULE CLAIMS `side-panel`, so opening and closing it is this
+     app's own behaviour on Carbon's own markup -- the class is compiled, the
+     structure is the sink's, and only the open/closed state is ours. Escape
+     closes it and focus goes back to the bar that opened it, because a panel
+     that swallows focus on close leaves a keyboard user at the top of the
+     document.
+
+     THE PAGE MAKES ROOM rather than the panel floating over it: `.sch-page`
+     takes the panel's width as end padding, and the grid follows on its own
+     because it measures its pane. Carbon's slide-in variant exists for
+     exactly this and drops the shadow a floating panel would carry.
+     ────────────────────────────────────────────────────────────────────────*/
+  let panelIndex = { trips: new Map(), buses: new Map(), driversById: new Map() };
+  let panelOpener = null;
+
+  const panelEl = document.getElementById('sch-panel');
+  const panelBody = document.getElementById('sch-panel-body');
+  const panelTitle = document.getElementById('sch-panel-title');
+  const panelTitleCollapsed = document.getElementById('sch-panel-title-collapsed');
+  const panelSubtitle = document.getElementById('sch-panel-subtitle');
+  const pageEl = document.querySelector('.sch-page');
+
+  const def = (rows) => {
+    const dl = el('dl', 'sch-def');
+    for (const [k, v] of rows) {
+      if (!v) continue;
+      dl.append(el('dt', null, k), el('dd', null, v));
+    }
+    return dl;
+  };
+
+  const section = (title, node) => {
+    const wrap = el('div', 'sch-panel-section');
+    wrap.append(el('div', 'sch-panel-section__title', title), node);
+    return wrap;
+  };
+
+  function closePanel(returnFocus = true) {
+    if (panelEl.hidden) return;
+    panelEl.hidden = true;
+    pageEl?.classList.remove('sch-page--with-panel');
+    for (const b of document.querySelectorAll('.sch-bar[aria-pressed="true"]')) b.setAttribute('aria-pressed', 'false');
+    const opener = panelOpener;
+    panelOpener = null;
+    window.Rux?.schedule?.fit?.();
+    if (returnFocus && opener?.isConnected) opener.focus();
+  }
+
+  function openPanel(bar) {
+    const trip = panelIndex.trips.get(bar.dataset.tripId);
+    if (!trip) return;
+    const legName = bar.dataset.leg || 'outbound';
+    const leg = legsOf(trip).find(l => l.leg === legName) ?? legsOf(trip)[0];
+    const bus = panelIndex.buses.get(bar.dataset.busId);
+    const assign = (trip.trip_assignments || []).find(a => a.id === bar.dataset.assignmentId);
+
+    panelTitle.textContent = trip.destination || 'No destination';
+    panelTitleCollapsed.textContent = trip.destination || 'No destination';
+    panelSubtitle.textContent = trip.customer || '';
+
+    const legDays = daysBetween(parseISO(leg.from), parseISO(leg.to)) + 1;
+    const when = leg.from === leg.to
+      ? parseISO(leg.from).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+      : `${parseISO(leg.from).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} to ${parseISO(leg.to).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} (${legDays} days)`;
+
+    const names = assign
+      ? (assign.trip_drivers || []).map(d => {
+          const who = panelIndex.driversById.get(d.driver_id);
+          const name = who ? (who.name || who.short_name) : null;
+          return name ? (d.role && d.role !== 'driver' ? `${name} (${d.role})` : name) : null;
+        }).filter(Boolean)
+      : [];
+
+    const reqs = [
+      trip.req_sleeper ? 'Sleeper' : null,
+      trip.req_ada ? 'ADA lift' : null,
+      trip.req_56pax ? '56 pax' : null,
+    ].filter(Boolean).join(', ');
+
+    panelBody.replaceChildren();
+    panelBody.appendChild(def([
+      ['Leg', legName === 'return' ? 'Return' : 'Outbound'],
+      ['When', when],
+      // THE SPOT TIME FINALLY HAS A HOME. The bar's one line of times could
+      // hold departure and return and no more; be-at-the-yard is read here.
+      ['Departs', hhmm(leg.depart)],
+      ['Spot', hhmm(leg.spot)],
+      ['Returns', hhmm(leg.back)],
+      ['Bus', bus ? `${bus.number}${(leg.count || 1) > 1 ? ` — ${(assign?.position ?? 0) + 1} of ${leg.count}` : ''}` : 'Not assigned'],
+      ['Drivers', names.join(', ') || (assign ? 'None assigned' : null)],
+      ['Type', trip.trip_type ? String(trip.trip_type).replace(/_/g, ' ') : null],
+      ['Status', trip.confirmed === false ? 'Unconfirmed' : 'Confirmed'],
+      ['Needs', reqs],
+    ]));
+
+    const stops = (trip.trip_stops || [])
+      .filter(st => (st.leg || 'outbound') === legName)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    if (stops.length) {
+      const list = el('div', 'rux--structured-list rux--structured-list--condensed');
+      list.setAttribute('role', 'table');
+      const body = el('div', 'rux--structured-list-tbody');
+      body.setAttribute('role', 'rowgroup');
+      for (const st of stops) {
+        const row = el('div', 'rux--structured-list-row');
+        row.setAttribute('role', 'row');
+        const when = el('div', 'rux--structured-list-td rux--structured-list-content--nowrap', hhmm(st.depart_prev) || hhmm(st.arrive) || '');
+        when.setAttribute('role', 'cell');
+        const what = el('div', 'rux--structured-list-td', [st.label, st.name, st.address].filter(Boolean).join(' — ') || st.type || 'Stop');
+        what.setAttribute('role', 'cell');
+        row.append(when, what);
+        body.appendChild(row);
+      }
+      list.appendChild(body);
+      panelBody.appendChild(section('Itinerary', list));
+    }
+
+    if (trip.notes) panelBody.appendChild(section('Notes', el('p', null, trip.notes)));
+
+    panelOpener = bar;
+    panelEl.hidden = false;
+    pageEl?.classList.add('sch-page--with-panel');
+    window.Rux?.schedule?.fit?.();
+    document.getElementById('sch-panel-close')?.focus();
+  }
+
+  document.getElementById('sch-panel-close')?.addEventListener('click', () => closePanel());
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !panelEl.hidden) { e.preventDefault(); closePanel(); }
+  });
+  gridEl.addEventListener('click', e => {
+    const bar = e.target.closest('.sch-bar');
+    if (bar && bar.dataset.tripId) openPanel(bar);
+  });
 
   // -- the week, and moving between them ------------------------------------
   let cursor = mondayOf(new Date());

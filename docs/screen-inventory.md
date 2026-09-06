@@ -157,23 +157,49 @@ that by accident. **Three homes, and one rule for choosing.**
   picker is compiled and `templates/schedule-page.html` already uses it.
 - **Print → a modal over the same page**, not a separate window.
 
-### The driver availability grid is PANEL content, not a popover
+### The driver availability grid is a SECOND SECTION OF THE GRID
 
-§2 records it as "later, the popover module", and that is wrong — corrected
-here rather than quietly. **It is coupled to the schedule's selection**: rux's
-own account of the old board is that clicking a trip highlights the row for
-that trip's date, so a dispatcher can read off which drivers are free then.
-That makes it an answer about the selected trip, which is the panel's whole
-job, and it belongs beside the trip's own driver list: who is driving this,
-and who else could.
+Corrected twice, so both wrong answers are on the record. §2 called it a
+popover. The first version of this section called it panel content, reasoning
+that it answers a question about the selected trip. **Both miss what the task
+is.** rux: *"when looking at the scheduler trying to decide on available
+driver usually its open to view both schedule and driver availability grid at
+the same time."* The board is half the answer -- which buses are busy -- and
+the grid is the other half. Putting the second half in a panel squeezes the
+first to about 118px a day, which is the opposite of what the task needs.
 
-The same grid appears in two framings, and only one of them is the panel:
+**Both are week-by-day grids, so they share the day columns.** Availability is
+a second row group under the bus rows, full width, same seven columns at the
+same widths, so a column means the same thing in both and a day reads straight
+down: this bus is busy Thursday, these three drivers are free Thursday. It
+holds the selected trip's dates highlighted, which is what the old board did.
 
-| Where | Framing |
+| | |
 |---|---|
-| The trip panel | Highlighted to the selected trip's dates. For assigning. |
-| The Drivers page | The whole grid, nothing highlighted. For browsing. |
+| **Trigger** | A toolbar toggle. It is a companion view, not the detail of anything, so it stays on until turned off. |
+| **In the trip panel** | Nothing. The panel carries the trip's own drivers; who ELSE is free is read on the board. |
+| **On the Drivers page** | The same grid, nothing highlighted, for browsing without a trip. |
+| **Still a popover** | The per-driver card -- photo, city, phone, licence and medical expiry -- that opens from a cell in that grid. That is the detail of a cell, not a surface. |
 
-**What does stay a popover is the per-driver card** — the photo, city, phone,
-licence and medical expiry that the old app showed when a cell in that grid
-was clicked. That is the detail of a cell inside a surface, not a surface.
+### The two regions coexist
+
+They are different places and both can be open: the availability section below
+the grid, the trip panel to the right. That is the arrangement the work needs
+-- the board, who is free, and the trip being assigned, all at once -- and it
+is what the old app got from a right panel plus a floating window, without the
+floating window. Only the panel is one-at-a-time: a trip, a driver, a bus or a
+request, whichever was selected last.
+
+When the panel is open it shrinks the grid and the availability section shrinks
+with it, so the two stay aligned; the day columns fall toward their minimum and
+the week scrolls until it closes.
+
+### The trip bar does not expand any more
+
+The old bar grew on click to reveal five ghost action icons above and more
+trip information below. **Dropped.** On a dense board a bar growing changes its
+row's height and re-stacks the lanes beside it, so what you were comparing
+against moves. Everything it revealed has a better home: the information is
+the panel's whole job, and the actions go in the panel's header where they can
+carry labels. The two or three wanted without opening anything belong on a
+right-click menu, which that board already had for Add trip.

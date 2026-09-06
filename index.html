@@ -370,6 +370,10 @@
   afternoon one on the same bus, so marking those would be a false alarm). -->
   <div class="rux--css-grid">
     <div class="rux--css-grid-column rux--col-span-100">
+      <!-- An app-owned wrapper so the page can make room for the side panel
+           without a rule on a rux-- class. `--with-panel` is set by
+           sch-data.js while the panel is open. -->
+      <div class="sch-page">
       <div class="rux--stack-vertical rux--stack-scale-5">
         <!-- THE PAGE'S NAME IS IN THE OUTLINE, NOT ON THE SCREEN. Three pieces of
              chrome already say it: the tab title, the app name in the header, and
@@ -421,8 +425,30 @@
           <div class="sch-grid" id="sch-grid"></div>
         </div>
       </div>
+      </div>
     </div>
   </div>
+
+  <!-- THE TRIP PANEL. Carbon's own side panel; no rux-ds module claims it, so
+       sch-data.js opens and closes it and says so in its own comment. Slide-in
+       rather than the default: it drops the shadow, because the page makes
+       room beside it instead of letting it float over the grid. -->
+  <aside class="rux--side-panel rux--side-panel--right-placement rux--side-panel--md rux--side-panel--slide-in" id="sch-panel" aria-label="Trip" hidden>
+    <div class="rux--side-panel__header rux--side-panel__header--has-title">
+      <p class="rux--side-panel__label-text" id="sch-panel-label">Trip</p>
+      <div class="rux--side-panel__title">
+        <h2 class="rux--side-panel__title-text" id="sch-panel-title">&nbsp;</h2>
+        <h2 class="rux--side-panel__collapsed-title-text" id="sch-panel-title-collapsed">&nbsp;</h2>
+      </div>
+      <div class="rux--side-panel__decorator-and-close">
+        <button type="button" class="rux--side-panel__close-button rux--btn rux--btn--primary rux--btn--icon-only" id="sch-panel-close" aria-label="Close">
+          <svg class="rux--side-panel--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+      </div>
+      <p class="rux--side-panel__subtitle-text" id="sch-panel-subtitle"></p>
+    </div>
+    <div class="rux--side-panel__inner-content rux--side-panel--scrolls" id="sch-panel-body"></div>
+  </aside>
 </main>
 
 <!-- The behaviour layer. The kernel loads FIRST; the others delegate to it. -->

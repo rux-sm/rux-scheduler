@@ -427,3 +427,40 @@
 /* Everything before this sits left, everything after it right. */
 .sch-toolbar__spacer { flex: 1; }
 
+
+/* ── THE PAGE BESIDE THE PANEL ──────────────────────────────────────────────
+   Carbon's side panel is `position: fixed` at z-index 9000, so it floats over
+   whatever is under it. The slide-in variant drops its shadow precisely so an
+   app can make room instead, and this is that room: the schedule region gets
+   the panel's own width as end padding while it is open, so the board stays
+   readable rather than hidden behind it. The grid measures its own pane, so
+   the columns and the height follow on their own -- they fall toward the
+   minimum and the week scrolls, which is the price of having both. */
+.sch-page { transition: padding-inline-end .11s cubic-bezier(.2, 0, 1, .9); }
+.sch-page--with-panel { padding-inline-end: 30rem; }
+
+/* Definition rows in the panel. Carbon's structured list is the nearest
+   compiled pattern and is used for the itinerary, which is a real table; a
+   trip's own fields are label-and-value pairs rather than rows of a table, so
+   they are a description list, which is what they are. */
+.sch-def { display: grid; grid-template-columns: 7rem 1fr; gap: var(--rux-spacing-03) var(--rux-spacing-05); margin: 0; }
+.sch-def dt {
+  font-size: var(--rux-label-01-font-size);
+  line-height: var(--rux-label-01-line-height);
+  letter-spacing: var(--rux-label-01-letter-spacing);
+  color: var(--rux-text-secondary);
+}
+.sch-def dd {
+  margin: 0;
+  font-size: var(--rux-body-compact-01-font-size);
+  line-height: var(--rux-body-compact-01-line-height);
+  color: var(--rux-text-primary);
+}
+.sch-panel-section { margin-block-start: var(--rux-spacing-06); }
+.sch-panel-section__title {
+  font-size: var(--rux-label-01-font-size);
+  line-height: var(--rux-label-01-line-height);
+  letter-spacing: var(--rux-label-01-letter-spacing);
+  color: var(--rux-text-secondary);
+  margin-block-end: var(--rux-spacing-03);
+}
