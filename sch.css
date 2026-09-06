@@ -40,13 +40,22 @@
   --sch-ls: var(--rux-label-01-letter-spacing);
   --sch-row-h: calc(var(--rux-label-01-font-size) * var(--rux-label-01-line-height));
   --sch-bar-h: calc(var(--sch-bar-rows) * var(--sch-row-h) + 2 * var(--rux-spacing-02));
-  /* ONE GAP GOVERNS EVERY EDGE OF A BAR. It was spacing-01 left and right
-     against spacing-02 above and below, measured 2px against 4px, which is
-     what made a bar look wedged into its day. spacing-02 on all four sides
-     also lands the bar's first character at 12px from the day boundary --
-     4px gap plus its own 8px padding -- which is exactly where the day
-     header's label starts, so the column reads as one line of text. */
+  /* THE GAP IS MEASURED TO THE BOUNDARY; THE EYE MEASURES TO THE LINE.
+     Every rule is 1px painted on one side of the boundary it marks, so it
+     falls INSIDE the gap on that side and outside it on the other. With one
+     value on all four sides the clear space came out 3px left and bottom
+     against 4px right and top -- measured 2026-09-06, and visible once you
+     look closely. Two values fix it: `--sch-gap` where the rule is inside
+     (the day rule sits in its column's first pixel, the row rule in its
+     row's last), `--sch-gap-clear` where it is not. Three pixels of clear
+     space on all four sides, and the bar's first character still lands at
+     12px from the day boundary -- 4px plus its own 8px of padding -- which is
+     where the day header's own label starts. */
   --sch-gap: var(--rux-spacing-02);
+  --sch-gap-clear: calc(var(--sch-gap) - 1px);
+  /* Between two stacked bars there is no rule at all, so this separates bar
+     from bar and stays at the full 4px: were it 3px like the rest, two bars
+     in one row would read as closer to each other than to the grid. */
   --sch-lane-gap: var(--sch-gap);
   position: relative;
   overflow: auto;
@@ -206,7 +215,7 @@
 .sch-track {
   position: relative;
   grid-column: span var(--sch-days);
-  min-block-size: calc(var(--sch-lanes, 1) * (var(--sch-bar-h) + var(--sch-lane-gap)) + var(--sch-lane-gap));
+  min-block-size: calc(var(--sch-gap-clear) + var(--sch-lanes, 1) * var(--sch-bar-h) + (var(--sch-lanes, 1) - 1) * var(--sch-lane-gap) + var(--sch-gap));
   border-block-end: 1px solid var(--rux-border-subtle);
 }
 
@@ -255,9 +264,9 @@
   --sch-hover: var(--rux-tag-hover-gray);
   --sch-border: var(--rux-tag-border-gray);
   position: absolute;
-  inset-block-start: calc(var(--sch-lane-gap) + var(--sch-lane, 0) * (var(--sch-bar-h) + var(--sch-lane-gap)));
+  inset-block-start: calc(var(--sch-gap-clear) + var(--sch-lane, 0) * (var(--sch-bar-h) + var(--sch-lane-gap)));
   inset-inline-start: calc(var(--sch-start) * (100% / var(--sch-days)) + var(--sch-gap));
-  inline-size: calc(var(--sch-span) * (100% / var(--sch-days)) - 2 * var(--sch-gap));
+  inline-size: calc(var(--sch-span) * (100% / var(--sch-days)) - var(--sch-gap) - var(--sch-gap-clear));
   block-size: var(--sch-bar-h);
   box-sizing: border-box;
   padding: var(--rux-spacing-02) var(--rux-spacing-03);
@@ -299,7 +308,7 @@
    that day ends; subtracting both gaps left it one gap short of its own day. */
 .sch-bar--from-prev {
   inset-inline-start: 0;
-  inline-size: calc(var(--sch-span) * (100% / var(--sch-days)) - var(--sch-gap));
+  inline-size: calc(var(--sch-span) * (100% / var(--sch-days)) - var(--sch-gap-clear));
   border-inline-start: 3px dotted var(--sch-border);
 }
 .sch-bar--to-next { inset-inline-end: 0; inline-size: auto; border-inline-end: 3px dotted var(--sch-border); }

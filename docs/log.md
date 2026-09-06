@@ -4,6 +4,29 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - three pixels clear, evenly, on rux's call.** The gap was 4px
+to every boundary and the clear space was not: 3px left and bottom against
+4px right and top. **Every rule is 1px painted on one side of the boundary it
+marks**, so it falls inside the gap on that side - the day rule sits in its
+column's first pixel, the row rule in its row's last - and outside it on the
+other. Two variables now: `--sch-gap` where the rule is inside, and
+`--sch-gap-clear`, one pixel less, where it is not.
+
+Measured after: 3px clear on all four sides, the bar unchanged at 88px, the
+single-lane row 95px rather than 96. The bar's first character still lands at
+12px from the day boundary, which is where the day header's own label starts,
+so the alignment that mattered did not move.
+
+**The continuing edges keep no gap, which was rux's own point.** A bar running
+in from last week sits flush at the track's left with 3px on its right; one
+running out into next week is flush at the right with 3px on its left. The
+space is what says the trip stops there, so an edge that does not stop has
+none. Verified on the specimen, both directions.
+
+**Between two stacked bars stays 4px.** There is no rule there - it separates
+bar from bar rather than bar from line - and at 3px two bars in one row would
+read as closer to each other than to the grid.
+
 **2026-09-06 - whole-pixel day columns, and what "pixel perfect" turned out
 to mean.** rux asked for the bars to be pixel perfect in the grid. Audited
 first: **the placement arithmetic was already exact**, worst deviation 0.016px
