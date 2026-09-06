@@ -4,6 +4,56 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the live week, read only.** `index.html` now draws the real
+schedule: `sch-data.js` reads `buses`, `trips` with their `trip_assignments`
+and `trip_drivers` nested, `drivers` and `bus_out_of_service` straight from
+the Supabase project the rux-ui app writes, through the client
+`/account.js` exposes. Nothing writes; New trip ships disabled. Week
+navigation works. The static states moved to `specimen.html`, which needs no
+network and stays the design reference; it is deliberately not in the nav.
+
+**A bar is one ASSIGNMENT, not one trip** - the model the data actually has.
+A trip carries an outbound leg and, when it is a drop-off and pick-up, a
+return leg days later; assignments name a bus per leg and per position. So
+the Dallas trip of 7 to 11 September renders as seven bars across seven bus
+rows, each labelled its position of seven, and a drop-off renders as two
+bars on one row with a gap. A leg needing more buses than it has
+assignments puts the difference on Unassigned as "Needs a bus"; verified on
+Harlingen (pm) that week, which needs four and has three.
+
+**Two faults found by measuring, not by reading.** The week label built by
+hand read "7 - September 13, 2026"; it is `Intl.DateTimeFormat.formatRange`
+now, which knows the form for the locale. And the day header only sticks to
+its SCROLL CONTAINER, which was never scrolling - the page was, so the
+header slid away above ten bus rows. The grid is its own scroll pane now;
+measured after, the header holds at the top and the bus column at the left
+through both scroll directions.
+
+**No conflict marking, deliberately.** Placement here is by day, and two
+same-day trips on one bus are ordinary. Marking every overlap would cry
+wolf on most rows; real detection needs the times, which is the
+time-aligned mode, which is later. The specimen still draws the state.
+
+**ONE THING NEEDS RUX'S CALL: amber.** rux-ui stores a colour name and its
+own module maps retired names onto five live ones - teal, green, purple,
+amber, pink. Carbon's tag palette has no amber, and amber is the most-used
+of the five (22 rows of 64 counted 2026-09-06, counting the yellow that
+maps to it). It renders warm-gray today, which is honest but drops the
+distinction. Either amber goes neutral, or `sch.css` gets one bar hue that
+is not a Carbon tag. Not decided here.
+
+Measured live at 1440x950 against the real project: current week 11 rows and
+19 bars, next week 18 bars with 7 multi-day, one continuing into the week
+after, two unconfirmed drawn hollow. All five themes resolve their own
+tokens, read off the computed styles rather than the screenshots, which lag
+while the browser pane is hidden. Selection, keyboard Enter and both size
+tiers work on live bars: 88px compact, 98px comfortable.
+
+Not covered: no drag, no editor, no realtime, no time-aligned mode, no
+two-week view, no print. The side nav's other five items go nowhere yet.
+`check-a11y` and the spacing gate are rux-ds's and have never run against
+this app.
+
 **2026-09-06 — pin moved to v0.1.7.** The tag was cut in rux-ds at
 `57031cc`, verified there in a clean worktree with all 41 browser cells
 current, nothing removed in `CHANGES.md`. The move brought

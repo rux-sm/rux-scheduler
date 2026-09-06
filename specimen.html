@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Scheduler</title>
+<title>Trip bar specimen</title>
 <link rel="icon" href="brand/favicon.svg" type="image/svg+xml">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="vendor/rux-ds/assets/fonts/IBMPlexSans-Regular-Latin1.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="vendor/rux-ds/assets/fonts/IBMPlexSans-SemiBold-Latin1.woff2">
@@ -387,26 +387,29 @@
 </header>
 
 <main id="main-content" class="rux--content">
-<!-- BEHAVIOUR: the live week grid · 2026-09-06 · sch-data.js fills #sch-grid
-  from the same Supabase tables the rux-ui app writes -- buses, trips, their
-  assignments and drivers, and out-of-service windows -- READ ONLY: nothing on
-  this page writes, and no control here edits a trip. The grid and the trip bar
-  are this app's own components (sch.css); the toolbar, shell and notification
-  are Carbon parts from the pinned rux.css. Every state the grid CAN draw is on
-  specimen.html, which needs no network; this page draws only what the week
-  holds. Not covered: no drag, no editor, no time-aligned mode, no realtime, no
-  conflict marking (day granularity cannot tell a morning trip from an
-  afternoon one on the same bus, so marking those would be a false alarm). -->
+<!-- BEHAVIOUR: static specimen · 2026-09-06 · invented trips on an invented
+  week, Mon 7 to Sun 13 September 2026, today drawn on Wednesday for the
+  specimen and not read from a clock. The grid and the trip bar are this
+  app's own components (sch.css); the toolbar, side nav, switcher, tags and
+  overflow menu are Carbon parts as compiled in the pinned rux.css. What it
+  shows: a two-day bar, a bar continuing from last week, one continuing into
+  next week with a partial-PO border, two bars overlapping into a second
+  lane, an unconfirmed hollow bar, a double booking, an out-of-service
+  stripe with its row icon, and the Unassigned row. What it does: a click
+  selects a bar (aria-pressed), the switcher changes the size tier. Not
+  covered: no data, no drag, no editor, no week navigation, no time-aligned
+  mode, no realtime. -->
   <div class="rux--css-grid">
     <div class="rux--css-grid-column rux--col-span-100">
       <div class="rux--stack-vertical rux--stack-scale-5">
-        <h1>Schedule</h1>
+        <h1>Trip bar specimen</h1>
+        <p>Every state the grid can draw, on invented trips and no network. This page is the design reference for <code>sch.css</code>: the live <a class="rux--link" href="./">Schedule</a> shows only the states this week happens to contain. Not linked from the side nav on purpose.</p>
         <div class="sch-toolbar">
-          <button type="button" class="rux--btn rux--btn--primary rux--layout--size-md" disabled>New trip<svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg></button>
-          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-prev" aria-label="Previous week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
-          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-md" id="sch-today">Today</button>
-          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-next" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
-          <h2 class="sch-toolbar__range rux--type-heading-compact-02" id="sch-range">&nbsp;</h2>
+          <button type="button" class="rux--btn rux--btn--primary rux--layout--size-md">New trip<svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg></button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" aria-label="Previous week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-md">Today</button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
+          <h2 class="sch-toolbar__range rux--type-heading-compact-02">7 – 13 September 2026</h2>
           <span class="sch-toolbar__spacer"></span>
           <div class="sch-toolbar__sizes">
           <div class="rux--content-switcher rux--content-switcher--sm rux--layout--size-sm rux--layout-constraint--size__default-md rux--layout-constraint--size__min-sm rux--layout-constraint--size__max-lg" role="tablist" aria-label="Trip bar size" data-sch-sizes="#sch">
@@ -414,28 +417,140 @@
             <button type="button" class="rux--content-switcher-btn" role="tab" aria-selected="false" tabindex="-1" data-size="lg"><span class="rux--content-switcher__label">Comfortable</span></button>
           </div>
           </div>
-        </div>
-
-        <!-- One live region for both states the loader can be in. It ships
-             saying "Loading", so a page whose script never runs says something
-             true rather than showing an empty grid that looks like an empty
-             week. -->
-        <div id="sch-status" role="status" aria-live="polite">
-          <div class="rux--inline-loading">
-            <div class="rux--inline-loading__animation">
-              <div class="rux--loading rux--loading--small">
-                <svg class="rux--loading__svg" viewBox="0 0 100 100">
-                  <circle class="rux--loading__background" cx="50%" cy="50%" r="42"></circle>
-                  <circle class="rux--loading__stroke" cx="50%" cy="50%" r="42"></circle>
-                </svg>
-              </div>
-            </div>
-            <div class="rux--inline-loading__text">Loading the week…</div>
+          <div style="position:relative">
+            <button type="button" class="rux--overflow-menu" aria-expanded="false" aria-haspopup="true" aria-label="View options">
+              <svg class="rux--overflow-menu__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg>
+            </button>
+            <ul class="rux--overflow-menu-options" role="menu">
+              <li class="rux--overflow-menu-options__option" role="none"><button type="button" class="rux--overflow-menu-options__btn" role="menuitem" tabindex="0"><div class="rux--overflow-menu-options__option-content">Time-aligned</div></button></li>
+              <li class="rux--overflow-menu-options__option" role="none"><button type="button" class="rux--overflow-menu-options__btn" role="menuitem" tabindex="-1"><div class="rux--overflow-menu-options__option-content">Start on Sunday</div></button></li>
+              <li class="rux--overflow-menu-options__option" role="none"><button type="button" class="rux--overflow-menu-options__btn" role="menuitem" tabindex="-1"><div class="rux--overflow-menu-options__option-content">Two weeks</div></button></li>
+              <li class="rux--overflow-menu--divider rux--overflow-menu-options__option" role="none"><button type="button" class="rux--overflow-menu-options__btn" role="menuitem" tabindex="-1"><div class="rux--overflow-menu-options__option-content">Print schedule</div></button></li>
+            </ul>
           </div>
         </div>
-
-        <div class="sch" id="sch" role="region" aria-label="Week schedule" hidden>
-          <div class="sch-grid" id="sch-grid"></div>
+        <div class="sch" id="sch" style="--sch-today:2" role="region" aria-label="Week of 7 September 2026">
+          <div class="sch-grid">
+      <div class="sch-corner">Bus</div>
+      <div class="sch-day">Mon<span class="sch-day__num">7</span></div>
+      <div class="sch-day">Tue<span class="sch-day__num">8</span></div>
+      <div class="sch-day sch-day--today" aria-current="date">Wed<span class="sch-day__num">9</span></div>
+      <div class="sch-day">Thu<span class="sch-day__num">10</span></div>
+      <div class="sch-day">Fri<span class="sch-day__num">11</span></div>
+      <div class="sch-day sch-day--weekend">Sat<span class="sch-day__num">12</span></div>
+      <div class="sch-day sch-day--weekend">Sun<span class="sch-day__num">13</span></div>
+      <div class="sch-row">
+        <div class="sch-row-head"><div class="sch-row-head__num">Bus 101</div><div class="sch-row-head__meta">56 pax · Coach</div></div>
+        <div class="sch-track" style="--sch-lanes:2">
+        <article class="sch-bar sch-bar--blue" role="button" tabindex="0" aria-pressed="false" style="--sch-start:0;--sch-span:2;--sch-lane:0" aria-label="Boston, MA, Lincoln HS band · J. Alvarez">
+          <div class="sch-bar__row sch-bar__dest"><span>Boston, MA</span><span class="sch-bar__ref">1 of 2</span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Lincoln HS band · J. Alvarez</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>06:30 – 21:00</span><span>spot 06:00</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>56 pax · Hotel</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Ortiz · Nguyen</span></div>
+        </article>
+        <article class="sch-bar sch-bar--teal" role="button" tabindex="0" aria-pressed="false" style="--sch-start:3;--sch-span:1;--sch-lane:0" aria-label="Foxwoods, Riverside Seniors · M. Chen">
+          <div class="sch-bar__row sch-bar__dest"><span>Foxwoods</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Riverside Seniors · M. Chen</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>08:00 – 18:30</span><span>spot 07:30</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>44 pax · ADA lift</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Ortiz</span></div>
+        </article>
+        <article class="sch-bar sch-bar--purple sch-bar--unconfirmed" role="button" tabindex="0" aria-pressed="false" style="--sch-start:3;--sch-span:2;--sch-lane:1" aria-label="Newport, RI, Harbor Rotary · D. Reyes">
+          <div class="sch-bar__row sch-bar__dest"><span>Newport, RI</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Harbor Rotary · D. Reyes</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>07:00 – 22:00</span><span>spot 06:30</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>52 pax</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>—</span></div>
+        </article>
+        </div>
+      </div>
+      <div class="sch-row">
+        <div class="sch-row-head"><div class="sch-row-head__num">Bus 102</div><div class="sch-row-head__meta">56 pax · Coach</div></div>
+        <div class="sch-track" style="--sch-lanes:1">
+        <article class="sch-bar sch-bar--magenta sch-bar--from-prev" role="button" tabindex="0" aria-pressed="false" style="--sch-start:0;--sch-span:6;--sch-lane:0" aria-label="Washington, DC, continues from last week">
+          <div class="sch-bar__row sch-bar__dest"><span>Washington, DC</span><span class="sch-bar__ref">2 of 2</span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Lincoln HS band · J. Alvarez</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>Ret 23:30</span><span></span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>56 pax · Hotel · Fuel card</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Baker · Silva</span></div>
+        </article>
+        </div>
+      </div>
+      <div class="sch-row">
+        <div class="sch-row-head"><div class="sch-row-head__num">Bus 103</div><div class="sch-row-head__meta">47 pax · ADA</div></div>
+        <div class="sch-track" style="--sch-lanes:1">
+        <article class="sch-bar sch-bar--green" role="button" tabindex="0" aria-pressed="false" style="--sch-start:2;--sch-span:1;--sch-lane:0" aria-label="Six Flags, Camp Wildwood · T. Okafor">
+          <div class="sch-bar__row sch-bar__dest"><span>Six Flags</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Camp Wildwood · T. Okafor</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>07:15 – 20:00</span><span>spot 06:45</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>47 pax · ADA lift</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Nguyen</span></div>
+        </article>
+        <article class="sch-bar sch-bar--cyan sch-bar--partial-po sch-bar--to-next" role="button" tabindex="0" aria-pressed="false" style="--sch-start:5;--sch-span:2;--sch-lane:0" aria-label="Cape Cod, continues into next week, purchase order incomplete">
+          <div class="sch-bar__row sch-bar__dest"><span>Cape Cod</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Sunrise Tours · P. Walsh</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>09:00 – —</span><span>spot 08:30</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>47 pax · PO partial</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Silva</span></div>
+        </article>
+        </div>
+      </div>
+      <div class="sch-row">
+        <div class="sch-row-head"><div class="sch-row-head__num">Bus 104</div><div class="sch-row-head__meta">56 pax · Sleeper</div></div>
+        <div class="sch-track" style="--sch-lanes:2">
+        <article class="sch-bar sch-bar--red" role="button" tabindex="0" aria-pressed="false" style="--sch-start:1;--sch-span:1;--sch-lane:0" aria-label="New York, NY, Metro Choir · A. Patel">
+          <div class="sch-bar__row sch-bar__dest"><span>New York, NY</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Metro Choir · A. Patel</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>05:30 – 23:00</span><span>spot 05:00</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>56 pax · Sleeper</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Baker</span></div>
+        </article>
+        <article class="sch-bar sch-bar--warm-gray sch-bar--has-conflict" role="button" tabindex="0" aria-pressed="false" style="--sch-start:4;--sch-span:1;--sch-lane:0" aria-label="Providence, RI, St. Anne Parish · L. Moore">
+          <div class="sch-bar__row sch-bar__dest"><span>Providence, RI</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>St. Anne Parish · L. Moore</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>08:30 – 17:00</span><span>spot 08:00</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>40 pax</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Ortiz</span></div>
+          <div class="sch-bar__conflict"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-warning--filled"/></svg>Double booked</div>
+        </article>
+        <article class="sch-bar sch-bar--cool-gray sch-bar--has-conflict" role="button" tabindex="0" aria-pressed="false" style="--sch-start:4;--sch-span:1;--sch-lane:1" aria-label="Hartford, CT, Elm Street School · R. Diaz">
+          <div class="sch-bar__row sch-bar__dest"><span>Hartford, CT</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Elm Street School · R. Diaz</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>07:45 – 16:30</span><span>spot 07:15</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>56 pax</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Nguyen</span></div>
+          <div class="sch-bar__conflict"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-warning--filled"/></svg>Double booked</div>
+        </article>
+        </div>
+      </div>
+      <div class="sch-row">
+        <div class="sch-row-head"><div class="sch-row-head__num">Bus 105 <span class="sch-row-head__oos" title="Out of service Thu to Sun"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-warning--filled"/></svg></span></div><div class="sch-row-head__meta">56 pax · Coach</div></div>
+        <div class="sch-track" style="--sch-lanes:1">
+          <div class="sch-oos" style="--sch-start:3;--sch-span:4" role="img" aria-label="Out of service Thursday to Sunday"></div>
+        <article class="sch-bar sch-bar--gray" role="button" tabindex="0" aria-pressed="false" style="--sch-start:0;--sch-span:1;--sch-lane:0" aria-label="Albany, NY, County Office · S. Kim">
+          <div class="sch-bar__row sch-bar__dest"><span>Albany, NY</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>County Office · S. Kim</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>06:00 – 19:00</span><span>spot 05:30</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>30 pax</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>Silva</span></div>
+        </article>
+        </div>
+      </div>
+      <div class="sch-row sch-row--unassigned">
+        <div class="sch-row-head"><div class="sch-row-head__num">Unassigned</div><div class="sch-row-head__meta">needs a bus</div></div>
+        <div class="sch-track" style="--sch-lanes:1">
+        <article class="sch-bar sch-bar--blue sch-bar--unconfirmed" role="button" tabindex="0" aria-pressed="false" style="--sch-start:2;--sch-span:1;--sch-lane:0" aria-label="Mystic Aquarium, Bayview Elementary · K. Lee">
+          <div class="sch-bar__row sch-bar__dest"><span>Mystic Aquarium</span><span class="sch-bar__ref"></span></div>
+          <div class="sch-bar__row sch-bar__client"><span>Bayview Elementary · K. Lee</span></div>
+          <div class="sch-bar__row sch-bar__time"><span>08:00 – 15:30</span><span>spot 07:30</span></div>
+          <div class="sch-bar__row sch-bar__reqs"><span>56 pax</span></div>
+          <div class="sch-bar__row sch-bar__drivers"><span>—</span></div>
+        </article>
+        </div>
+      </div>
+            <div class="sch-now" aria-hidden="true"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -460,9 +575,5 @@
 <script src="vendor/rux-ds/js/profile.js"></script>
 <script src="/switcher.js"></script>
 <script src="sch.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
-<script src="/account.js"></script>
-<script src="sch-data.js"></script>
 </body>
 </html>

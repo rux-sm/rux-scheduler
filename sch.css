@@ -28,6 +28,16 @@
   --sch-lane-gap: var(--rux-spacing-02);
   position: relative;
   overflow: auto;
+  /* THE GRID IS ITS OWN SCROLL PANE, not a tall block on a scrolling page.
+     Both sticky edges depend on it: the day header sticks to the top of its
+     SCROLL CONTAINER and the bus column to that container's left, so with the
+     page doing the scrolling instead the header slid away above ten bus rows
+     -- measured 2026-09-06, the grid 1199px inside a 950px viewport with the
+     container never scrolling at all. The subtraction is the shell header,
+     the page padding, the h1 and the toolbar; the max() keeps it usable on a
+     short window, where the page scrolls as well and that is fine. */
+  max-block-size: max(24rem, calc(100dvh - 15rem));
+  overscroll-behavior: contain;
   background: var(--rux-layer);
   border: 1px solid var(--rux-border-subtle);
 }
@@ -42,6 +52,9 @@
    every row shares the same columns. The track spans the days and is the
    containing block the bars are placed in by percentage. */
 .sch-grid {
+  position: relative;   /* the now-line's containing block: the GRID, not the
+                           scroll port, so it stays on today's column when the
+                           week is wider than the viewport and .sch scrolls. */
   display: grid;
   grid-template-columns: var(--sch-head-w) repeat(var(--sch-days), minmax(var(--sch-day-min), 1fr));
   min-inline-size: 100%;
@@ -136,7 +149,6 @@
   z-index: 1;
   pointer-events: none;
 }
-.sch[style*="--sch-today:-1"] .sch-now { display: none; }
 
 /* ── the trip bar ─────────────────────────────────────────────────────── */
 .sch-bar {
@@ -166,6 +178,7 @@
 .sch-bar[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--rux-border-interactive); }
 .sch-bar[aria-pressed="true"]:hover { background: var(--sch-bg); }
 
+.sch-bar--gray      { --sch-bg: var(--rux-tag-background-gray);      --sch-fg: var(--rux-tag-color-gray);      --sch-hover: var(--rux-tag-hover-gray);      --sch-border: var(--rux-tag-border-gray); }
 .sch-bar--blue      { --sch-bg: var(--rux-tag-background-blue);      --sch-fg: var(--rux-tag-color-blue);      --sch-hover: var(--rux-tag-hover-blue);      --sch-border: var(--rux-tag-border-blue); }
 .sch-bar--cyan      { --sch-bg: var(--rux-tag-background-cyan);      --sch-fg: var(--rux-tag-color-cyan);      --sch-hover: var(--rux-tag-hover-cyan);      --sch-border: var(--rux-tag-border-cyan); }
 .sch-bar--teal      { --sch-bg: var(--rux-tag-background-teal);      --sch-fg: var(--rux-tag-color-teal);      --sch-hover: var(--rux-tag-hover-teal);      --sch-border: var(--rux-tag-border-teal); }
