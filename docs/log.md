@@ -31,6 +31,10 @@ is the same mechanism and was not isolated by that run - the synthetic close
 had not moved them - but the `display` transition alone holds the panel on
 screen at full strength, and that is the flash.
 
+**Confirmed by rux the same day: no more flash.** Which is the reading that
+matters, because the proof above is structural and the eye was the only
+instrument that could see the defect in the first place.
+
 **The harness wasted most of this pass and the reason is worth keeping.** The
 browser pane throttles a page it is not showing: timers clamp to 1000ms, CSS
 animations do not run, and `requestAnimationFrame` does not fire. Two
@@ -64,7 +68,9 @@ in the log. The animation runs on the COMPOSITOR, and cancelling it commits a
 full-strength frame there that the main thread never observes. Visible to the
 eye, invisible to script. What is measurable is that the animation now
 completes - 0.102 at 287px on the last visible frame against 0.176 at 263px
-before - and the rest is structural, confirmed by rux looking at it.
+before - and the rest is structural. **That sentence originally ended
+"confirmed by rux looking at it", and that was never true:** rux looked
+and it was still flashing. See the entry above for the real cause.
 
 **2026-09-06 - the panel was open the whole time, and `hidden` could not
 close it.** rux asked whether the panel is always open like that even when
