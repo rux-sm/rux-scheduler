@@ -296,19 +296,43 @@
       const lanes = bars.length ? assignLanes(bars) : 1;
       const rowEl = el('div', 'sch-row' + (r.id === UNASSIGNED ? ' sch-row--unassigned' : ''));
 
+      // THE HEAD IS THE NUMBER AND THE EQUIPMENT ICONS. Capacity, type and a
+      // non-active status are not dropped, they move to the cell's title, so
+      // the column can be narrow and a hover still answers "which bus is this".
       const head = el('div', 'sch-row-head');
-      const num = el('div', 'sch-row-head__num', r.bus ? `Bus ${r.bus.number}` : 'Unassigned');
+      head.append(el('div', 'sch-row-head__num', r.bus ? String(r.bus.number) : 'Unassigned'));
+      if (r.bus) {
+        head.title = [
+          `Bus ${r.bus.number}`,
+          r.bus.capacity ? `${r.bus.capacity} pax` : null,
+          r.bus.type,
+          r.bus.ada_lift ? 'ADA lift' : null,
+          r.bus.sleeper ? 'Sleeper' : null,
+          r.bus.status !== 'active' ? r.bus.status : null,
+        ].filter(Boolean).join(' · ');
+      }
+
+      // EACH SYMBOL KEEPS ITS OWN viewBox. The sprite quarries every icon from
+      // the smallest size Carbon ships it in, so these are not all one box:
+      // accessibility and hotel exist only at 32, warning--filled at 16. Drawing
+      // a 16-box symbol inside a 32-box svg scales it to a quarter of the space.
+      const kit = el('div', 'sch-row-head__kit');
+      const flag = (href, box, label, cls) => {
+        const span = el('span', cls || null);
+        span.title = label;
+        span.setAttribute('role', 'img');
+        span.setAttribute('aria-label', label);
+        span.appendChild(svgUse(href, '16', box));
+        kit.appendChild(span);
+      };
+      if (r.bus?.ada_lift) flag('#i-accessibility', '0 0 32 32', 'ADA lift');
+      if (r.bus?.sleeper) flag('#i-hotel', '0 0 32 32', 'Sleeper');
+
       const windows = (oosByBus.get(r.id) ?? []).filter(w => clip(w.start_date, w.end_date, weekStart, weekEnd));
       if (windows.length) {
-        const mark = el('span', 'sch-row-head__oos');
-        mark.title = `Out of service: ${windows.map(w => w.reason || 'no reason given').join('; ')}`;
-        mark.appendChild(svgUse('#i-warning--filled', '16', '0 0 16 16'));
-        num.appendChild(mark);
+        flag('#i-warning--filled', '0 0 16 16', `Out of service: ${windows.map(w => w.reason || 'no reason given').join('; ')}`, 'sch-row-head__oos');
       }
-      const meta = r.bus
-        ? [r.bus.capacity ? `${r.bus.capacity} pax` : null, r.bus.type, r.bus.status !== 'active' ? r.bus.status : null].filter(Boolean).join(' · ')
-        : 'needs a bus';
-      head.append(num, el('div', 'sch-row-head__meta', meta));
+      if (kit.childElementCount) head.appendChild(kit);
 
       const track = el('div', 'sch-track');
       track.style.setProperty('--sch-lanes', lanes);

@@ -1,6 +1,6 @@
-tag     v0.1.7
-commit  57031cc7147ab9bdc7c54d272a4f33f11d3729e0
-date    2026-09-06T17:32:18Z
+tag     v0.1.8
+commit  fb0f22f194acb73d6b3f6ea837c7681674f5c5ed
+date    2026-09-06T18:57:03Z
 subject docs(gates): Restamp portal, 41 of 41 current
 
 Written by rux-ds tools/new-project.sh from the tag, not the tree. Re-run it to move

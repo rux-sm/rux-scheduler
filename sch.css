@@ -18,7 +18,7 @@
 .sch {
   --sch-days: 7;
   --sch-today: -1;
-  --sch-head-w: 9rem;
+  --sch-head-w: 5.5rem;
   --sch-day-min: 7rem;
   --sch-bar-rows: 5;
   --sch-fs: var(--rux-label-01-font-size);
@@ -81,6 +81,14 @@
 .sch-day--today { box-shadow: inset 0 -2px 0 var(--rux-border-interactive); }
 .sch-day--today .sch-day__num { color: var(--rux-text-primary); font-weight: 600; }
 
+/* THE BUS COLUMN IS THE NUMBER AND WHAT THE BUS CARRIES, nothing else.
+   It held "Bus 218" over "52 pax · Motorcoach" and cost 9rem of a grid whose
+   whole job is the seven days to its right. The number alone identifies the
+   row -- the corner cell already says these are buses -- and the equipment
+   became two icons, so capacity and type moved to the row's title where a
+   hover still reaches them. 5.5rem, not the 5rem tried first: three digits
+   fit either way, but "Unassigned" measured 66px against 63px of content box
+   and clipped, and the row is worth its own word rather than an abbreviation. */
 .sch-row-head {
   position: sticky;
   inset-inline-start: 0;
@@ -88,28 +96,38 @@
   background: var(--rux-layer);
   border-inline-end: 1px solid var(--rux-border-subtle);
   border-block-end: 1px solid var(--rux-border-subtle);
-  padding: var(--rux-spacing-03) var(--rux-spacing-04);
+  padding: var(--rux-spacing-03);
   display: flex;
   flex-direction: column;
-  gap: var(--rux-spacing-01);
+  gap: var(--rux-spacing-02);
 }
 .sch-row-head__num {
-  font-size: var(--rux-label-02-font-size);
-  line-height: var(--rux-label-02-line-height);
-  letter-spacing: var(--rux-label-02-letter-spacing);
+  font-size: var(--rux-body-compact-01-font-size);
+  line-height: var(--rux-body-compact-01-line-height);
   font-weight: 600;
   color: var(--rux-text-primary);
-  display: flex; align-items: center; gap: var(--rux-spacing-02);
+  font-variant-numeric: tabular-nums;
 }
-.sch-row-head__meta {
+/* The equipment row: one icon per thing the bus has, in the order a
+   dispatcher asks for them. An absent icon means the bus does not have it,
+   which is why nothing here is a placeholder. */
+.sch-row-head__kit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rux-spacing-02);
+  color: var(--rux-text-secondary);
+}
+.sch-row-head__kit svg { display: block; }
+.sch-row-head__oos { color: var(--rux-support-warning); display: inline-flex; }
+.sch-row--unassigned .sch-row-head { background: var(--rux-layer-accent); }
+.sch-row--unassigned .sch-row-head__num {
+  color: var(--rux-text-secondary);
+  font-weight: 400;
+  font-style: italic;
   font-size: var(--rux-helper-text-01-font-size);
   line-height: var(--rux-helper-text-01-line-height);
   letter-spacing: var(--rux-helper-text-01-letter-spacing);
-  color: var(--rux-text-secondary);
 }
-.sch-row-head__oos { color: var(--rux-support-warning); display: inline-flex; }
-.sch-row--unassigned .sch-row-head { background: var(--rux-layer-accent); }
-.sch-row--unassigned .sch-row-head__num { color: var(--rux-text-secondary); font-weight: 400; font-style: italic; }
 .sch-row--unassigned .sch-track { background-color: var(--rux-layer-accent); }
 
 .sch-track {

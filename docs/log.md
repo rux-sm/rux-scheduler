@@ -4,6 +4,30 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the bus column, narrowed to what it says.** It held "Bus 218"
+over "52 pax - Motorcoach" and took 9rem of a grid whose job is the seven
+days beside it. Now the number alone, with the equipment as icons under it:
+`accessibility` for an ADA lift, `hotel` for a sleeper, the warning mark for
+an out-of-service window. Capacity, type and a non-active status are not
+dropped, they moved to the row's `title`. Measured 1440x950: the head went
+144px to 88px and each day column 117px to 138px, and the icons take their
+colour from the same token in all five themes.
+
+**5.5rem, not the 5rem tried first.** Three digits fit either way, but
+"Unassigned" measured 66px against a 63px content box and clipped; the row
+is worth its own word rather than an abbreviation.
+
+**The two icons came from rux-ds, not from here.** Carbon ships both and the
+sprite carried neither, so `tools/icons.mjs` there gained two names, the
+glyph snapshot gained two entries and moved none, all 41 browser cells were
+re-swept because `npm run icons` rewrites every page's inlined sprite, and
+`v0.1.8` was cut. The pin moved to it. **A pin move does NOT refresh a page's
+inlined sprite** - `new-project.sh` leaves pages alone by design - so the app
+had the new icons in `vendor/` and the old sprite in its markup, with no
+gate able to see it: `check.mjs` asks whether a `<use>` resolves, and it did,
+against the stale copy. `tools/sprite.mjs` is the answer, and `--check` says
+whether a page is behind the pin.
+
 **2026-09-06 - the live week, read only.** `index.html` now draws the real
 schedule: `sch-data.js` reads `buses`, `trips` with their `trip_assignments`
 and `trip_drivers` nested, `drivers` and `bus_out_of_service` straight from
