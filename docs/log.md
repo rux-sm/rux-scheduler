@@ -4,6 +4,29 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - why every bar was grey, and the rule that fixes it.** rux
+asked. The cause: only the OVERRIDE colour was wired. rux-ui's rule has three
+levels, in its own `--_tone` declaration and the one rule beneath it -
+`var(--_trip-bar-color, var(--sched-trip-bar-confirmed-tone))`, with
+`--unconfirmed:not([data-trip-bar-color])` taking the unconfirmed tone. So an
+override beats status, status beats the default, **and the default is blue,
+not neutral**: blue-400 on the dark themes, blue-600 on the light, with red
+for unconfirmed. Only 64 of 743 trips carry an override, so wiring that alone
+left every other bar saying nothing.
+
+Carbon has no token for "a confirmed trip" and its support tokens are for
+alerts, so the categorical tag palette carries all three levels: the override
+hues as before, `blue` for the default and `red` for unconfirmed. That is the
+same information the old board showed, in tokens this system already compiles.
+On the current week, 17 blue and 2 red.
+
+**The selection ring had to move.** It was `border-interactive`, which is
+Carbon's blue, and a blue ring on a blue bar is the one pairing that cannot be
+seen. It is `layer-selected-inverse` now - near-black on the light themes,
+near-white on the dark - measured at 7.09:1 against the fill on g90 and g100
+and 13.79:1 on white, g10 and rux. Label on fill reads 5.94:1 in all five,
+comfortably past AA. Focus keeps the focus token; they are different signals.
+
 **2026-09-06 - the browser gates, swept for the first time.** `docs/gate-
 coverage.md` is the record. Both pages, white theme asserted from a resolved
 token, focus taken with Tab then blurred, transitions suppressed, Plex

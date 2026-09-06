@@ -288,7 +288,13 @@
 }
 .sch-bar:hover { background: var(--sch-hover); }
 .sch-bar:focus-visible { outline: 2px solid var(--rux-focus); outline-offset: -2px; }
-.sch-bar[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--rux-border-interactive); }
+/* THE SELECTION RING IS THE LAYER'S INVERSE, NOT THE INTERACTIVE BLUE.
+   Once the default fill became blue -- which is what the old board used for a
+   confirmed trip -- a blue ring on a blue bar was the one pairing that could
+   not be seen. `layer-selected-inverse` is near-black on the light themes and
+   near-white on the dark ones, so it reads on every tag tint including its
+   own. Focus keeps the focus token; the two are different signals. */
+.sch-bar[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--rux-layer-selected-inverse); }
 .sch-bar[aria-pressed="true"]:hover { background: var(--sch-bg); }
 
 .sch-bar--gray      { --sch-bg: var(--rux-tag-background-gray);      --sch-fg: var(--rux-tag-color-gray);      --sch-hover: var(--rux-tag-hover-gray);      --sch-border: var(--rux-tag-border-gray); }

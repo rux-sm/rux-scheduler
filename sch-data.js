@@ -68,6 +68,17 @@
     amber: 'warm-gray', yellow: 'warm-gray', orange: 'warm-gray',
   };
 
+  // THREE LEVELS, WHICH IS RUX-UI'S OWN RULE. Its `--_tone` reads
+  // `var(--_trip-bar-color, var(--sched-trip-bar-confirmed-tone))` with a
+  // second rule giving `--unconfirmed:not([data-trip-bar-color])` the
+  // unconfirmed tone: an override colour beats status, status beats the
+  // default, and the default is BLUE, not neutral. Only the override was
+  // wired here until 2026-09-06, and 679 of 743 trips carry none, so
+  // virtually every bar came out grey -- a bar saying nothing where the old
+  // board said "confirmed, nothing to look at".
+  const hueFor = trip => HUES[String(trip.trip_bar_color || '').toLowerCase()]
+    ?? (trip.confirmed === false ? 'red' : 'blue');
+
   const UNASSIGNED = ' unassigned';
 
   const client = window.Rux?.account?.client
@@ -246,7 +257,7 @@
 
   function barEl(b, driversById) {
     const { trip, leg, assign, place, slot } = b;
-    const hue = HUES[String(trip.trip_bar_color || '').toLowerCase()] ?? 'gray';
+    const hue = hueFor(trip);
     const bar = el('article', `sch-bar sch-bar--${hue}`);
     bar.setAttribute('role', 'button');
     bar.tabIndex = 0;
