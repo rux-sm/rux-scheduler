@@ -4,6 +4,32 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the two sticky axes are one frame now.** rux asked whether the
+bus column should be styled like the day band. It is, and the two precedents
+disagree, so the reasoning is worth keeping.
+
+**Carbon's own data table says no.** `thead` takes `layer-accent`; `tbody th`
+- a row header - takes no background at all, only `text-secondary` and a
+border. That is right for a table, where the row header is one column of
+content among others.
+
+**rux-ui's scheduler said yes**, painting the corner, the day heads and the
+row heads from a single `--sched-calendar-header-bg`.
+
+This follows rux-ui, because this axis is not a column of content: it holds
+the row's identity and what the bus carries, and nothing anyone reads as a
+value. Corner, day band and bus column now share `layer-accent-01` in all
+five themes, so the corner is a corner rather than a cell that changes colour
+halfway down. The Unassigned row head keeps its own hover step, one below the
+frame, so it still reads as the odd row out.
+
+**And an answer to the other half of the question: Carbon has no example of
+this table.** No calendar, gantt, schedule, timeline or matrix component
+exists in `@carbon/styles` at all - checked against the package, not from
+memory. That is the whole reason the grid is this app's own component, and it
+is why questions like this one get settled by argument from the nearest
+Carbon pattern rather than by copying one.
+
 **2026-09-06 - the day header is one 32px row, and the date sits beside the
 day.** It was two stacked lines at 51px. It is `2rem` now, the same 32px the
 toolbar's buttons are, with the name and the number on one line: they name one

@@ -196,7 +196,19 @@
   position: sticky;
   inset-inline-start: 0;
   z-index: 2;
-  background: var(--rux-layer);
+  /* THE SAME SURFACE AS THE DAY BAND, so the two sticky axes read as one
+     L-shaped frame and the corner is a corner rather than a cell that changes
+     colour halfway down.
+
+     CARBON'S OWN TABLE SAYS OTHERWISE and it is worth saying why this does
+     not follow it: `thead` takes `layer-accent`, while `tbody th` -- a row
+     header -- takes no background at all, only `text-secondary` and a border.
+     That is right for a table, where the row header is a column of content
+     among others. This axis is not: it holds the row's identity and what the
+     bus carries, and nothing anyone reads as a value. rux-ui's own scheduler
+     agreed, painting corner, day heads and row heads from one
+     `--sched-calendar-header-bg`. */
+  background: var(--rux-layer-accent-01);
   border-inline-end: 1px solid var(--rux-border-subtle-01);
   border-block-end: 1px solid var(--rux-border-subtle-01);
   padding: var(--rux-spacing-03);
