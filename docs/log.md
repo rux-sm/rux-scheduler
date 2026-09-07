@@ -4,6 +4,31 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - back to xs, and the width derived rather than picked.** rux
+asked for both. Rows return to 24px: 32 showed 23 of 40 drivers where 24 shows
+31, and seeing the roster at once is the whole point of the grid. The header
+stays at 32 to meet the schedule's day header, which is the one row where the
+two grids sit side by side. The square follows the row, so a day cell is 24 by
+24 again.
+
+**The width is now content-sized, the same rule the bus column follows.** It
+is only ever seven squares plus the longest driver name, so hand-setting it
+means clipping a name or carrying dead space. `max-content` with a 22rem cap,
+and `minmax(0, max-content)` on the name track so the cap shrinks and
+ellipsises rather than overflowing. It comes out at 261px against the 304 of
+19rem and the 368 it carried at 32px rows; the board gets the 43 back and now
+measures 1035. Nothing clips, checked by `scrollWidth` against `clientWidth`
+on all 40.
+
+**THE FIRST MEASUREMENT OF THE NAMES WAS WRONG, and I reported it to rux
+before catching it.** It said the longest name needed 131px, which would have
+made 19rem the "derived" answer - a wrong number that happened to justify the
+value already there, which is the kind that survives. The probe built its font
+from `getComputedStyle(el).font`, and **that shorthand returns an empty string
+here**, so every name was measured in the browser's default 16px serif and
+inflated by about half. The real longest is "Vicente Solar" at 88px in a 91px
+column. Read the longhands, or ask the rendered box whether it overflows.
+
 **2026-09-06 - left of the board, and the trial comes out.** rux chose it,
 so the dock and the right-hand slot are deleted along with the layout button
 and the stored preference. One position, no switch.

@@ -492,25 +492,45 @@
 .sch-board { display: flex; align-items: flex-start; gap: var(--rux-spacing-05); min-inline-size: 0; }
 .sch-board > .sch { flex: 1 1 auto; min-inline-size: 0; }
 
-/* WIDE ENOUGH FOR SEVEN SQUARES AND A NAME. Seven 32px days are 224, and the
-   rest is the name column: 143px, which is what it had at 24px rows. `order`
-   is the whole of "left" -- the box is after the grid in the markup so the
-   schedule is still the first thing reached, and before it on screen. */
-.sch-aside { flex: 0 0 auto; inline-size: 23rem; order: -1; }
+/* AS WIDE AS ITS CONTENT, MEASURED, NOT PICKED -- the same rule the bus column
+   follows. The width here is only ever seven squares plus the longest driver
+   name, and hand-setting it means either clipping a name or carrying dead
+   space. Measured 2026-09-06 across 40 drivers: the longest, "Vicente Solar",
+   needs 88px with its padding, and seven 24px days are 168, so the whole box
+   comes to 261 -- against the 304 of 19rem and the 368 this carried at 32px
+   rows. The 43px is given back to the board.
 
-/* 32px, WHICH IS CARBON'S sm, AND THE SAME HEIGHT AS THE HEADER. It ran at
-   24 (xs) with only the header at 32; rux chose one height for all of it on
-   2026-09-06, so the header rule below is now saying what the rest already
-   says. The cell stays square, which at this row means 32 by 32: a day here
-   is a STATE, so it reads as a mark rather than a box with text in it. The
-   cost is drivers on screen -- 31 of 40 at 24px, 23 at 32. */
-.sch--avail { --sch-avail-h: 2rem; max-block-size: 15rem; }
+   THE FIRST MEASUREMENT OF THIS WAS WRONG AND SAID 131px, which would have
+   justified 19rem as "derived". The probe built its font from
+   `getComputedStyle(el).font`, and that SHORTHAND RETURNS AN EMPTY STRING
+   here, so it measured every name in the browser's default 16px serif and
+   inflated the lot by about half. Read the longhands -- fontStyle, fontWeight,
+   fontSize, lineHeight, fontFamily -- or check `scrollWidth` against
+   `clientWidth` on the real box, which is what caught it: no cell overflows.
+
+   THE CAP IS THE BOARD'S PROTECTION. One absurd name cannot take the
+   schedule's width with it: past 22rem the name track shrinks and ellipsises,
+   which is what `minmax(0, max-content)` on the column below is for.
+
+   `order` is the whole of "left" -- the box is after the grid in the markup so
+   the schedule is still the first thing reached, and before it on screen. */
+.sch-aside { flex: 0 0 auto; inline-size: max-content; max-inline-size: 22rem; order: -1; }
+
+/* XS, 24px, WHICH IS CARBON'S SMALLEST ROW. It went to 32 (sm) briefly on
+   2026-09-06 and came back the same day: 32 showed 23 of 40 drivers where 24
+   shows 31, and the whole point of this grid is seeing the roster at once.
+   The header stays at 32 to meet the schedule's own day header, which is the
+   one row where the two grids sit side by side.
+
+   THE CELL IS SQUARE AT THE ROW HEIGHT -- 24 by 24 -- because a day here is a
+   STATE, so it reads as a mark rather than a box with text in it. */
+.sch--avail { --sch-avail-h: 1.5rem; max-block-size: 15rem; }
 /* In the side slot every pixel the days do not need goes to the name, which
    is the only thing there with anything to say. `minmax(0, 1fr)` and not
    `1fr`: a grid track's automatic minimum is its content, so a long name
    would push the squares out of the panel rather than ellipsing. */
 .sch-aside .sch--avail {
-  --sch-head-w: minmax(0, 1fr);
+  --sch-head-w: minmax(0, max-content);
   --sch-day-track: var(--sch-avail-h);
 }
 .sch-avail__grid { align-content: start; }
