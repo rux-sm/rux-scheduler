@@ -38,3 +38,22 @@
    `display: none` at once rather than 150ms later. It applies only while the
    attribute is set, so the entrance is untouched. */
 .rux--side-panel[hidden] { display: none; transition: none; }
+
+/* THE PANEL ALREADY PAID FOR THIS PADDING. `side-panel__inner-content` is
+   `padding: 0 1rem 1rem` and `.rux--tab-content` is another
+   `padding: <density inline>`, which resolves to 16px here -- so a field
+   inside a tab sat 33px from the panel edge while the panel's own title and
+   the tab strip above it sat at 17. A 16px ragged edge down the panel,
+   measured 2026-09-06 at a 480px panel.
+
+   Inline only: the block padding is real separation between the tab strip and
+   what it reveals, and the panel supplies none of it. At Carbon's own
+   specificity -- (0,2,0) against its (0,1,0) -- and scoped to the panel, so
+   tabs anywhere else keep their own padding.
+
+   NO CAPTURE SETTLES THIS. None of the nine captured side-panel stories
+   contains tabs; every one holds a data table. So this is not a divergence
+   from a reference, it is a decision where there is none: the tab content
+   lines up with the panel title, which is the only alignment the panel
+   already asserts. */
+.rux--side-panel .rux--tab-content { padding-inline: 0; }

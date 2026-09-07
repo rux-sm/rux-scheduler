@@ -4,6 +4,31 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the tab spacing, and only half of it was wrong.** rux asked
+whether the tabs should reach the panel's sides or keep the gap. Measured
+against the panel edge at 480px: title 17, tab strip 17 left and 16 right,
+form fields **33 and 32**.
+
+**The strip's inset is Carbon's and is right.** `side-panel__inner-content`
+is `padding: 0 1rem 1rem`, so the strip lines up exactly with the panel's own
+title. Nothing to fix.
+
+**The content was double-padded.** `.rux--tab-content` adds a density-derived
+inline padding of its own on top of the panel's, so every field sat 16px
+further in than the title above it - a ragged edge running down the panel,
+which is what could be seen. `rux-overrides.css` zeroes the INLINE padding
+only, inside a side panel only, at Carbon's own specificity. The block padding
+stays: it is the separation between the strip and what it reveals, and the
+panel supplies none of it.
+
+**NO CAPTURE SETTLES THE FULL-BLEED QUESTION.** None of the nine captured
+side-panel stories contains tabs - every one holds a data table - so there is
+no reference for tabs inside a panel and full bleed would be a divergence with
+nothing behind it. The inset at least matches the one alignment the panel
+already asserts. Said plainly rather than answered from taste.
+
+Verified: title, strip and fields all at 17 left and 16 right.
+
 **2026-09-06 - trip dates, and split is two outings not one range.** rux asked
 whether From/To could serve round trip and split with a depart-only field for
 one way. **The data says no to both halves of that**, so it was measured
