@@ -448,7 +448,29 @@
    readable rather than hidden behind it. The grid measures its own pane, so
    the columns and the height follow on their own -- they fall toward the
    minimum and the week scrolls, which is the price of having both. */
-.sch-page { transition: padding-inline-end .11s cubic-bezier(.2, 0, 1, .9); }
+/* NO TRANSITION ON THE PADDING, and it is not a matter of taste: the
+   transition PREVENTED THE PADDING FROM EVER APPLYING. Measured 2026-09-06 at
+   1440 with the panel open -- the class is on the element, the rule declares
+   `padding-inline-end: 30rem`, its sheet is enabled and unwrapped, and
+   `getComputedStyle` still returned `0px` with NO transition object in
+   `getAnimations()`. Suppressing transitions returned 480px immediately. So
+   the board was never given the panel's room at all and ran 96px underneath
+   it, which is the opposite of what this rule exists to do.
+
+   It had already cost one bug earlier today, when `fit()` measured the page
+   mid-transition and sized the grid for a width it was about to lose. Two
+   defects for an animation nobody asked for, on a page where the panel itself
+   already slides, is a poor trade. The room appears at once now. */
+/* THE VALUE IS A FALLBACK; sch.js measures the real one. The panel is
+   `position: fixed` against the VIEWPORT's right edge, and this page is not
+   there -- the shell's content region holds its own gutter, 64px at 1440. So
+   reserving the panel's full width from the PAGE's edge reserves those 64px
+   twice, and they show as dead space between the board and the panel. Only
+   the part of the panel that actually overlaps the page needs paying for, and
+   that is a measurement, not a constant: it changes with the shell's padding
+   and with the panel's own size. This 30rem is what renders if the script
+   never runs, which errs toward too much room rather than a board underneath
+   the panel. */
 .sch-page--with-panel { padding-inline-end: 30rem; }
 
 /* Definition rows in the panel. Carbon's structured list is the nearest

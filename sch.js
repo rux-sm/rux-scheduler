@@ -148,11 +148,35 @@
 
   }
 
+  /* THE ROOM THE PANEL ACTUALLY TAKES FROM THIS PAGE. The panel is fixed to
+     the viewport's right edge; `.sch-page` is inset from it by whatever the
+     shell's content region reserves -- 64px at 1440. Paying the panel's whole
+     width out of the page's own edge pays that 64 twice and leaves it empty
+     between the board and the panel. What is owed is only the overlap.
+
+     PADDING DOES NOT MOVE THE ELEMENT'S RIGHT EDGE, so reading `page.right`
+     after setting it is stable and there is no feedback loop.
+
+     Called before the columns are measured, because it changes how much room
+     they have. */
+  function fitPanelRoom() {
+    const page = document.querySelector('.sch-page');
+    if (!page) return;
+    const panel = document.getElementById('sch-panel');
+    if (!panel || panel.hidden || !page.classList.contains('sch-page--with-panel')) {
+      page.style.removeProperty('padding-inline-end');
+      return;
+    }
+    const docRight = document.documentElement.clientWidth;
+    const overlap = panel.getBoundingClientRect().width - (docRight - page.getBoundingClientRect().right);
+    page.style.paddingInlineEnd = `${Math.max(0, Math.round(overlap))}px`;
+  }
+
   const sch = document.getElementById('sch');
   if (sch && 'ResizeObserver' in window) {
     // Observing the PANE, not the grid: the grid's width is what this changes,
     // so observing it would feed its own output back in.
-    const fit = () => { fitHeight(sch); fitColumns(sch); };
+    const fit = () => { fitPanelRoom(); fitHeight(sch); fitColumns(sch); };
 
     // THE THREE WAYS THIS IS ASKED TO RUN, and why none of them alone is
     // enough. `window.resize` is the obvious one and is the only one proven

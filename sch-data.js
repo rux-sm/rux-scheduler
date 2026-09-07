@@ -1311,18 +1311,10 @@
     window.Rux?.schedule?.fit?.();
   }
 
-  /* FIT AGAIN WHEN THE ROOM HAS ACTUALLY CHANGED. `.sch-page` transitions its
-     end padding over 110ms, and the fit() inside openPanel runs at once --
-     measuring the width the page still has, not the one it is going to. With
-     only the grid there that self-corrected on the next resize and nobody
-     noticed. With the side layout it does not: the grid keeps its pre-panel
-     width, the aside is pushed past the panel's edge, and 420px of it sits
-     behind the panel. Measured at 1440: aside right 1380 against a panel left
-     of 960. So the fit is repeated when the transition ends and the numbers
-     are real. */
-  pageEl?.addEventListener('transitionend', e => {
-    if (e.target === pageEl && e.propertyName === 'padding-inline-end') window.Rux?.schedule?.fit?.();
-  });
+  /* The padding used to be transitioned and a second fit was needed when it
+     settled. It is not any more -- the transition stopped the padding
+     applying at all -- so the fit inside openPanel measures the final width
+     and this listener has nothing left to wait for. */
 
   availToggle?.addEventListener('click', () => { availOn = !availOn; placeAvailability(); });
 

@@ -4,6 +4,44 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the space between the board and the panel, which was two
+bugs.** rux asked what sets it and whether that much was intended. It was not,
+and neither half of it was deliberate.
+
+**ONE: the transition stopped the padding applying AT ALL.** `.sch-page` had
+`transition: padding-inline-end .11s`, and with the panel open the class was
+on the element, the rule declared `padding-inline-end: 30rem`, its sheet was
+enabled and unwrapped, `page.matches()` was true - and `getComputedStyle`
+still returned **0px**, with NO transition object in `getAnimations()`.
+Suppressing transitions returned 480px immediately. So the page never made
+room and the board ran 96px UNDERNEATH the panel. That animation had already
+cost one defect earlier today, when `fit()` measured the page mid-transition
+and sized the grid for a width it was about to lose. Two bugs for an animation
+nobody asked for, on a page whose panel already slides: removed. The
+`transitionend` re-fit went with it, having nothing left to wait for.
+
+**TWO: the room was reserved twice over.** The panel is `position: fixed`
+against the VIEWPORT's right edge; `.sch-page` is not there - the shell's
+content region holds its own gutter, 64px at 1440. Reserving the panel's full
+480 from the page's own edge pays that 64 twice, and it shows as dead space
+between the board and the panel. Only the overlap is owed, and that is a
+measurement rather than a constant: it moves with the shell's padding and the
+panel's size. `sch.js` sets it; the stylesheet keeps 30rem as what renders if
+the script never runs, erring toward too much room rather than a board hidden
+under the panel.
+
+Verified at 1440: padding 416, board right 960, panel left 960, gap 0, and the
+board 64px wider than before. Closed, the padding is removed and the week goes
+back to 181px columns.
+
+**A measurement note, twice paid.** The panel reads 320px to the right of
+where it settles while its entrance animation runs - that is
+`--panel-transform`, not a gap - so a "320px gap" appeared in the middle of
+this and was not real. And an earlier read of the padding returned 0 with the
+pane hidden, which looked like the same bug for a different reason: CSS
+transitions do not advance in a hidden pane. Front the pane, let the animation
+finish, then measure.
+
 **2026-09-06 - the bus number centred, which was the price of the last
 change.** Giving the bus column the flooring remainder aligned the board with
 the toolbar and left the number sitting 8px from one edge and 13.8 from the
