@@ -4,6 +4,76 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-07 - moving a bus by accident on a phone, which was two faults.**
+rux: *"i keep by mistake moving buses on mobile"*, and asked whether a
+confirmation screen was the answer. It is not the first answer, because
+neither fault needed one.
+
+**A CONFIRMATION ON EVERY DROP WAS REJECTED.** It taxes the mouse drag, which
+was never the thing going wrong, and a dialog raised on every legitimate move
+is dismissed reflexively inside a week -- at which point it has cost the
+gesture and gates nothing. It stays available as a touch-only gate if the two
+fixes below turn out not to be enough; rux's call, not taken here.
+
+**FAULT ONE: 4px is no threshold at all for a thumb.** The drag armed on 4px
+of travel whatever the pointer was, and a finger moves that far just landing
+on the glass. So a scroll that began on a bar and the drag were competing for
+one gesture, and on a board that scrolls in both directions the scroll is what
+a finger on a bar nearly always meant. Touch now HOLDS: within 10px for 400ms
+and the bar lifts, travel before that and the drag stands down for good and
+the board keeps the gesture. The mouse is untouched at 4px.
+
+**Keyed off `pointerType`, not the screen.** The gesture says what it is; a
+width query would have given a touchscreen laptop the hold for its mouse and,
+had it been a `pointer: coarse` query, the same answer for both of its
+pointers. One window, one size, both behaviours, decided per gesture.
+
+**FAULT TWO, AND THE WORSE ONE: an interrupted drag committed the move.**
+`pointercancel` was bound to the same handler as `pointerup`, and that handler
+wrote as soon as the drag had armed. `pointercancel` is exactly what a browser
+fires when it takes a touch over for scrolling -- so the accidental arm above
+did not merely start a drag, it FINISHED one, against whichever row the bar
+was last over, with nothing released. Not mobile's alone: a system dialog or a
+window switch mid-drag does the same on a desktop. Only a release writes now.
+
+**Measured before and after, on the shipped code.** The drag block was sliced
+out of `sch-data.js` by its own text into a harness with stubbed
+`client`/`show`/`say` and driven with synthetic pointer events, first from
+`HEAD` and then from the working tree, same six gestures:
+
+| Gesture | Before | After |
+|---|---|---|
+| Mouse drag to another bus, released | wrote | wrote |
+| Mouse drag, interrupted | **wrote** | no write |
+| Touch swipe across the bar (a scroll) | **wrote** | no write |
+| Touch hold, drag, released | wrote | wrote |
+| Touch hold, drag, interrupted | **wrote** | no write |
+| Touch hold, dropped on its own row | no write | no write |
+
+Five of six wrote before; the two that should write, write.
+
+**The hold needed the page to stop fighting it.** `touch-action` is read when a
+gesture STARTS, so it cannot be tightened once the hold completes: a
+non-passive `touchmove` suppresses the scroll instead, which holds only because
+arming requires the finger to have stayed still -- a scroll already under way
+cannot be taken back. `.sch-bar` also takes `touch-action: manipulation`
+(panning and pinching kept, double-tap zoom dropped), `-webkit-touch-callout:
+none` and `user-select: none`, or iOS raises its selection callout on top of
+the bar being picked up. Android fires `contextmenu` at about the moment the
+hold completes, so the bar menu now stands down while a touch drag is armed;
+right-click is unchanged.
+
+**NOT DONE, and each is a separate decision.** No undo on a completed move --
+proposed as the third fix, the write to reverse it is the one `moveToBus`
+already makes, and it is the only one of the three that helps when the move
+was deliberate but wrong. No touch-only confirmation. **And this was not
+driven on a real touch device or on the live page**: the grid needs the
+production sign-in the browser pane has no session for, so the evidence above
+is synthetic pointer events against the real code, not a thumb on a phone.
+`node tools/check.mjs` exits 0. The header of `sch-data.js` still opens "READ
+ONLY ... nothing here writes", which stopped being true when the drag landed
+and is untouched here.
+
 **2026-09-06 - full width, because a board is scanned, not read.** rux asked
 whether the week should still be tiny on a large screen, and whether it should
 still scroll with the trip panel and the driver grid open when there is room

@@ -524,12 +524,40 @@
        * the Unassigned row can never be a conflict;
        * dropping on the row it came from does nothing.
 
+     TWO RULES ARE THIS APP'S OWN, ADDED 2026-09-07 AFTER RUX MOVED BUSES BY
+     MISTAKE ON A PHONE:
+       * a finger has to HOLD a bar before it lifts, because a touch that
+         travels straight away meant to scroll the board;
+       * an INTERRUPTED gesture writes nothing. Only a release is a drop.
+
      WHAT IT DOES NOT DO: no ghost that re-lays-out a multi-day bar, no
      optimistic move. The source dims, the target row lights, and on release
      the week is read again from the server -- so what is on screen after a
      move is what the database actually holds, not what this page hoped.
      ────────────────────────────────────────────────────────────────────────*/
-  const DRAG_THRESHOLD = 4;
+  /* WHAT COUNTS AS PICKING A BAR UP, AND WHY A FINGER IS ASKED FOR MORE.
+     4px of travel is the right threshold for a pointing device and no threshold
+     at all for a thumb -- a finger moves that far just landing on the glass. So
+     on touch the board's own scroll and this drag were competing for the same
+     gesture, and a finger starting on a bar almost always meant the scroll:
+     rux moved buses by mistake on a phone, repeatedly.
+
+     A FINGER HOLDS FIRST. Stay inside TOUCH_SLOP for TOUCH_HOLD_MS and the bar
+     lifts; travel before that and this was a scroll, so the drag stands down
+     and never fires again for that gesture. A mouse is unchanged and picks the
+     bar up on the first 4px, because a mouse has no second job on this element.
+
+     KEYED OFF THE POINTER, NOT THE SCREEN. `pointerType` is a property of the
+     gesture, so a touchscreen laptop keeps the instant mouse drag AND gets the
+     hold from its own screen, in one window at one size. A width query would
+     have got both of those wrong. */
+  const DRAG_THRESHOLD = 4;      // mouse: pixels of travel that mean "drag"
+  const TOUCH_SLOP = 10;         // finger: how far it may wander while holding
+  const TOUCH_HOLD_MS = 400;     // finger: how long it must hold to lift a bar
+
+  // Android fires `contextmenu` at about the moment a hold completes. The bar
+  // menu reads this to stay out of the way of a bar the finger is carrying.
+  let touchDragging = false;
 
   const overlaps = (aStart, aSpan, bStart, bSpan) =>
     aStart < bStart + bSpan && bStart < aStart + aSpan;
@@ -558,43 +586,51 @@
     if (!bar.dataset.assignmentId) return;   // an unfilled slot owns no row to move
     bar.addEventListener('pointerdown', down => {
       if (down.button !== 0) return;
-      const startY = down.clientY;
+      const touch = down.pointerType === 'touch';
+      const startX = down.clientX, startY = down.clientY;
       const start = +bar.dataset.start, span = +bar.dataset.span;
       const fromBus = bar.dataset.busId || null;
-      let moved = false, target = null, tracks = [], unassignedRow = null;
+      let moved = false, target = null, tracks = [], unassignedRow = null, hold = 0;
 
       const clear = () => {
         for (const { track } of tracks) track.classList.remove('sch-track--drop', 'sch-track--warn');
       };
 
-      const move = ev => {
-        if (!moved) {
-          if (Math.abs(ev.clientY - startY) < DRAG_THRESHOLD) return;
-          moved = true;
-          unassignedRow = gridEl.querySelector('.sch-row--unassigned');
-          if (unassignedRow?.hidden) { unassignedRow.hidden = false; unassignedRow.dataset.revealed = 'true'; }
-          tracks = [...gridEl.querySelectorAll('.sch-track')].map(t => ({ track: t, rect: t.getBoundingClientRect() }));
-          bar.classList.add('sch-bar--dragging');
-          document.body.style.cursor = 'grabbing';
-          bar.setPointerCapture(down.pointerId);
-        }
-        ev.preventDefault();
-        const hit = tracks.find(({ rect }) => ev.clientY >= rect.top && ev.clientY <= rect.bottom);
-        const next = hit?.track ?? null;
-        if (next === target) return;
-        clear();
-        target = next;
-        const sameRow = target && (target.dataset.busId ?? null) === fromBus;
-        if (target && !sameRow) {
-          target.classList.add(targetWarns(target, start, span) ? 'sch-track--warn' : 'sch-track--drop');
-        }
+      // WHILE A FINGER IS CARRYING A BAR THE PAGE MUST NOT SCROLL UNDER IT.
+      // `touch-action` is read when the gesture STARTS and cannot be changed
+      // once the hold has completed, so a non-passive `touchmove` is what stops
+      // the scroll mid-gesture. It works only because arming requires the
+      // finger to have stayed still: the browser has not begun scrolling yet,
+      // and a scroll already under way cannot be taken back.
+      const eat = ev => ev.preventDefault();
+
+      // THE BAR IS PICKED UP. The same for both pointers; only the way in differs.
+      const lift = () => {
+        moved = true;
+        unassignedRow = gridEl.querySelector('.sch-row--unassigned');
+        if (unassignedRow?.hidden) { unassignedRow.hidden = false; unassignedRow.dataset.revealed = 'true'; }
+        tracks = [...gridEl.querySelectorAll('.sch-track')].map(t => ({ track: t, rect: t.getBoundingClientRect() }));
+        bar.classList.add('sch-bar--dragging');
+        document.body.style.cursor = 'grabbing';
+        try { bar.setPointerCapture(down.pointerId); } catch { /* the pointer is already gone */ }
+        if (touch) { touchDragging = true; bar.addEventListener('touchmove', eat, { passive: false }); }
       };
 
-      const up = async () => {
+      /* EVERY ENDING COMES THROUGH HERE, AND ONLY A RELEASE WRITES.
+         `pointercancel` used to run the same handler as `pointerup`, and that
+         handler wrote as soon as the drag had armed. So a gesture the browser
+         TOOK AWAY -- a scroll takeover, a system dialog, a window switch
+         mid-drag -- committed the move to whichever row the bar was last over,
+         with nothing released and nothing confirmed. An interrupted drag is not
+         a drop. It is nothing happening, and the trip stays where it was. */
+      const finish = async (release) => {
+        if (hold) { clearTimeout(hold); hold = 0; }
         bar.removeEventListener('pointermove', move);
-        bar.removeEventListener('pointerup', up);
-        bar.removeEventListener('pointercancel', up);
-        if (!moved) return;
+        bar.removeEventListener('pointerup', onUp);
+        bar.removeEventListener('pointercancel', onCancel);
+        bar.removeEventListener('touchmove', eat);
+        touchDragging = false;
+        if (!moved) return;              // a press that never lifted still selects
         document.body.style.cursor = '';
         bar.classList.remove('sch-bar--dragging');
         clear();
@@ -602,6 +638,7 @@
         // The browser fires a click after this; suppress the one that would
         // otherwise toggle selection at the end of a drag.
         bar.addEventListener('click', e => e.stopPropagation(), { capture: true, once: true });
+        if (!release) return;
 
         const toBus = target ? (target.dataset.busId ?? null) : fromBus;
         if (!target || toBus === fromBus) return;
@@ -618,9 +655,36 @@
         show();   // read it back, rather than trusting the move landed
       };
 
+      const move = ev => {
+        if (!moved) {
+          const dx = Math.abs(ev.clientX - startX), dy = Math.abs(ev.clientY - startY);
+          // A FINGER THAT TRAVELS BEFORE THE HOLD IS DONE MEANT TO SCROLL.
+          // Stand down rather than arm, and let the board keep the gesture.
+          // Both axes count, because the board scrolls sideways as well.
+          if (touch) { if (dx > TOUCH_SLOP || dy > TOUCH_SLOP) finish(false); return; }
+          if (dy < DRAG_THRESHOLD) return;
+          lift();
+        }
+        ev.preventDefault();
+        const hit = tracks.find(({ rect }) => ev.clientY >= rect.top && ev.clientY <= rect.bottom);
+        const next = hit?.track ?? null;
+        if (next === target) return;
+        clear();
+        target = next;
+        const sameRow = target && (target.dataset.busId ?? null) === fromBus;
+        if (target && !sameRow) {
+          target.classList.add(targetWarns(target, start, span) ? 'sch-track--warn' : 'sch-track--drop');
+        }
+      };
+
+      const onUp = () => finish(true);
+      const onCancel = () => finish(false);
+
+      if (touch) hold = setTimeout(() => { hold = 0; lift(); }, TOUCH_HOLD_MS);
+
       bar.addEventListener('pointermove', move);
-      bar.addEventListener('pointerup', up);
-      bar.addEventListener('pointercancel', up);
+      bar.addEventListener('pointerup', onUp);
+      bar.addEventListener('pointercancel', onCancel);
     });
   }
 
@@ -1448,6 +1512,11 @@
     if (!bar || !bar.dataset.tripId) return;
     e.preventDefault();
     e.stopPropagation();
+    // A HOLD ON TOUCH IS THE DRAG'S GESTURE NOW, and Android fires this event
+    // at about the moment the bar lifts. Opening a menu on top of a bar the
+    // finger is already carrying is the wrong answer to that press, so the
+    // drag wins while it is armed. The menu is unchanged for a right-click.
+    if (touchDragging) return;
     barMenuFor = bar;
     document.getElementById('sch-bar-menu-unassign').hidden =
       !bar.dataset.assignmentId || !bar.dataset.busId;

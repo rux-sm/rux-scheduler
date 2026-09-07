@@ -372,6 +372,16 @@
   overflow: hidden;
   cursor: pointer;
   z-index: 1;
+  /* A BAR IS HELD BEFORE IT MOVES ON TOUCH, and a hold is the browser's own
+     gesture too: iOS raises the selection callout and both platforms offer to
+     select the label, either of which lands on top of the bar being picked up.
+     `manipulation` keeps panning and pinching -- the board must still scroll
+     under a finger that starts on a bar -- and drops only the double-tap zoom,
+     which has nothing to do here. The drag suppresses the scroll itself, once
+     the hold is done; see sch-data.js. */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 .sch-bar:hover { background: var(--sch-hover); }
 .sch-bar:focus-visible { outline: 2px solid var(--rux-focus); outline-offset: -2px; }
