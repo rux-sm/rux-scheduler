@@ -4,6 +4,27 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - a third position, left of the schedule.** rux asked about it
+rather than a left-hand panel, and it is one property: `side` and `left` are
+the same box in the same flex row, `order: -1` apart. The layout button cycles
+Dock, Side, Left and names where it goes next. Verified through a full cycle:
+aside at 1072 after the board, at 64 with the board pushed to 384, then the
+dock.
+
+**A left-hand Carbon panel was the other option and was argued against.** The
+class is compiled and would have worked. But `screen-inventory.md` section 7
+says a panel holds the DETAIL OF A SELECTED THING and closes when you are
+done, and rux keeps this open the whole time - persistent reference belongs in
+the layout. It also costs the same width as the slot already there, so it buys
+no room, only a different edge to lose it from.
+
+**What the left position trades, and it is not obvious in either direction.**
+It puts the trip panel beside the board it describes, which is what rux found
+awkward about the middle. It also puts the selected trip's date and the
+squares that answer it at opposite edges of the screen, which is the pairing
+the marked column exists to serve. Both are defensible; that is what the
+trial is for.
+
 **2026-09-06 - the header seam, fixed in the header.** rux asked whether the
 availability rows should go to 32 to match the table header. Measured: both
 grids start at y=129 and the schedule's day header is 32px against this one's

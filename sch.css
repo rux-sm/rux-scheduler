@@ -491,6 +491,10 @@
 .sch-board > .sch { flex: 1 1 auto; min-inline-size: 0; }
 
 .sch-aside { flex: 0 0 auto; inline-size: 19rem; }
+/* THE THIRD POSITION, and it is one property. Left of the schedule puts the
+   trip panel next to the board it describes, at the cost of putting the
+   selected trip's date and the squares that answer it at opposite edges. */
+.sch-aside--start { order: -1; }
 .sch-dock { margin-block-start: var(--rux-spacing-05); }
 
 /* XS, WHICH IS CARBON'S OWN SMALLEST ROW. 24px, the same step the data table

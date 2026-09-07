@@ -790,15 +790,18 @@
 
      TIME OFF IS STORED, in `driver_time_off`, and beats busy in the cell --
      a driver both assigned and away is a conflict worth seeing as away. */
-  const availSlots = {
-    dock: document.getElementById('sch-dock'),
-    side: document.getElementById('sch-aside'),
-  };
+  // THREE POSITIONS, TWO SLOTS. `side` and `left` are the same box in the same
+  // flex row; only its order changes, which is the whole of the difference
+  // rux asked to see.
+  const AVAIL_LAYOUTS = ['dock', 'side', 'left'];
+  const dockSlot = document.getElementById('sch-dock');
+  const asideSlot = document.getElementById('sch-aside');
   const availEl = document.getElementById('sch-avail');
   const availGrid = document.getElementById('sch-avail-grid');
   const availToggle = document.getElementById('sch-avail-toggle');
   const availLayoutBtn = document.getElementById('sch-avail-layout');
-  let availLayout = localStorage.getItem('sch-avail-layout') || 'dock';
+  let availLayout = AVAIL_LAYOUTS.includes(localStorage.getItem('sch-avail-layout'))
+    ? localStorage.getItem('sch-avail-layout') : 'dock';
   let availOn = false;
   let availRows = [];
 
@@ -893,14 +896,20 @@
     return Number.isFinite(start) && bar ? start : null;
   };
 
+  const WHERE = { dock: 'below the schedule', side: 'right of the schedule', left: 'left of the schedule' };
+
   function placeAvailability() {
-    availLayoutBtn.textContent = availLayout === 'dock' ? 'Side' : 'Dock';
-    availLayoutBtn.setAttribute('aria-label', availLayout === 'dock' ? 'Move driver availability to the side' : 'Move driver availability below the schedule');
-    for (const [name, slot] of Object.entries(availSlots)) {
-      if (!slot) continue;
-      slot.hidden = !(availOn && availLayout === name);
-      if (availOn && availLayout === name) slot.appendChild(availEl);
+    const next = AVAIL_LAYOUTS[(AVAIL_LAYOUTS.indexOf(availLayout) + 1) % AVAIL_LAYOUTS.length];
+    availLayoutBtn.textContent = next[0].toUpperCase() + next.slice(1);
+    availLayoutBtn.setAttribute('aria-label', `Move driver availability ${WHERE[next]}`);
+
+    const wantsAside = availLayout !== 'dock';
+    if (dockSlot) dockSlot.hidden = !(availOn && !wantsAside);
+    if (asideSlot) {
+      asideSlot.hidden = !(availOn && wantsAside);
+      asideSlot.classList.toggle('sch-aside--start', availLayout === 'left');
     }
+    if (availOn) (wantsAside ? asideSlot : dockSlot)?.appendChild(availEl);
     availEl.hidden = !availOn;
     availToggle.setAttribute('aria-pressed', String(availOn));
     window.Rux?.schedule?.fit?.();
@@ -921,7 +930,7 @@
 
   availToggle?.addEventListener('click', () => { availOn = !availOn; placeAvailability(); });
   availLayoutBtn?.addEventListener('click', () => {
-    availLayout = availLayout === 'dock' ? 'side' : 'dock';
+    availLayout = AVAIL_LAYOUTS[(AVAIL_LAYOUTS.indexOf(availLayout) + 1) % AVAIL_LAYOUTS.length];
     localStorage.setItem('sch-avail-layout', availLayout);
     placeAvailability();
   });
