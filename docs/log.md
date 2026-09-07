@@ -4,6 +4,28 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - left of the board, and the trial comes out.** rux chose it,
+so the dock and the right-hand slot are deleted along with the layout button
+and the stored preference. One position, no switch.
+
+**Every row is 32px now**, Carbon's sm and the height the header already had,
+which makes the earlier "match the header, not every row" answer moot - rux
+looked at it and wanted one height throughout. The square follows the row, so
+a day cell is 32 by 32 and the aside widens from 19rem to 23rem to hold seven
+of them plus a 142px name column. The cost is on screen: 23 of 40 drivers
+visible against 31 at 24px rows.
+
+Verified after the deletion: aside at x=64 with the board at 448, rows and
+squares 32, header 32, both panes ending on the same line, and neither the
+dock nor the layout button in the document.
+
+**A process note worth keeping.** The cleanup went out as two heredocs and the
+first one asserted on its last replacement, so `sch-data.js` was never written
+while `sch.js` was - and `node tools/check.mjs` still exited 0, because a
+stale module that parses is not something it can see. Caught by grepping for
+the thing that should have been gone. Check the file, not the exit code, when
+a pass is a deletion.
+
 **2026-09-06 - beside the board means as tall as the board.** rux asked
 whether the list should reach the schedule's height. It should: it had a
 hand-set 30rem cap of its own and stopped short with empty page beneath it,

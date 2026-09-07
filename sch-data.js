@@ -776,11 +776,12 @@
   }
 
   /* ── DRIVER AVAILABILITY ───────────────────────────────────────────────────
-     ON TRIAL IN TWO PLACES, and the switch exists so rux can decide from the
-     rendered thing rather than from my argument for one of them. One renderer
-     fills one element, and the element is MOVED between the dock and the side
-     slot, so what differs between the two readings is the layout and nothing
-     else. When the answer is in, the loser's slot and the layout button go.
+     LEFT OF THE BOARD, decided 2026-09-06 after trying it docked below the
+     schedule and to its right as well. The dock aligned Thursday under
+     Thursday and cost 240px of height; the right-hand slot sat between the
+     board and the panel describing it, which is what settled it. Both are
+     gone. The marked day column is what answers "who is free THEN" now that
+     the columns no longer line up.
 
      BUSY IS DERIVED, NOT STORED. There is no per-driver-per-day row anywhere:
      a driver is busy on a day because an assignment they are on covers it, so
@@ -790,18 +791,10 @@
 
      TIME OFF IS STORED, in `driver_time_off`, and beats busy in the cell --
      a driver both assigned and away is a conflict worth seeing as away. */
-  // THREE POSITIONS, TWO SLOTS. `side` and `left` are the same box in the same
-  // flex row; only its order changes, which is the whole of the difference
-  // rux asked to see.
-  const AVAIL_LAYOUTS = ['dock', 'side', 'left'];
-  const dockSlot = document.getElementById('sch-dock');
   const asideSlot = document.getElementById('sch-aside');
   const availEl = document.getElementById('sch-avail');
   const availGrid = document.getElementById('sch-avail-grid');
   const availToggle = document.getElementById('sch-avail-toggle');
-  const availLayoutBtn = document.getElementById('sch-avail-layout');
-  let availLayout = AVAIL_LAYOUTS.includes(localStorage.getItem('sch-avail-layout'))
-    ? localStorage.getItem('sch-avail-layout') : 'dock';
   let availOn = false;
   let availRows = [];
 
@@ -896,20 +889,11 @@
     return Number.isFinite(start) && bar ? start : null;
   };
 
-  const WHERE = { dock: 'below the schedule', side: 'right of the schedule', left: 'left of the schedule' };
-
   function placeAvailability() {
-    const next = AVAIL_LAYOUTS[(AVAIL_LAYOUTS.indexOf(availLayout) + 1) % AVAIL_LAYOUTS.length];
-    availLayoutBtn.textContent = next[0].toUpperCase() + next.slice(1);
-    availLayoutBtn.setAttribute('aria-label', `Move driver availability ${WHERE[next]}`);
-
-    const wantsAside = availLayout !== 'dock';
-    if (dockSlot) dockSlot.hidden = !(availOn && !wantsAside);
     if (asideSlot) {
-      asideSlot.hidden = !(availOn && wantsAside);
-      asideSlot.classList.toggle('sch-aside--start', availLayout === 'left');
+      asideSlot.hidden = !availOn;
+      if (availOn) asideSlot.appendChild(availEl);
     }
-    if (availOn) (wantsAside ? asideSlot : dockSlot)?.appendChild(availEl);
     availEl.hidden = !availOn;
     availToggle.setAttribute('aria-pressed', String(availOn));
     window.Rux?.schedule?.fit?.();
@@ -929,11 +913,6 @@
   });
 
   availToggle?.addEventListener('click', () => { availOn = !availOn; placeAvailability(); });
-  availLayoutBtn?.addEventListener('click', () => {
-    availLayout = AVAIL_LAYOUTS[(AVAIL_LAYOUTS.indexOf(availLayout) + 1) % AVAIL_LAYOUTS.length];
-    localStorage.setItem('sch-avail-layout', availLayout);
-    placeAvailability();
-  });
 
   document.getElementById('sch-panel-close')?.addEventListener('click', () => closePanel());
   document.addEventListener('keydown', e => {

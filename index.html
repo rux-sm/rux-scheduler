@@ -402,11 +402,6 @@
                did nothing. It comes back, right-aligned after this spacer, on the
                day the trip editor does. -->
           <div class="sch-toolbar__spacer"></div>
-          <!-- A TRIAL, NOT A DECISION. rux asked to see the driver availability
-               grid both ways before choosing, so the second button switches where
-               it lives and one of the two goes when the answer is in. Remove the
-               layout button with the loser. -->
-          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-avail-layout">Side</button>
           <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-avail-toggle" aria-pressed="false">Drivers</button>
         </div>
 
@@ -432,12 +427,12 @@
           <div class="sch" id="sch" role="region" aria-label="Week schedule" hidden>
             <div class="sch-grid" id="sch-grid"></div>
           </div>
-          <!-- The two slots the availability grid can occupy. It is ONE element,
-               moved between them, so both layouts render from one pass and the
-               comparison is of the layout and nothing else. -->
+          <!-- LEFT OF THE BOARD, decided 2026-09-06 after trying it below and to
+               the right as well. `order: -1` puts it first; it is before the
+               grid in the layout and after it in the markup so the schedule
+               stays the first thing reached. -->
           <div class="sch-aside" id="sch-aside" hidden></div>
         </div>
-        <div class="sch-dock" id="sch-dock" hidden></div>
 
         <div class="sch sch--avail" id="sch-avail" role="region" aria-label="Driver availability" hidden>
           <div class="sch-grid sch-avail__grid" id="sch-avail-grid"></div>

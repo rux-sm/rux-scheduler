@@ -71,29 +71,16 @@
     const content = sch.closest('.rux--content');
     const below = content ? parseFloat(getComputedStyle(content).paddingBottom) || 0 : 0;
     const top = sch.getBoundingClientRect().top;
-    // THE DOCK IS BELOW THE GRID AND HAS TO BE PAID FOR. Without this the grid
-    // takes every pixel left in the window and the dock starts exactly at the
-    // bottom edge -- measured 240px tall at y=950 in a 950px window, which is
-    // a dock nobody can see. Its own margin counts: it is the gap between the
-    // two grids, not slack at the end of the page.
-    const dock = document.getElementById('sch-dock');
-    let docked = 0;
-    if (dock && !dock.hidden) {
-      const box = dock.getBoundingClientRect();
-      docked = box.height + (parseFloat(getComputedStyle(dock).marginBlockStart) || 0);
-    }
     // A floor, for the same reason the stylesheet has one: a short window
     // should scroll the page rather than crush the grid to nothing.
-    const height = Math.max(12 * 16, Math.round(window.innerHeight - top - below - docked));
+    const height = Math.max(12 * 16, Math.round(window.innerHeight - top - below));
     const next = `${height}px`;
     if (sch.style.maxBlockSize !== next) sch.style.maxBlockSize = next;
 
-    // BESIDE THE BOARD MEANS AS TALL AS THE BOARD. In the side and left
-    // positions the availability pane starts at the same y as the grid, so a
-    // hand-set cap of its own just stopped it short: 19 of 40 drivers with
-    // empty page below it. It gets the measured height instead and the two
-    // bottoms line up. Docked it keeps the stylesheet's own cap, because
-    // there it is BELOW the grid and this height would push it off-screen.
+    // BESIDE THE BOARD MEANS AS TALL AS THE BOARD. The availability pane starts
+    // at the same y as the grid, so a hand-set cap of its own just stopped it
+    // short: 18 of 40 drivers with empty page below it. It gets the measured
+    // height instead and the two bottoms line up.
     const aside = document.getElementById('sch-aside');
     const avail = document.getElementById('sch-avail');
     if (aside && avail && !aside.hidden && aside.contains(avail)) {
@@ -135,21 +122,6 @@
     }
     sch.style.setProperty('--sch-day-track', `${day}px`);
 
-    // THE DOCK SHARES THE COLUMNS OR IT IS NOT A DOCK. The availability grid
-    // below the schedule is only worth its vertical space if Thursday sits
-    // under Thursday, so it gets the same measured track and the same total
-    // width. The side slot sets its own and is left alone.
-    const dock = document.getElementById('sch-dock');
-    const avail = document.getElementById('sch-avail');
-    if (dock && avail && !dock.hidden && dock.contains(avail)) {
-      avail.style.setProperty('--sch-day-track', `${day}px`);
-      avail.style.setProperty('--sch-head-w', `${headBase}px`);
-      avail.style.inlineSize = sch.style.inlineSize || '';
-    } else if (avail) {
-      avail.style.removeProperty('--sch-day-track');
-      avail.style.removeProperty('--sch-head-w');
-      avail.style.removeProperty('inline-size');
-    }
   }
 
   const sch = document.getElementById('sch');

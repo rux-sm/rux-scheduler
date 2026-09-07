@@ -475,11 +475,13 @@
    add is a denser row and the three cell states. AGENTS.md names the week grid
    and the trip bar as this app's two components and that stays true.
 
-   TWO LAYOUTS, ONE RENDERER, because rux asked to try both before choosing.
-   The dock shares the schedule's day columns exactly -- sch.js applies the
-   same measured track to both -- so Thursday sits under Thursday. The side
-   slot spends horizontal space instead, keeps the schedule's full height, and
-   gives up that alignment. One of these is deleted when the answer is in. */
+   LEFT OF THE BOARD, decided 2026-09-06. It was tried three ways: docked
+   below the schedule sharing its day columns exactly, to the right between
+   the board and the trip panel, and here. Docking aligned Thursday under
+   Thursday and cost 240px of height; the right-hand slot put the grid between
+   the board and the panel describing it, which is what settled it. Left keeps
+   the trip panel beside the board it describes and gives up column alignment,
+   which the marked day column answers instead. */
 /* `min-inline-size: 0` IS LOAD-BEARING. This sits in Carbon's
    `rux--stack-vertical`, which is a grid, and a grid item defaults to
    `min-width: auto` -- it refuses to shrink below its own content. With the
@@ -490,18 +492,19 @@
 .sch-board { display: flex; align-items: flex-start; gap: var(--rux-spacing-05); min-inline-size: 0; }
 .sch-board > .sch { flex: 1 1 auto; min-inline-size: 0; }
 
-.sch-aside { flex: 0 0 auto; inline-size: 19rem; }
-/* THE THIRD POSITION, and it is one property. Left of the schedule puts the
-   trip panel next to the board it describes, at the cost of putting the
-   selected trip's date and the squares that answer it at opposite edges. */
-.sch-aside--start { order: -1; }
-.sch-dock { margin-block-start: var(--rux-spacing-05); }
+/* WIDE ENOUGH FOR SEVEN SQUARES AND A NAME. Seven 32px days are 224, and the
+   rest is the name column: 143px, which is what it had at 24px rows. `order`
+   is the whole of "left" -- the box is after the grid in the markup so the
+   schedule is still the first thing reached, and before it on screen. */
+.sch-aside { flex: 0 0 auto; inline-size: 23rem; order: -1; }
 
-/* XS, WHICH IS CARBON'S OWN SMALLEST ROW. 24px, the same step the data table
-   calls xs, and the cell is square at that: a day here is a STATE, so the
-   cell wants to be a mark rather than a box with text in it. Measured before:
-   25 tall by 32 wide, which read as neither. */
-.sch--avail { --sch-avail-h: 1.5rem; max-block-size: 15rem; }
+/* 32px, WHICH IS CARBON'S sm, AND THE SAME HEIGHT AS THE HEADER. It ran at
+   24 (xs) with only the header at 32; rux chose one height for all of it on
+   2026-09-06, so the header rule below is now saying what the rest already
+   says. The cell stays square, which at this row means 32 by 32: a day here
+   is a STATE, so it reads as a mark rather than a box with text in it. The
+   cost is drivers on screen -- 31 of 40 at 24px, 23 at 32. */
+.sch--avail { --sch-avail-h: 2rem; max-block-size: 15rem; }
 /* In the side slot every pixel the days do not need goes to the name, which
    is the only thing there with anything to say. `minmax(0, 1fr)` and not
    `1fr`: a grid track's automatic minimum is its content, so a long name
@@ -509,12 +512,7 @@
 .sch-aside .sch--avail {
   --sch-head-w: minmax(0, 1fr);
   --sch-day-track: var(--sch-avail-h);
-  max-block-size: 30rem;
 }
-/* In the dock the schedule's own day header is directly above, so a second
-   one is a repeat. */
-.sch-dock .sch-avail__days { display: none; }
-
 .sch-avail__grid { align-content: start; }
 .sch-avail__days,
 .sch-avail__row { display: contents; }
@@ -543,12 +541,9 @@
   display: block;
   line-height: var(--sch-avail-h);
 }
-/* THE HEADER MATCHES THE SCHEDULE'S, THE ROWS DO NOT. Both grids start at the
-   same y and the schedule's day header is 32px against this one's 24, so the
-   seam showed on the one row where the two are side by side. Taking every row
-   to 32 would have fixed it by spending 320px of scroll -- 40 drivers at 32 is
-   1280 against 960 -- to correct 8px in one place. So the header alone takes
-   the schedule's height and the data stays at xs. */
+/* The header matched the schedule's 32px before the rows did; it is kept
+   explicit so a change to the row height cannot pull the two grids' top
+   edges apart again. */
 .sch-avail__days > .sch-avail__day { block-size: 2rem; line-height: 2rem; }
 
 /* A single letter needs no padding and reads better centred over its square. */
@@ -563,8 +558,7 @@
 /* THE THREE STATES, and free is the one being looked for, so it is the one
    with nothing in it. Busy and off are Carbon's own tag tints, the same
    palette the trip bar uses, so the two grids read as one system. */
-.sch-avail__cell { padding-inline: var(--rux-spacing-02); overflow: hidden; }
-.sch-aside .sch-avail__cell { padding-inline: 0; }
+.sch-avail__cell { padding-inline: 0; overflow: hidden; }
 .sch-avail__cell--busy {
   background: var(--rux-tag-background-blue);
   color: var(--rux-tag-color-blue);
@@ -581,7 +575,7 @@
 }
 /* The side slot has no room for a destination and does not need one: the
    question there is free or not. */
-.sch-aside .sch-avail__cell > span { visibility: hidden; }
+.sch-avail__cell > span { visibility: hidden; }
 
 /* The selected trip's day, so "who is free THEN" is answered without
    counting columns. The old board did this by highlighting the row for the

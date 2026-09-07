@@ -168,15 +168,31 @@ the same time."* The board is half the answer -- which buses are busy -- and
 the grid is the other half. Putting the second half in a panel squeezes the
 first to about 118px a day, which is the opposite of what the task needs.
 
-**Both are week-by-day grids, so they share the day columns.** Availability is
-a second row group under the bus rows, full width, same seven columns at the
-same widths, so a column means the same thing in both and a day reads straight
-down: this bus is busy Thursday, these three drivers are free Thursday. It
-holds the selected trip's dates highlighted, which is what the old board did.
+**Corrected a third time, 2026-09-06, and this one was settled by building
+it.** This section said a second row group under the bus rows, sharing the day
+columns so a day read straight down. Two things were wrong with that. A second
+row group is in the SAME SCROLL CONTAINER as the buses, so it scrolls away
+exactly when there are enough buses to need it -- rux caught that. And shared
+columns cost 240px of height for an alignment the marked day column already
+provides.
+
+**It is a compact grid LEFT OF THE BOARD.** Rows are drivers at 32px, Carbon's
+sm; the seven day cells are 32px squares, because a day here is a state and
+reads as a mark rather than a box with text. The pane takes the schedule's own
+measured height, so the two end on the same line. The selected trip's day is
+marked down the column, which is what answers "who is free THEN" now that the
+columns do not line up.
+
+Three positions were built and tried before this one was chosen: docked below
+the schedule with the columns aligned, to the right between the board and the
+trip panel, and left. The right-hand slot put the availability grid between
+the board and the panel describing it. Left keeps the trip panel beside the
+board, at the cost of putting the selected trip's date and the squares that
+answer it at opposite edges. `docs/log.md` carries the numbers.
 
 | | |
 |---|---|
-| **Trigger** | A toolbar toggle. It is a companion view, not the detail of anything, so it stays on until turned off. |
+| **Trigger** | The `Drivers` toolbar toggle. It is a companion view, not the detail of anything, so it stays on until turned off. |
 | **In the trip panel** | Nothing. The panel carries the trip's own drivers; who ELSE is free is read on the board. |
 | **On the Drivers page** | The same grid, nothing highlighted, for browsing without a trip. |
 | **Still a popover** | The per-driver card -- photo, city, phone, licence and medical expiry -- that opens from a cell in that grid. That is the detail of a cell, not a surface. |
