@@ -4,6 +4,44 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the trip editor, first slice.** Step 4 of the build order. The
+panel gains Details and Fleet tabs and Details is editable: destination,
+customer, type, the confirmed flag, the three requirement flags, notes. Every
+one is a plain column on `trips` that changes nothing about WHERE the bar
+sits, so a save is one update with no cascade.
+
+**What is not editable and why, since `trips` has 88 columns.** Dates move a
+bar across days and are read through legsOf/clip, so a wrong write moves a
+real trip; they get a pass with the placement in front of them. Times are not
+on the trip at all - they live per-leg and per-stop in `trip_stops`, which is
+the itinerary editor. Bus and drivers are the Fleet half, read-only here.
+Money, contacts and the per-leg workflow booleans want a fuller editor than a
+panel.
+
+**One Save button, because one is what is captured.** `action-set--row-double`
+is compiled but no captured story shows a two-button action set, so the second
+is not ours to invent. Close discards, and it already restores focus. The
+markup for the action set, the tabs, the text input, the select, the checkbox
+group and the text area all came from `carbon-ibm-products-dom.json` and the
+vendored `templates/`, not from guesses.
+
+**Dirty is computed, not tracked.** Every input re-reads the form against the
+values the panel opened with, so typing a change and typing it back out again
+disables Save rather than leaving it armed. Verified: disabled at open, armed
+on edit, disabled on revert, armed on a checkbox, disabled when unchecked, and
+a whitespace-only edit does not count because the read trims.
+
+**Saved against production and restored.** Trip
+`f522945d-b51f-4480-a072-7f63b5ceaf4e`, notes null before; wrote a marker
+through the panel, read it back from the table, status said "Saved 1 change.",
+then set it back to null and confirmed. The save reads the week back rather
+than trusting the write, as the drag does.
+
+Not done: the panel closes on save because a render replaces every bar, and
+reopening on the new bar is not written yet. The Fleet tab is read-only. Both
+tabs carried the leg's dates and times for one commit, which read as a bug;
+they are in Details now, above the editor they belong to.
+
 **2026-09-06 - back to xs, and the width derived rather than picked.** rux
 asked for both. Rows return to 24px: 32 showed 23 of 40 drivers where 24 shows
 31, and seeing the roster at once is the whole point of the grid. The header

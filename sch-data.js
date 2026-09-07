@@ -625,9 +625,13 @@
      ────────────────────────────────────────────────────────────────────────*/
   let panelIndex = { trips: new Map(), buses: new Map(), driversById: new Map() };
   let panelOpener = null;
+  const panelDetails = document.getElementById('sch-panel-details');
+  const panelFleet = document.getElementById('sch-panel-fleet');
+  const panelSave = document.getElementById('sch-panel-save');
 
   const panelEl = document.getElementById('sch-panel');
   const panelBody = document.getElementById('sch-panel-body');
+  void panelBody;   // kept as the scroll container's handle; content goes in the tabs
   const panelTitle = document.getElementById('sch-panel-title');
   const panelTitleCollapsed = document.getElementById('sch-panel-title-collapsed');
   const panelSubtitle = document.getElementById('sch-panel-subtitle');
@@ -694,6 +698,148 @@
     if (returnFocus && opener?.isConnected) opener.focus();
   }
 
+  /* ── THE TRIP EDITOR ───────────────────────────────────────────────────────
+     STEP 4's FIRST SLICE, and deliberately not all 88 columns of `trips`.
+     What is editable here is what is a plain column on the trip and changes
+     nothing about WHERE the bar sits: destination, customer, type, status,
+     the three requirement flags, notes. One update, no cascade.
+
+     WHAT IS NOT EDITABLE HERE AND WHY. Dates move a bar across days and are
+     read through legsOf/clip, so a wrong write moves a real trip -- they get
+     their own pass with the placement in front of it. Times are not on the
+     trip at all: they live per-leg and per-stop in `trip_stops`, which is the
+     itinerary editor. Bus and drivers are the Fleet half. Money, contacts and
+     the per-leg workflow booleans are a fuller editor than this panel.
+
+     ONE BUTTON, BECAUSE ONE IS WHAT IS CAPTURED. `action-set--row-double` is
+     compiled but no captured story shows two buttons in an action set, so the
+     second is not ours to invent (AGENTS.md). Close discards.
+
+     SAVE READS BACK rather than trusting the write, the same rule the drag
+     follows: `show()` refetches the week. A render replaces every bar, so the
+     panel closes with it -- reopening on the new bar is not done yet. */
+  const FIELD = (id, label, control, cls = 'rux--form-item') => {
+    const item = el('div', cls);
+    const lw = el('div', 'rux--text-input__label-wrapper');
+    const lab = el('label', 'rux--label', label);
+    lab.setAttribute('for', id);
+    lw.appendChild(lab);
+    item.append(lw, control);
+    return item;
+  };
+
+  function textField(id, label, value) {
+    const outer = el('div', 'rux--text-input__field-outer-wrapper');
+    const wrap = el('div', 'rux--text-input__field-wrapper');
+    const input = el('input', 'rux--text-input');
+    input.type = 'text';
+    input.id = id;
+    input.value = value ?? '';
+    wrap.appendChild(input);
+    outer.appendChild(wrap);
+    return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
+  }
+
+  function selectField(id, label, value, options) {
+    const box = el('div', 'rux--select rux--layout--size-md');
+    const lab = el('label', 'rux--label', label);
+    lab.setAttribute('for', id);
+    const wrap = el('div', 'rux--select-input__wrapper');
+    const sel = el('select', 'rux--select-input');
+    sel.id = id;
+    for (const [val, text] of options) {
+      const o = el('option', 'rux--select-option', text);
+      o.value = val;
+      if (String(value ?? '') === val) o.selected = true;
+      sel.appendChild(o);
+    }
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'rux--select__arrow');
+    svg.setAttribute('width', '16'); svg.setAttribute('height', '16');
+    svg.setAttribute('viewBox', '0 0 32 32'); svg.setAttribute('fill', 'currentColor');
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', '#i-chevron--down');
+    svg.appendChild(use);
+    wrap.append(sel, svg);
+    box.append(lab, wrap);
+    const item = el('div', 'rux--form-item');
+    item.appendChild(box);
+    return item;
+  }
+
+  function checkField(id, label, checked) {
+    const item = el('div', 'rux--form-item rux--checkbox-wrapper');
+    const input = el('input', 'rux--checkbox');
+    input.type = 'checkbox';
+    input.id = id;
+    input.checked = !!checked;
+    const lab = el('label', 'rux--checkbox-label');
+    lab.setAttribute('for', id);
+    lab.appendChild(el('div', 'rux--checkbox-label-text', label));
+    item.append(input, lab, el('div', 'rux--checkbox__validation-msg'));
+    return item;
+  }
+
+  function notesField(id, label, value) {
+    const item = el('div', 'rux--form-item');
+    const lw = el('div', 'rux--text-area__label-wrapper');
+    const lab = el('label', 'rux--label', label);
+    lab.setAttribute('for', id);
+    lw.appendChild(lab);
+    const wrap = el('div', 'rux--text-area__wrapper');
+    const ta = el('textarea', 'rux--text-area');
+    ta.id = id;
+    ta.rows = 3;
+    ta.value = value ?? '';
+    wrap.append(ta, el('span', 'rux--text-area__counter-alert'));
+    wrap.lastChild.setAttribute('role', 'alert');
+    item.append(lw, wrap);
+    return item;
+  }
+
+  // The fields this pass writes, each with how to read it off the form and
+  // what counts as unchanged. `null` and '' are the same thing to the column.
+  const EDITS = [
+    { key: 'destination', get: f => f['sch-f-destination'].value.trim() || null },
+    { key: 'customer', get: f => f['sch-f-customer'].value.trim() || null },
+    { key: 'trip_type', get: f => f['sch-f-type'].value || null },
+    { key: 'confirmed', get: f => f['sch-f-confirmed'].checked },
+    { key: 'req_sleeper', get: f => f['sch-f-sleeper'].checked },
+    { key: 'req_ada', get: f => f['sch-f-ada'].checked },
+    { key: 'req_56pax', get: f => f['sch-f-56pax'].checked },
+    { key: 'notes', get: f => f['sch-f-notes'].value.trim() || null },
+  ];
+
+  let editing = null;   // { id, before: {...} }
+
+  function readForm() {
+    const f = {};
+    for (const id of ['destination', 'customer', 'type', 'confirmed', 'sleeper', 'ada', '56pax', 'notes']) {
+      f[`sch-f-${id}`] = document.getElementById(`sch-f-${id}`);
+    }
+    if (Object.values(f).some(v => !v)) return null;
+    const out = {};
+    for (const e of EDITS) out[e.key] = e.get(f);
+    return out;
+  }
+
+  const same = (a, b) => (a ?? null) === (b ?? null);
+
+  function patchOf() {
+    if (!editing) return null;
+    const now = readForm();
+    if (!now) return null;
+    const patch = {};
+    for (const e of EDITS) if (!same(now[e.key], editing.before[e.key])) patch[e.key] = now[e.key];
+    return patch;
+  }
+
+  function refreshDirty() {
+    const patch = patchOf();
+    panelSave.disabled = !patch || Object.keys(patch).length === 0;
+  }
+
   function openPanel(bar) {
     const trip = panelIndex.trips.get(bar.dataset.tripId);
     if (!trip) return;
@@ -725,19 +871,63 @@
       trip.req_56pax ? '56 pax' : null,
     ].filter(Boolean).join(', ');
 
-    panelBody.replaceChildren();
-    panelBody.appendChild(def([
+    editing = { id: trip.id, before: {
+      destination: trip.destination ?? null,
+      customer: trip.customer ?? null,
+      trip_type: trip.trip_type ?? null,
+      confirmed: trip.confirmed !== false,
+      req_sleeper: !!trip.req_sleeper,
+      req_ada: !!trip.req_ada,
+      req_56pax: !!trip.req_56pax,
+      notes: trip.notes ?? null,
+    } };
+
+    panelDetails.replaceChildren();
+    const form = el('div', 'rux--stack-vertical rux--stack-scale-5');
+    form.append(
+      textField('sch-f-destination', 'Destination', trip.destination),
+      textField('sch-f-customer', 'Customer', trip.customer),
+      selectField('sch-f-type', 'Type', trip.trip_type, [
+        ['', '—'],
+        ['round_trip', 'Round trip'],
+        ['one_way', 'One way'],
+        ['dropoff_pickup', 'Drop-off and pick-up'],
+      ]),
+    );
+    const flags = el('fieldset', 'rux--checkbox-group');
+    flags.setAttribute('aria-disabled', 'false');
+    const legend = el('legend', 'rux--label rux--type-heading-compact-01', 'Status and needs');
+    flags.append(
+      legend,
+      checkField('sch-f-confirmed', 'Confirmed', trip.confirmed !== false),
+      checkField('sch-f-sleeper', 'Sleeper', trip.req_sleeper),
+      checkField('sch-f-ada', 'ADA lift', trip.req_ada),
+      checkField('sch-f-56pax', '56 pax', trip.req_56pax),
+    );
+    form.append(flags, notesField('sch-f-notes', 'Notes', trip.notes));
+    panelDetails.appendChild(form);
+
+    // THE LEG'S OWN FACTS STAY READ-ONLY. Dates and times are not in this
+    // pass; they are shown because the editor above is meaningless without
+    // knowing which leg is on screen.
+    panelDetails.appendChild(section('This leg', def([
       ['Leg', legName === 'return' ? 'Return' : 'Outbound'],
       ['When', when],
-      // THE SPOT TIME FINALLY HAS A HOME. The bar's one line of times could
-      // hold departure and return and no more; be-at-the-yard is read here.
+      // THE SPOT TIME HAS A HOME HERE. The bar's one line of times could hold
+      // departure and return and no more; be-at-the-yard is read in the panel.
       ['Departs', hhmm(leg.depart)],
       ['Spot', hhmm(leg.spot)],
       ['Returns', hhmm(leg.back)],
+    ])));
+
+    // FLEET IS THE BUS AND WHO IS ON IT, and nothing else -- the leg's own
+    // dates and times are in Details, above the editor they belong to. Both
+    // tabs carried them for one commit, which read as a bug rather than a
+    // convenience.
+    panelFleet.replaceChildren();
+    panelFleet.appendChild(def([
       ['Bus', bus ? `${bus.number}${(leg.count || 1) > 1 ? ` — ${(assign?.position ?? 0) + 1} of ${leg.count}` : ''}` : 'Not assigned'],
       ['Drivers', names.join(', ') || (assign ? 'None assigned' : null)],
-      ['Type', trip.trip_type ? String(trip.trip_type).replace(/_/g, ' ') : null],
-      ['Status', trip.confirmed === false ? 'Unconfirmed' : 'Confirmed'],
       ['Needs', reqs],
     ]));
 
@@ -760,10 +950,10 @@
         body.appendChild(row);
       }
       list.appendChild(body);
-      panelBody.appendChild(section('Itinerary', list));
+      panelDetails.appendChild(section('Itinerary', list));
     }
 
-    if (trip.notes) panelBody.appendChild(section('Notes', el('p', null, trip.notes)));
+    refreshDirty();
 
     panelOpener = bar;
     markAvailDay(Number(bar.style.getPropertyValue('--sch-start')));
@@ -913,6 +1103,31 @@
   });
 
   availToggle?.addEventListener('click', () => { availOn = !availOn; placeAvailability(); });
+
+  // DIRTY IS COMPUTED, NOT TRACKED. Every input event re-reads the form and
+  // compares it against the values the panel opened with, so typing a change
+  // and typing it back out again disables Save rather than leaving it armed.
+  panelDetails?.addEventListener('input', refreshDirty);
+  panelDetails?.addEventListener('change', refreshDirty);
+
+  panelSave?.addEventListener('click', async () => {
+    const patch = patchOf();
+    if (!editing || !patch || !Object.keys(patch).length) return;
+    const id = editing.id;
+    panelSave.disabled = true;
+    say('info', 'Saving the trip…');
+    try {
+      const { error } = await withTimeout(client.from('trips').update(patch).eq('id', id).then(r => r));
+      if (error) throw new Error(error.message);
+      // READ IT BACK rather than trusting the write, as the drag does. The
+      // render replaces every bar, so the panel closes with it.
+      await show();
+      say('success', `Saved ${Object.keys(patch).length} change${Object.keys(patch).length === 1 ? '' : 's'}.`);
+    } catch (e) {
+      say('error', `The trip was not saved. ${e.message}`);
+      panelSave.disabled = false;
+    }
+  });
 
   document.getElementById('sch-panel-close')?.addEventListener('click', () => closePanel());
   document.addEventListener('keydown', e => {
