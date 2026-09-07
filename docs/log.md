@@ -4,6 +4,18 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - beside the board means as tall as the board.** rux asked
+whether the list should reach the schedule's height. It should: it had a
+hand-set 30rem cap of its own and stopped short with empty page beneath it,
+showing 18 of 40 drivers. In the side and left positions it now takes the
+same measured height the grid gets, so both panes run 128 to 918 and 31 of 40
+drivers are visible without scrolling. Docked it keeps the stylesheet's cap,
+because there it sits BELOW the grid and this height would push it off-screen.
+
+A measurement note: `.sch-avail__row` is `display: contents` and has no box,
+so counting visible rows from their rects reads zero. Counted from the name
+cells instead.
+
 **2026-09-06 - a third position, left of the schedule.** rux asked about it
 rather than a left-hand panel, and it is one property: `side` and `left` are
 the same box in the same flex row, `order: -1` apart. The layout button cycles

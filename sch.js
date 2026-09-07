@@ -87,6 +87,20 @@
     const height = Math.max(12 * 16, Math.round(window.innerHeight - top - below - docked));
     const next = `${height}px`;
     if (sch.style.maxBlockSize !== next) sch.style.maxBlockSize = next;
+
+    // BESIDE THE BOARD MEANS AS TALL AS THE BOARD. In the side and left
+    // positions the availability pane starts at the same y as the grid, so a
+    // hand-set cap of its own just stopped it short: 19 of 40 drivers with
+    // empty page below it. It gets the measured height instead and the two
+    // bottoms line up. Docked it keeps the stylesheet's own cap, because
+    // there it is BELOW the grid and this height would push it off-screen.
+    const aside = document.getElementById('sch-aside');
+    const avail = document.getElementById('sch-avail');
+    if (aside && avail && !aside.hidden && aside.contains(avail)) {
+      if (avail.style.maxBlockSize !== next) avail.style.maxBlockSize = next;
+    } else if (avail && avail.style.maxBlockSize) {
+      avail.style.removeProperty('max-block-size');
+    }
   }
 
   function fitColumns(sch) {
