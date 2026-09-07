@@ -462,6 +462,21 @@
     </li>
   </ul>
 
+  <!-- THE BAR'S CONTEXT MENU. `screen-inventory.md` section 5 keeps three of
+       the old bar's five icons -- Open trip, Move bus, Print envelope -- and
+       section 7 puts the ones wanted WITHOUT opening anything on this menu.
+       Two of the three are here: Open trip, and Move bus in the form it can
+       take without a bus list, which is taking the bus away. Print envelope
+       waits for the print pass, step 5 of the build order. -->
+  <ul class="rux--menu rux--menu--sm rux--menu--open rux--menu--shown" id="sch-bar-menu" role="menu" tabindex="-1" hidden>
+    <li class="rux--menu-item" role="menuitem" tabindex="0" id="sch-bar-menu-open">
+      <div class="rux--menu-item__label">Open trip</div>
+    </li>
+    <li class="rux--menu-item" role="menuitem" tabindex="0" id="sch-bar-menu-unassign">
+      <div class="rux--menu-item__label">Take off this bus</div>
+    </li>
+  </ul>
+
   <!-- THE TRIP PANEL. Carbon's own side panel; no rux-ds module claims it, so
        sch-data.js opens and closes it and says so in its own comment. Slide-in
        rather than the default: it drops the shadow, because the page makes

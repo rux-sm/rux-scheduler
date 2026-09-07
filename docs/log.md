@@ -4,6 +4,39 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the bar's right-click menu.** `screen-inventory.md` section 5
+keeps three of the old bar's five icons - Open trip, Move bus, Print envelope -
+and section 7 says the ones wanted WITHOUT opening anything belong on a
+right-click menu. Two of the three are here.
+
+**Open trip**, which the panel already does on a left click, and **Take off
+this bus**, which is Move bus in the only form it can take without a list of
+every bus. That write is not new: it is exactly what the drag does when a bar
+is dropped on the Unassigned row.
+
+**Hidden where it cannot act.** A bar with no assignment row is an unfilled
+slot in the Unassigned row and there is nothing to clear, so the item is not
+rendered rather than rendered disabled - a disabled item that can never enable
+is worse than no item. Verified on the bar after unassigning it: menu opens,
+the item is gone.
+
+**Print envelope is the third and is deferred, not forgotten** - printing is
+step 5 of the build order and nothing prints yet.
+
+**Delete is not on this menu and that is deliberate.** The inventory never
+lists it among the bar's actions, so it has no home in the plan; inventing one
+for an irreversible write, on a menu, is not a call to make in passing. Worth
+rux deciding where it belongs.
+
+**Verified against production and restored.** Open trip opened the panel on
+"Banquete, TX". Take off this bus set `bus_id` null, the board redrew the bar
+in the Unassigned row, the notice read as expected, and the assignment was put
+back on its original bus with a match confirmed.
+
+The placement arithmetic both menus use is now one function; the cell menu's
+handler already returned early on a bar, so the two contextmenu listeners on
+the grid do not fight.
+
 **2026-09-06 - right-click an empty cell, the old board's gesture.** rux said
 the old app offered "add new trip" from a context menu on an empty spot, with
 the date and bus already filled. It is worth keeping for the reason it

@@ -1395,7 +1395,20 @@
      `position: fixed` surfaces, and this one is absolute inside `.sch-page`,
      so the placement below stands. */
   const cellMenu = document.getElementById('sch-cell-menu');
+  const barMenu = document.getElementById('sch-bar-menu');
   let cellMenuAt = null;
+  let barMenuFor = null;
+
+  // Both menus are placed the same way, so the arithmetic is written once.
+  function popMenuAt(menu, e) {
+    const page = pageEl?.getBoundingClientRect();
+    menu.hidden = false;
+    menu.style.position = 'absolute';
+    menu.style.insetInlineStart = `${e.clientX - (page?.left ?? 0)}px`;
+    menu.style.insetBlockStart = `${e.clientY - (page?.top ?? 0)}px`;
+    pageEl?.appendChild(menu);
+    window.Rux?.menu?.open?.(menu, null);
+  }
 
   gridEl.addEventListener('contextmenu', e => {
     const track = e.target.closest('.sch-track');
@@ -1411,14 +1424,63 @@
       busId: track.dataset.unassigned ? null : (track.dataset.busId || null),
     };
 
-    const page = pageEl?.getBoundingClientRect();
-    cellMenu.hidden = false;
-    cellMenu.style.position = 'absolute';
-    cellMenu.style.insetInlineStart = `${e.clientX - (page?.left ?? 0)}px`;
-    cellMenu.style.insetBlockStart = `${e.clientY - (page?.top ?? 0)}px`;
-    pageEl?.appendChild(cellMenu);
-    window.Rux?.menu?.open?.(cellMenu, null);
+    popMenuAt(cellMenu, e);
   });
+
+  /* THE BAR'S OWN MENU. `screen-inventory.md` section 5 keeps three of the old
+     bar's five icons and section 7 puts the ones wanted without opening
+     anything here. Open trip is one. Move bus is the other, in the only form
+     it can take without a list of every bus: taking the bus AWAY, which sends
+     the trip to the Unassigned row -- the same write the drag makes when a bar
+     is dropped there, so nothing new is being invented for it.
+
+     TAKE OFF THIS BUS IS HIDDEN WHERE IT CANNOT ACT: a bar with no assignment
+     row is an unfilled slot in the Unassigned row, and there is nothing to
+     clear. A disabled item that can never enable is worse than no item.
+
+     PRINT ENVELOPE IS THE THIRD AND IS NOT HERE, because printing is step 5 of
+     the build order and nothing prints yet. Not forgotten -- deferred.
+
+     DELETE IS NOT HERE EITHER, and deliberately: the inventory never lists it
+     among the bar's actions, so it has no home in the plan yet and this is not
+     the place to invent one for an irreversible write. */
+  gridEl.addEventListener('contextmenu', e => {
+    const bar = e.target.closest('.sch-bar');
+    if (!bar || !bar.dataset.tripId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    barMenuFor = bar;
+    document.getElementById('sch-bar-menu-unassign').hidden =
+      !bar.dataset.assignmentId || !bar.dataset.busId;
+    popMenuAt(barMenu, e);
+  });
+
+  barMenu?.addEventListener('click', async e => {
+    const item = e.target.closest('.rux--menu-item');
+    if (!item || !barMenuFor) return;
+    const bar = barMenuFor;
+    window.Rux?.menu?.close?.(barMenu);
+    barMenu.hidden = true;
+
+    if (item.id === 'sch-bar-menu-open') { openPanel(bar); return; }
+
+    if (item.id === 'sch-bar-menu-unassign') {
+      const assignmentId = bar.dataset.assignmentId;
+      if (!assignmentId) return;
+      say('info', 'Taking the trip off its bus…');
+      try {
+        // The same write the drag makes for a drop on the Unassigned row.
+        const { error } = await withTimeout(
+          client.from('trip_assignments').update({ bus_id: null }).eq('id', assignmentId).then(r => r));
+        if (error) throw new Error(error.message);
+        await show();
+        say('success', 'Taken off its bus. It is in the Unassigned row.');
+      } catch (err) {
+        say('error', `The trip was not moved. ${err.message}`);
+      }
+    }
+  });
+  barMenu?.addEventListener('rux:menu-closed', () => { barMenu.hidden = true; });
 
   cellMenu?.addEventListener('click', e => {
     if (!e.target.closest('#sch-cell-menu-new')) return;
