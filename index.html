@@ -475,7 +475,46 @@
     <li class="rux--menu-item" role="menuitem" tabindex="0" id="sch-bar-menu-unassign">
       <div class="rux--menu-item__label">Take off this bus</div>
     </li>
+    <li class="rux--menu-item rux--menu-item--danger" role="menuitem" tabindex="0" id="sch-bar-menu-cancel">
+      <div class="rux--menu-item__label">Cancel trip…</div>
+    </li>
   </ul>
+
+  <!-- CANCELLING ASKS FOR A REASON, because the data says it is normally
+       given: 32 of the 41 already-cancelled trips carry one. Structure copied
+       from `templates/wizard-page.html`, which confirms a cancel the same way;
+       `modal.js` claims it and supplies the focus trap, Escape and
+       `data-rux-close`. Danger, because it takes a trip off the board -- but
+       it is reversible, which is why it is not a delete. -->
+  <div class="rux--layer-one rux--modal" id="sch-cancel-modal" role="presentation">
+    <div role="dialog" aria-modal="true" aria-labelledby="sch-cancel-h" tabindex="-1" class="rux--modal-container rux--modal-container--sm">
+      <div class="rux--modal-header">
+        <h2 class="rux--modal-header__heading" id="sch-cancel-h">Cancel this trip?</h2>
+        <div class="rux--modal-close-button">
+          <button type="button" class="rux--modal-close" aria-label="Close" data-rux-close>
+            <svg class="rux--modal-close__icon" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="rux--modal-content">
+        <p id="sch-cancel-what"></p>
+        <p>It comes off the schedule and stays on the trips list, where it can be brought back.</p>
+        <div class="rux--form-item">
+          <div class="rux--text-area__label-wrapper">
+            <label class="rux--label" for="sch-cancel-reason">Reason</label>
+          </div>
+          <div class="rux--text-area__wrapper">
+            <textarea id="sch-cancel-reason" class="rux--text-area" rows="3" placeholder="Why is it cancelled?"></textarea>
+            <span class="rux--text-area__counter-alert" role="alert"></span>
+          </div>
+        </div>
+      </div>
+      <div class="rux--modal-footer">
+        <button type="button" class="rux--btn rux--btn--secondary" data-rux-close>Keep it</button>
+        <button type="button" class="rux--btn rux--btn--danger" id="sch-cancel-confirm">Cancel trip</button>
+      </div>
+    </div>
+  </div>
 
   <!-- THE TRIP PANEL. Carbon's own side panel; no rux-ds module claims it, so
        sch-data.js opens and closes it and says so in its own comment. Slide-in

@@ -187,7 +187,14 @@
 
     const [buses, trips, drivers, oos, timeOff] = await withTimeout(Promise.all([
       client.from('buses').select('id,number,capacity,type,status,sort_order,ada_lift,sleeper').order('sort_order').then(unwrap),
-      client.from('trips').select(TRIP_COLUMNS).gte('start_date', lo).lte('start_date', hi).order('start_date').then(unwrap),
+      // A CANCELLED TRIP IS NOT ON THE SCHEDULE. `cancelled_at` is set on 41 of
+      // the 743 rows and this read never excluded it, so cancelled work has
+      // been drawn as live work on every week since the grid landed -- the
+      // kind of defect that misleads rather than merely looks wrong. It stays
+      // in the table and belongs to the trips page, which is where it can be
+      // seen and brought back.
+      client.from('trips').select(TRIP_COLUMNS).is('cancelled_at', null)
+        .gte('start_date', lo).lte('start_date', hi).order('start_date').then(unwrap),
       client.from('drivers').select('id,name,short_name').then(unwrap),
       client.from('bus_out_of_service').select('bus_id,start_date,end_date,reason').lte('start_date', hi).gte('end_date', iso(weekStart)).then(unwrap),
       // OVERLAP, NOT CONTAINMENT: a driver away across the whole fortnight has
@@ -1464,6 +1471,16 @@
 
     if (item.id === 'sch-bar-menu-open') { openPanel(bar); return; }
 
+    if (item.id === 'sch-bar-menu-cancel') {
+      const trip = panelIndex.trips.get(bar.dataset.tripId);
+      cancelling = bar.dataset.tripId;
+      document.getElementById('sch-cancel-what').textContent =
+        `${trip?.destination || 'This trip'}${trip?.customer ? ` for ${trip.customer}` : ''}.`;
+      document.getElementById('sch-cancel-reason').value = '';
+      window.Rux?.modal?.open?.('sch-cancel-modal');
+      return;
+    }
+
     if (item.id === 'sch-bar-menu-unassign') {
       const assignmentId = bar.dataset.assignmentId;
       if (!assignmentId) return;
@@ -1481,6 +1498,36 @@
     }
   });
   barMenu?.addEventListener('rux:menu-closed', () => { barMenu.hidden = true; });
+
+  /* CANCEL IS NOT DELETE, and the difference is the whole point of it. The row
+     stays; `cancelled_at` takes it off the board and the trips page is where
+     it can still be read and brought back. rux: "its useful to know about
+     trips that were cancelled." Deleting outright belongs on that page, for
+     the test rows that are worth nothing to anybody.
+
+     THE REASON IS OPTIONAL HERE and stored when given. 32 of the 41 cancelled
+     trips carry one, so it is normally written but not always, and refusing
+     the cancel without one would be stricter than the data has ever been. */
+  let cancelling = null;
+
+  document.getElementById('sch-cancel-confirm')?.addEventListener('click', async () => {
+    const id = cancelling;
+    if (!id) return;
+    const reason = document.getElementById('sch-cancel-reason').value.trim();
+    window.Rux?.modal?.close?.('sch-cancel-modal');
+    cancelling = null;
+    say('info', 'Cancelling the trip…');
+    try {
+      const patch = { cancelled_at: new Date().toISOString() };
+      if (reason) patch.cancellation_reason = reason;
+      const { error } = await withTimeout(client.from('trips').update(patch).eq('id', id).then(r => r));
+      if (error) throw new Error(error.message);
+      await show();
+      say('success', 'Trip cancelled. It is off the schedule and still on the trips list.');
+    } catch (e) {
+      say('error', `The trip was not cancelled. ${e.message}`);
+    }
+  });
 
   cellMenu?.addEventListener('click', e => {
     if (!e.target.closest('#sch-cell-menu-new')) return;

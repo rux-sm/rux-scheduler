@@ -4,6 +4,40 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - cancel, not delete, and a defect it uncovered.** rux described
+the old board's only bar action: cancel, which gives the trip a cancelled
+status and takes it off the schedule while leaving it on the trips page, "its
+useful to know about trips that were cancelled". Deleting outright belongs on
+that page, for test rows worth nothing to anybody.
+
+**THE SCHEDULE HAS BEEN DRAWING CANCELLED TRIPS AS LIVE WORK.** `cancelled_at`
+is set on 41 of the 743 rows and the week read never excluded it. Three of
+those 41 overlap the week on screen right now - Local and Hidalgo TX on the
+3rd, Edinburg TX on the 2nd - so this was not theoretical. Proven by trip id
+rather than by destination text, because a first attempt matched on text and
+"Edinburg, TX" also names live trips: it read 2 where the honest answer was 0
+after the fix and 3 before it. The read now filters `is('cancelled_at', null)`.
+
+**Cancel asks for a reason and stores it when given.** 32 of the 41 already
+carry one, so it is normally written but not always, and refusing a cancel
+without one would be stricter than the data has ever been. The modal's
+structure is copied from `templates/wizard-page.html`, which confirms a cancel
+the same way; `modal.js` supplies the focus trap, Escape and
+`data-rux-close`. Danger styling, because it takes a trip off the board -- but
+it is reversible, which is exactly why it is not a delete.
+
+**Delete is still not built anywhere**, and now has a home in the plan: the
+trips page, once that exists.
+
+**Verified against production and restored.** Banquete, TX: the modal named
+the trip and its customer, cancelling set `cancelled_at` and the reason, the
+bar left the board, and the notice said where it went. Then both columns were
+nulled and the cancelled count went back to exactly 41 with 743 rows.
+
+One measurement note: the modal read `opacity: 0` from a computed style while
+the screenshot showed it fully painted. The same stale-style trap as the side
+panel; the screenshot is what settled it.
+
 **2026-09-06 - the bar's right-click menu.** `screen-inventory.md` section 5
 keeps three of the old bar's five icons - Open trip, Move bus, Print envelope -
 and section 7 says the ones wanted WITHOUT opening anything belong on a
