@@ -539,6 +539,14 @@
   display: block;
   line-height: var(--sch-avail-h);
 }
+/* THE HEADER MATCHES THE SCHEDULE'S, THE ROWS DO NOT. Both grids start at the
+   same y and the schedule's day header is 32px against this one's 24, so the
+   seam showed on the one row where the two are side by side. Taking every row
+   to 32 would have fixed it by spending 320px of scroll -- 40 drivers at 32 is
+   1280 against 960 -- to correct 8px in one place. So the header alone takes
+   the schedule's height and the data stays at xs. */
+.sch-avail__days > .sch-avail__day { block-size: 2rem; line-height: 2rem; }
+
 /* A single letter needs no padding and reads better centred over its square. */
 .sch-avail__day {
   inset-inline-start: auto;

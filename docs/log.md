@@ -4,6 +4,14 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the header seam, fixed in the header.** rux asked whether the
+availability rows should go to 32 to match the table header. Measured: both
+grids start at y=129 and the schedule's day header is 32px against this one's
+24, so the mismatch was one row and 8px. Taking every row to 32 would have
+spent 320px of scroll to fix it - 40 drivers at 32 is 1280 against 960 - so
+the header alone takes the schedule's height and the data stays at xs. Both
+headers now run 129 to 161 and the cell is still a 24px square.
+
 **2026-09-06 - the availability grid at xs, on rux's reading.** Still on
 trial; this is the side layout made to fit its slot. Days are one letter,
 M T W T F S S, because the day number is already directly above in the
