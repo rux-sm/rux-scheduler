@@ -9,6 +9,64 @@ a rux-ds clone, sweeping, and deleting them again. That is what was done
 below, and it is a gap worth closing upstream: an app on a tag cannot check
 its own rendering without a checkout of the design system beside it.
 
+## Re-swept 2026-09-07 at `b8c373d`
+
+Both pages, white theme asserted by `--rux-field-hover` (#e8e8e8) and
+`body` `rgb(255,255,255)` read in the same execution, 1440×950, focus taken
+with Tab then blurred (`activeElement` BODY, `hasFocus` true), transitions and
+animations suppressed, IBM Plex serving, pointer parked with only HTML, BODY
+and MAIN in `:hover` and no control under measurement, page looked at.
+
+| Gate | `index.html` | `specimen.html` |
+|---|---|---|
+| `check-runtime-classes` | 122 / 117, **5 stripped**, 0 added | 56 / 56, 0 stripped, 0 added |
+| `check-a11y` | 0 findings, 0 notes, ring check live | 0 findings, 0 notes, ring check live |
+| `check-spacing` | 46 checked, 43 matched, 1 known, **2 diverges**, 4 not comparable, 28 no reference | 30 checked, 29 matched, **1 diverges**, 1 not comparable, 9 no reference |
+| `check-rendered` | N/A | N/A |
+| `check-behaviour` | N/A | N/A |
+
+**The red run was done again.** Stripping every `:focus` outline and
+box-shadow took `check-a11y` from 0 to 20 on `index.html` and from 0 to 14 on
+`specimen.html`, and restoring them returned both to 0.
+
+**`specimen.html` is unchanged, figure for figure.** `index.html` is not, and
+the growth is the page's own: it gained 151 lines across `7ce4e93`
+(right-click actions), `c277be1` (cancel a trip) and `3202be8` (the board on
+the whole screen), all after the sweep below. 60/55 became 122/117 for that
+reason and no other. The **same five** adjudicated classes are stripped — the
+`inline-loading` spinner `sch-data.js` replaces — so that finding is unchanged
+in kind.
+
+**One divergence is new, and it is this app's own decision, already reasoned.**
+`rux--tab-content` reports no inline padding where Carbon's capture has 16px,
+on 2 of 2 variants. That is `.rux--side-panel .rux--tab-content
+{ padding-inline: 0 }` in `rux-overrides.css`, added at `f9716f5` — after the
+sweep below, which is why it appears now. Its comment there records the
+measurement (a field sat 33px from the panel edge against the title's 17), the
+specificity, the panel scope, and that **no capture settles it**: none of the
+nine captured side-panel stories contains tabs. Not a defect and not to be
+removed. `rux--header__name` is the standing Carbon-caused one described below.
+
+**HOW THIS WAS RUN, AND IT DID NOT NEED THE TOOLS COPIED IN.** The header of
+this file says sweeping here means copying rux-ds's browser gates over and
+deleting them again. It does not. The app was served through the rux-ds
+server's own origin by a gitignored symlink in that clone (`.brand/sched` →
+this repository), so the page loads from `localhost:8642/.brand/sched/` and
+`/tools/check-*.js` are already there to `eval`. Nothing was copied into this
+repository and nothing was deleted from it. The environment matches the earlier
+sweeps in the way that matters: everything this app owns served 200, and only
+`/switcher.js` and `/account.js` 404 — root-absolute hub files that 404 on this
+app's own server too, which is the drift the report below already names.
+
+**A TIMING TRAP, PAID FOR HERE.** The first `check-runtime-classes` reading of
+this sweep was taken immediately on load and said 122/122 with **0 stripped**.
+That is wrong and it looks like a clean result: `sch-data.js` had not yet
+replaced `#sch-status`, so the spinner was still in the live DOM and matched
+the file. Read again once settled — `.rux--inline-loading` gone — it says
+122/117 with the five stripped. rux-ds's own pages settle synchronously and
+never show this; a page that fetches does. Wait for the page to settle before
+this gate, not merely for it to load.
+
 ## Re-swept 2026-09-06 at `abb971a`
 
 The grid moved onto `border-subtle-01` and `layer-accent-01` and the header
