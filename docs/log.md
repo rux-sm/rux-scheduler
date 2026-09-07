@@ -4,6 +4,59 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - trip dates, and split is two outings not one range.** rux asked
+whether From/To could serve round trip and split with a depart-only field for
+one way. **The data says no to both halves of that**, so it was measured
+across all 743 trips before anything was built.
+
+| type | n | outbound | return dates |
+|---|---|---|---|
+| round_trip | 705 | end differs from start in 268 | never |
+| one_way | 26 | one day in 25, THREE in one | never |
+| dropoff_pickup | 12 | always exactly one day | always set, always later |
+
+**A split is not a range.** All 12 drop off on a single day, the bus LEAVES,
+and it returns 1 to 4 days later - Sandia TX drops 19 July and collects 22
+July. A From/To range would claim the bus for those four days when the point
+of the type is that it is free in between, and the board already knew: legsOf
+makes two legs and draws two bars. **And one way is not a single date** - 25
+of 26 run a day, but Corpus Christi runs 2027-01-31 to 02-02, which a
+depart-only field would have silently collapsed.
+
+So it is ONE control repeated per leg: an outbound From/To for every type, and
+a second pair labelled Pick-up shown only for a split. That maps onto the four
+columns and onto how bars are already placed, so nothing is special-cased at
+render time.
+
+**The return pair is nulled off a non-split on save, on rux's instruction**,
+because legsOf reads those columns whatever the type says and would draw a
+phantom second bar.
+
+**Verified against production and restored.** Trip
+`f522945d-b51f-4480-a072-7f63b5ceaf4e`: made a split with a pick-up on the
+6th, saved, and the board drew TWO bars - outbound at day 3, return at day 6.
+Switched back to round trip, saved, both return columns came back null and the
+board went to one bar. Restored all five columns and compared against the
+recorded original.
+
+**A start date is now unsaveable when empty.** legsOf builds the outbound leg
+only `if (trip.start_date)`, so a null start takes the trip off every week
+while leaving the row in the table - lost rather than deleted, by the editor
+that just did it. Clearing it disables Save and marks the field
+`aria-invalid`. The end date needs no such guard: blank means the same day,
+which is also what the picker leaves behind after the first click of a range.
+
+**Two gates caught two real mistakes in this pass, both mine.** The container
+class was built as `rux--date-picker-container--${which}` and check-classes
+cannot see through an interpolation, so it read an uncompiled fragment and
+failed - both names are written out in full now, the same rule the
+notification kinds follow. Then the invalid state hung a
+`rux--date-picker--invalid` class on the root, which Carbon does not compile
+at all; that is inventing a class to hang a rule on, and the gate said so.
+`aria-invalid` alone does the job.
+
+Not done: the New Trip button. Dates were the thing blocking it, so it is next.
+
 **2026-09-06 - the sliver right of Sunday, and it was two bugs.** rux saw a
 few pixels of daylight between the last day column and the pane's border at
 full width. Real, and mine.

@@ -798,10 +798,99 @@
     return item;
   }
 
+  /* A CARBON RANGE DATE PICKER, built from the capture
+     `preview-preview-datepicker--range-with-calendar@open`: the root, two
+     `--from`/`--to` containers, and ONE shared calendar container. The module
+     fills the calendar and owns it from there -- "the markup is the API" --
+     so only the shell is written here, and `Rux.datePicker.init(scope)` claims
+     it after the panel is built.
+
+     IT WRITES ISO AND DISPATCHES `change`, which is why the dirty check picks
+     these up for free. One behaviour to know: the FIRST pick of a range clears
+     the `to` input, so a half-made range is a real state and the save below
+     treats a blank end as "same day as the start". */
+  const dpIcon = () => {
+    const b = el('button', 'rux--date-picker__icon');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Open calendar');
+    b.tabIndex = -1;
+    b.appendChild(svgUse('#i-calendar', 16, 32));
+    return b;
+  };
+
+  // BOTH NAMED IN FULL, never built from a fragment: `check-classes` reads the
+  // source and cannot see through an interpolation, so a composed class name
+  // is one it cannot verify -- and it said so. Same rule as the notification
+  // kinds. These are the two the range capture carries.
+  const DP_CONTAINER = {
+    from: 'rux--date-picker-container rux--date-picker-container--from',
+    to: 'rux--date-picker-container rux--date-picker-container--to',
+  };
+
+  const dpContainer = (which, id, labelText, value) => {
+    const c = el('div', DP_CONTAINER[which]);
+    const lab = el('label', 'rux--label', labelText);
+    lab.setAttribute('for', id);
+    const wrap = el('div', 'rux--date-picker-input__wrapper');
+    const span = el('span');
+    const input = el('input', 'rux--date-picker__input');
+    input.type = 'text';
+    input.id = id;
+    input.value = value || '';
+    span.append(input, dpIcon());
+    wrap.appendChild(span);
+    c.append(lab, wrap);
+    return c;
+  };
+
+  function dateRange(fromId, toId, fromLabel, toLabel, fromVal, toVal) {
+    const root = el('div', 'rux--date-picker rux--date-picker--next rux--date-picker--range');
+    root.append(
+      dpContainer('from', fromId, fromLabel, fromVal),
+      dpContainer('to', toId, toLabel, toVal),
+    );
+    const cc = el('div', 'rux--date-picker__calendar-container');
+    cc.hidden = true;
+    const cal = el('div', 'rux--date-picker__calendar');
+    cal.setAttribute('role', 'grid');
+    cal.setAttribute('aria-label', 'Calendar');
+    cal.tabIndex = 0;
+    const month = el('div', 'rux--date-picker__month');
+    const prev = el('button', 'rux--date-picker__month-nav');
+    prev.type = 'button'; prev.setAttribute('aria-label', 'Previous month');
+    prev.appendChild(svgUse('#i-chevron--left', 16, 32));
+    const next = el('button', 'rux--date-picker__month-nav');
+    next.type = 'button'; next.setAttribute('aria-label', 'Next month');
+    next.appendChild(svgUse('#i-chevron--right', 16, 32));
+    month.append(prev, el('div', 'rux--date-picker__current-month'), next);
+    const weekdays = el('div', 'rux--date-picker__weekdays');
+    for (let i = 0; i < 7; i++) weekdays.appendChild(el('div', 'rux--date-picker__weekday'));
+    cal.append(month, weekdays, el('div', 'rux--date-picker__days'));
+    cc.appendChild(cal);
+    root.appendChild(cc);
+    const item = el('div', 'rux--form-item');
+    item.appendChild(root);
+    return item;
+  }
+
   // The fields this pass writes, each with how to read it off the form and
   // what counts as unchanged. `null` and '' are the same thing to the column.
+  const SPLIT = 'dropoff_pickup';
+  const isoOrNull = v => (/^\d{4}-\d{2}-\d{2}$/.test((v || '').trim()) ? v.trim() : null);
+
   const EDITS = [
     { key: 'destination', get: f => f['sch-f-destination'].value.trim() || null },
+    { key: 'start_date', get: f => isoOrNull(f['sch-f-start'].value) },
+    // A BLANK END IS THE SAME DAY, not a null: `legsOf` falls back to
+    // start_date anyway, and the picker CLEARS this input on the first pick of
+    // a range, so a half-made range would otherwise save as a null end.
+    { key: 'end_date', get: f => isoOrNull(f['sch-f-end'].value) ?? isoOrNull(f['sch-f-start'].value) },
+    // THE RETURN PAIR IS NULLED OFF A SPLIT, on rux's instruction: a
+    // round trip carrying return dates draws a phantom second bar, because
+    // `legsOf` makes a leg from them whatever the type says.
+    { key: 'return_start_date', get: f => f['sch-f-type'].value === SPLIT ? isoOrNull(f['sch-f-rstart'].value) : null },
+    { key: 'return_end_date', get: f => f['sch-f-type'].value !== SPLIT ? null
+        : (isoOrNull(f['sch-f-rend'].value) ?? isoOrNull(f['sch-f-rstart'].value)) },
     { key: 'customer', get: f => f['sch-f-customer'].value.trim() || null },
     { key: 'trip_type', get: f => f['sch-f-type'].value || null },
     { key: 'confirmed', get: f => f['sch-f-confirmed'].checked },
@@ -815,7 +904,8 @@
 
   function readForm() {
     const f = {};
-    for (const id of ['destination', 'customer', 'type', 'confirmed', 'sleeper', 'ada', '56pax', 'notes']) {
+    for (const id of ['destination', 'customer', 'type', 'confirmed', 'sleeper', 'ada', '56pax', 'notes',
+                      'start', 'end', 'rstart', 'rend']) {
       f[`sch-f-${id}`] = document.getElementById(`sch-f-${id}`);
     }
     if (Object.values(f).some(v => !v)) return null;
@@ -835,9 +925,25 @@
     return patch;
   }
 
+  /* A TRIP WITHOUT A START DATE IS A TRIP NOBODY CAN SEE. `legsOf` makes the
+     outbound leg only `if (trip.start_date)`, so saving a null start would
+     take the trip off every week of the board while leaving the row in the
+     table -- lost rather than deleted, and from inside the editor that just
+     did it. So it is not saveable: clearing the field disables Save and the
+     field is marked invalid. The same is not true of the end date, which
+     falls back to the start, or of the pick-up pair, which only a split
+     reads. */
   function refreshDirty() {
     const patch = patchOf();
-    panelSave.disabled = !patch || Object.keys(patch).length === 0;
+    const startEl = document.getElementById('sch-f-start');
+    const startOk = !!isoOrNull(startEl?.value);
+    // `aria-invalid` ONLY. The first attempt hung a
+    // `rux--date-picker--invalid` class on the root and check-classes failed
+    // it: Carbon compiles no such class, and inventing one to hang a rule on
+    // is the thing AGENTS.md forbids. The attribute is real, it is what a
+    // screen reader reads, and Save being dead says the rest.
+    startEl?.setAttribute('aria-invalid', String(!startOk));
+    panelSave.disabled = !startOk || !patch || Object.keys(patch).length === 0;
   }
 
   function openPanel(bar) {
@@ -880,6 +986,10 @@
       req_ada: !!trip.req_ada,
       req_56pax: !!trip.req_56pax,
       notes: trip.notes ?? null,
+      start_date: trip.start_date ?? null,
+      end_date: trip.end_date ?? trip.start_date ?? null,
+      return_start_date: trip.return_start_date ?? null,
+      return_end_date: trip.return_end_date ?? trip.return_start_date ?? null,
     } };
 
     panelDetails.replaceChildren();
@@ -891,9 +1001,28 @@
         ['', '—'],
         ['round_trip', 'Round trip'],
         ['one_way', 'One way'],
-        ['dropoff_pickup', 'Drop-off and pick-up'],
+        [SPLIT, 'Drop-off and pick-up'],
       ]),
+      dateRange('sch-f-start', 'sch-f-end', 'From', 'To', trip.start_date, trip.end_date || trip.start_date),
     );
+
+    /* THE RETURN PAIR IS A SECOND OUTING, NOT THE END OF THE FIRST. Measured
+       across all 743 trips on 2026-09-06: every one of the 12 drop-off and
+       pick-up trips drops off on a SINGLE day, and the bus comes back 1 to 4
+       days later -- Sandia TX drops 19 July and collects 22 July. A single
+       From/To range would say the bus is committed for those four days when
+       the point of the type is that it is free in between, and the board
+       already knows better: `legsOf` makes two legs and draws two bars.
+
+       Round trip and one way never carry return dates -- 0 of 731 -- so the
+       pair only appears for a split. And one way is NOT a single date: 25 of
+       26 run a day, but one runs three, so it keeps the range too. */
+    const returnDates = el('div', 'sch-panel-return-dates');
+    returnDates.appendChild(section('Pick-up', dateRange(
+      'sch-f-rstart', 'sch-f-rend', 'From', 'To',
+      trip.return_start_date, trip.return_end_date || trip.return_start_date)));
+    returnDates.hidden = trip.trip_type !== SPLIT;
+    form.appendChild(returnDates);
     const flags = el('fieldset', 'rux--checkbox-group');
     flags.setAttribute('aria-disabled', 'false');
     const legend = el('legend', 'rux--label rux--type-heading-compact-01', 'Status and needs');
@@ -952,6 +1081,15 @@
       list.appendChild(body);
       panelDetails.appendChild(section('Itinerary', list));
     }
+
+    // The module claims a picker on load; these were built just now, so it is
+    // asked again for this subtree.
+    window.Rux?.datePicker?.init?.(panelDetails);
+
+    document.getElementById('sch-f-type')?.addEventListener('change', e => {
+      returnDates.hidden = e.target.value !== SPLIT;
+      refreshDirty();
+    });
 
     refreshDirty();
 
