@@ -1086,6 +1086,20 @@
     // asked again for this subtree.
     window.Rux?.datePicker?.init?.(panelDetails);
 
+    /* A TABPANEL IS A TAB STOP ONLY WHEN NOTHING INSIDE IT IS. That is the
+       ARIA rule, and Details breaks it: it holds 16 focusable controls, so its
+       own `tabindex="0"` made the panel a redundant stop and drew a focus ring
+       around the whole form -- which is what rux saw. Fleet is read-only with
+       nothing focusable in it, so it KEEPS the attribute: without it a
+       keyboard user could reach the tab and never reach what it reveals.
+       Decided per panel, from its contents, rather than written into the
+       markup once and left to rot as the contents change. */
+    for (const tp of [panelDetails, panelFleet]) {
+      const focusable = tp.querySelector('input, select, textarea, button, a[href], [tabindex]:not([tabindex="-1"])');
+      if (focusable) tp.removeAttribute('tabindex');
+      else tp.setAttribute('tabindex', '0');
+    }
+
     document.getElementById('sch-f-type')?.addEventListener('change', e => {
       returnDates.hidden = e.target.value !== SPLIT;
       refreshDirty();

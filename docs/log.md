@@ -4,6 +4,35 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the ring around the whole form, and two widths.** rux asked
+whether the form should be selectable like that, and whether notes and dates
+should span the panel.
+
+**The ring was a real defect and ARIA names the rule.** A tabpanel takes
+`tabindex="0"` only when NOTHING inside it is focusable. Details holds 16
+focusable controls and carried the attribute anyway, so the panel was a
+redundant tab stop that drew a focus ring around the entire form. It is now
+decided per panel from its contents at render time, not written into the
+markup once: Details drops it, Fleet KEEPS it, because Fleet is read-only and
+without it a keyboard user could reach the tab and never reach what it
+reveals.
+
+**Notes should fill, and does now.** `.rux--text-area__wrapper` is
+`display: flex` at `inline-size: 100%`, but `.rux--text-area` carries no width
+of its own, so as a flex item at the default `0 1 auto` it took its basis from
+the HTML `cols` default and sat at 190px inside a 447px wrapper. That 190 is
+the BROWSER's number, not Carbon's -- nothing in rux.css sizes the control.
+Growing it is what the 100% wrapper already said was intended.
+
+**The dates should NOT, and are left alone.** `.rux--date-picker__input` is an
+explicit `inline-size: 8.96875rem` in Carbon's own CSS. A date is a
+fixed-length string; the width is a decision, not an oversight, and two of
+them leaving space to the right is how a Carbon form looks. Stretching them
+would be a divergence with nothing behind it and no functional gain.
+
+Verified: Details `tabindex` absent with 16 focusable inside, Fleet `0` with
+none, notes 447 against a 447 wrapper, date inputs still 144.
+
 **2026-09-06 - the tab spacing, and only half of it was wrong.** rux asked
 whether the tabs should reach the panel's sides or keep the gap. Measured
 against the panel edge at 480px: title 17, tab strip 17 left and 16 right,
