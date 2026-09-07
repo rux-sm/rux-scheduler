@@ -450,6 +450,18 @@
     </div>
   </div>
 
+  <!-- THE BOARD'S CONTEXT MENU. Markup from `components-menu--default`: a
+       `ul[role=menu]` of `li[role=menuitem]` with a `__label` div. It is
+       positioned by sch-data.js at the pointer and opened through
+       `Rux.menu.open`, which supplies Escape, outside-press and focus return.
+       The module repositions only `position: fixed` surfaces, and this one is
+       absolute inside `.sch-page`, so the placement set for it is left alone. -->
+  <ul class="rux--menu rux--menu--sm rux--menu--open rux--menu--shown" id="sch-cell-menu" role="menu" tabindex="-1" hidden>
+    <li class="rux--menu-item" role="menuitem" tabindex="0" id="sch-cell-menu-new">
+      <div class="rux--menu-item__label">New trip here</div>
+    </li>
+  </ul>
+
   <!-- THE TRIP PANEL. Carbon's own side panel; no rux-ds module claims it, so
        sch-data.js opens and closes it and says so in its own comment. Slide-in
        rather than the default: it drops the shadow, because the page makes

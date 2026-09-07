@@ -108,9 +108,19 @@
   // classes said so on the first run: it read the literal half and failed on
   // it. Both whole names appear here, so the gate can see them, which is the
   // point of the gate.
+  /* EVERY CLASS WRITTEN OUT IN FULL, never `--${kind}`: check-classes reads
+     the source and cannot see through an interpolation.
+
+     SUCCESS AND WARNING WERE MISSING UNTIL 2026-09-06 and the lookup falls
+     back to `info`, so every "Saved" and "Trip created" notice this editor has
+     shown was rendering as an INFO notice -- the right words in the wrong
+     kind, which is exactly the sort of thing a fallback hides. Found while
+     adding `warning` for a half-finished create. */
   const NOTE = {
     error: { cls: 'rux--inline-notification rux--inline-notification--error', icon: '#i-error--filled' },
     info: { cls: 'rux--inline-notification rux--inline-notification--info', icon: '#i-information--filled' },
+    success: { cls: 'rux--inline-notification rux--inline-notification--success', icon: '#i-checkmark--filled' },
+    warning: { cls: 'rux--inline-notification rux--inline-notification--warning', icon: '#i-warning--filled' },
   };
 
   function say(kind, title, subtitle) {
@@ -969,8 +979,13 @@
      `destination` is never null in any of the 743, which is why it is
      required below alongside the date. `customer` is null on 26, so it is
      not. */
-  function openCreate() {
-    const start = iso(shown && cursor ? cursor : mondayOf(new Date()));
+  // The bus a new trip will be put on, when creation started from a cell.
+  // Null means the trip is created with no assignment and lands in Unassigned.
+  let createBusId = null;
+
+  function openCreate(opts = {}) {
+    const start = opts.startDate || iso(shown && cursor ? cursor : mondayOf(new Date()));
+    createBusId = opts.busId || null;
     openPanel(null, {
       id: null,
       destination: '', customer: '',
@@ -1097,8 +1112,11 @@
     // convenience.
     panelFleet.replaceChildren();
     if (creating) {
-      panelFleet.appendChild(el('p', 'sch-panel-hint',
-        'A new trip starts with no bus. Save it and it lands in the Unassigned row, where it can be dragged onto one.'));
+      const onBus = createBusId ? panelIndex.buses.get(createBusId) : null;
+      panelFleet.appendChild(onBus
+        ? def([['Bus', `${onBus.number}`], ['Drivers', 'None yet']])
+        : el('p', 'sch-panel-hint',
+            'A new trip starts with no bus. Save it and it lands in the Unassigned row, where it can be dragged onto one.'));
     } else panelFleet.appendChild(def([
       ['Bus', bus ? `${bus.number}${(leg.count || 1) > 1 ? ` — ${(assign?.position ?? 0) + 1} of ${leg.count}` : ''}` : 'Not assigned'],
       ['Drivers', names.join(', ') || (assign ? 'None assigned' : null)],
@@ -1320,19 +1338,95 @@
       // against. `bus_count` is set to 1 rather than left null, because it is
       // null on none of the 743 rows and `legsOf` would only paper over it.
       const row = creating ? { ...readForm(), bus_count: 1 } : patch;
-      const { error } = await withTimeout(
-        (creating ? client.from('trips').insert(row) : client.from('trips').update(row).eq('id', id)).then(r => r));
+      const wantBus = creating ? createBusId : null;
+      /* TWO WRITES WHEN A CELL ASKED FOR A BUS, and they cannot be one:
+         the assignment needs the trip's id, which only exists after the
+         insert. `.select().single()` is what returns it.
+
+         IF THE SECOND WRITE FAILS THE FIRST STANDS, and that is the honest
+         outcome rather than a silent rollback this client cannot do: the trip
+         exists, it simply has no bus, so it appears in the Unassigned row
+         where it can be dragged onto one. The message says exactly that
+         instead of claiming the whole thing failed. */
+      const { data: made, error } = await withTimeout(
+        (creating
+          ? client.from('trips').insert(row).select('id').single()
+          : client.from('trips').update(row).eq('id', id)).then(r => r));
       if (error) throw new Error(error.message);
+      if (wantBus && made?.id) {
+        const { error: aErr } = await withTimeout(client.from('trip_assignments')
+          .insert({ trip_id: made.id, bus_id: wantBus, leg: 'outbound', position: 0 }).then(r => r));
+        if (aErr) {
+          await show();
+          say('warning', 'The trip was created without its bus.',
+            `It is in the Unassigned row and can be dragged onto one. ${aErr.message}`);
+          return;
+        }
+      }
       // READ IT BACK rather than trusting the write, as the drag does. The
       // render replaces every bar, so the panel closes with it.
       await show();
-      if (creating) say('success', 'Trip created. It is in the Unassigned row until it has a bus.');
+      if (creating) say('success', wantBus ? 'Trip created on its bus.' : 'Trip created. It is in the Unassigned row until it has a bus.');
       else say('success', `Saved ${Object.keys(patch).length} change${Object.keys(patch).length === 1 ? '' : 's'}.`);
     } catch (e) {
       say('error', `The trip was not ${creating ? 'created' : 'saved'}. ${e.message}`);
       panelSave.disabled = false;
     }
   });
+
+  /* ── RIGHT-CLICK AN EMPTY CELL ─────────────────────────────────────────────
+     The old board's gesture, and the reason it is worth keeping: the two
+     things a new trip most needs are the two the cell already knows. The row
+     is the bus and the column is the day, so creating from a cell fills both
+     in and leaves only the destination to type.
+
+     WHICH DAY, FROM THE POINTER. The track is one element spanning all seven
+     columns -- bars are placed inside it by percentage, not by cell -- so
+     there is no per-day element to read. The day is the pointer's offset
+     across the track divided by a seventh of its width, which is the same
+     arithmetic `clip` uses in reverse.
+
+     ONLY ON EMPTY SPACE. A right-click on a bar is left alone: that wants the
+     bar's own actions, which are not built, and offering "new trip here" over
+     an existing one would be the wrong answer to the gesture.
+
+     THE MENU IS POSITIONED HERE AND OPENED BY THE MODULE. `Rux.menu.open`
+     gives Escape, outside-press and focus return; it repositions only
+     `position: fixed` surfaces, and this one is absolute inside `.sch-page`,
+     so the placement below stands. */
+  const cellMenu = document.getElementById('sch-cell-menu');
+  let cellMenuAt = null;
+
+  gridEl.addEventListener('contextmenu', e => {
+    const track = e.target.closest('.sch-track');
+    if (!track || e.target.closest('.sch-bar')) return;
+    if (!shown) return;
+    e.preventDefault();
+
+    const box = track.getBoundingClientRect();
+    const days = parseInt(getComputedStyle(gridEl).getPropertyValue('--sch-days'), 10) || 7;
+    const index = Math.min(days - 1, Math.max(0, Math.floor((e.clientX - box.left) / (box.width / days))));
+    cellMenuAt = {
+      startDate: iso(addDays(shown, index)),
+      busId: track.dataset.unassigned ? null : (track.dataset.busId || null),
+    };
+
+    const page = pageEl?.getBoundingClientRect();
+    cellMenu.hidden = false;
+    cellMenu.style.position = 'absolute';
+    cellMenu.style.insetInlineStart = `${e.clientX - (page?.left ?? 0)}px`;
+    cellMenu.style.insetBlockStart = `${e.clientY - (page?.top ?? 0)}px`;
+    pageEl?.appendChild(cellMenu);
+    window.Rux?.menu?.open?.(cellMenu, null);
+  });
+
+  cellMenu?.addEventListener('click', e => {
+    if (!e.target.closest('#sch-cell-menu-new')) return;
+    window.Rux?.menu?.close?.(cellMenu);
+    cellMenu.hidden = true;
+    if (cellMenuAt) openCreate(cellMenuAt);
+  });
+  cellMenu?.addEventListener('rux:menu-closed', () => { cellMenu.hidden = true; });
 
   document.getElementById('sch-new-trip')?.addEventListener('click', () => openCreate());
   document.getElementById('sch-panel-close')?.addEventListener('click', () => closePanel());

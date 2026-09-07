@@ -4,6 +4,42 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - right-click an empty cell, the old board's gesture.** rux said
+the old app offered "add new trip" from a context menu on an empty spot, with
+the date and bus already filled. It is worth keeping for the reason it
+existed: the two things a new trip most needs are the two the cell already
+knows, so creating from a cell leaves only the destination to type.
+
+**Which day, from the pointer.** The track is ONE element spanning all seven
+columns - bars sit inside it by percentage, not in per-day cells - so there is
+no element to read the day off. It is the pointer's offset across the track
+over a seventh of its width, the arithmetic `clip` does in reverse. Verified:
+a press at 2.5/7 across row 763 filled in Wednesday 2026-09-02 and bus 763.
+
+**Only on empty space.** A right-click on a bar is left alone; that gesture
+wants the bar's own actions, which are not built, and offering "new trip here"
+over an existing trip is the wrong answer to it.
+
+**Two writes, and the second can fail on its own.** The assignment needs the
+trip's id, which only exists after the insert, so `.select('id').single()`
+returns it and a second insert puts the bus on. **If that second write fails
+the first still stands**, which this client cannot roll back and should not
+pretend to: the trip exists with no bus, so it appears in the Unassigned row,
+and the notice says exactly that rather than claiming the whole thing failed.
+
+**Created against production and deleted.** Trip on 2026-09-02 with an
+assignment carrying the right bus, `leg: outbound`, `position: 0`; the board
+drew the bar on row 763 and NOT in Unassigned. Deleting the trip cascaded the
+assignment away, back to 743 rows, and a `like 'ZZ %'` sweep returned empty.
+
+**AND IT EXPOSED A QUIET BUG OF MY OWN.** `NOTE` carried only `error` and
+`info`, and `say` falls back to `info` for anything else - so every "Saved 1
+change" and "Trip created" notice since the editor landed has been rendering
+as an INFO notice. Right words, wrong kind, hidden by a fallback. Found only
+because `warning` was needed for the half-finished create. `success` and
+`warning` are in the map now, both classes written out in full, and the create
+above was confirmed carrying `rux--inline-notification--success`.
+
 **2026-09-06 - New trip, and the button's own promise kept.** The toolbar
 comment said it would come back "on the day the trip editor does", absent
 rather than disabled because a disabled primary button was the most prominent
