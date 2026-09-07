@@ -4,6 +4,38 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the sliver right of Sunday, and it was two bugs.** rux saw a
+few pixels of daylight between the last day column and the pane's border at
+full width. Real, and mine.
+
+**One: the head column was reserved at a width it never took.** `fitColumns`
+ceils the corner to keep the pane on whole pixels -- 42.203 becomes 43 -- and
+builds the pane's width from that, but the column itself stayed `max-content`
+and kept its fractional width. So the columns summed to 1309.203 inside a
+1310px content box and 0.797px fell out at the right, about two device pixels
+on a 2x display. The fix is to pin the column to the figure already reserved
+for it.
+
+**Two, and it only appeared once the first was fixed: `flex-grow` handed the
+remainder back.** The whole point of the narrowing is that the leftover pixels
+sit OUTSIDE the pane's border where nothing reads them as part of the grid.
+`.sch-board > .sch` grows, so the pane was stretched to fill the board again
+and 2.805px reopened with the driver grid on.
+
+**And grow could not simply be removed, which the first attempt did.** Growing
+is also the MEASUREMENT: `fitColumns` reads `clientWidth` off the pane to
+learn how much room there is, and a pane that cannot grow measures its own
+content -- 995 instead of 1310, so the week never widened past the floor and
+every day column sat at its 136px minimum. Caught immediately because the
+check reads the day width, not just the gap. So grow is restored for the
+measuring pass and pinned to 0 for the width just set; the floor-binds branch
+leaves it alone, since a grid wider than its pane should fill whatever room
+there is and scroll.
+
+Verified across five states at 1440, columns summing exactly to the pane in
+every one that does not scroll: 1310/181, driver grid on 1030/141, trip panel
+open 553 and scrolling at the 136 floor, then both back again.
+
 **2026-09-06 - the trip editor, first slice.** Step 4 of the build order. The
 panel gains Details and Fleet tabs and Details is editable: destination,
 customer, type, the confirmed flag, the three requirement flags, notes. Every

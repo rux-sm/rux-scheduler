@@ -490,6 +490,16 @@
    and sat behind it. The grid pane inside carries the same zero for the same
    reason. */
 .sch-board { display: flex; align-items: flex-start; gap: var(--rux-spacing-05); min-inline-size: 0; }
+/* FLEX-GROW IS BOTH THE MEASUREMENT AND THE BUG, so sch.js turns it off at the
+   moment it stops being the first. Growing is what lets the pane fill the
+   board, and `fitColumns` reads `clientWidth` off the pane to learn how much
+   room there is -- take grow away here and it measures its own content, comes
+   out at 995 instead of 1310, and the week never widens past the floor. But
+   once the columns are chosen the pane is deliberately narrowed so the few
+   leftover pixels fall OUTSIDE its border, and grow hands them straight back:
+   2.805px of daylight to the right of Sunday, measured at 1440 with the driver
+   grid on. So the rule keeps grow for the measuring pass and sch.js pins
+   `flex-grow: 0` inline for the width it just set. */
 .sch-board > .sch { flex: 1 1 auto; min-inline-size: 0; }
 
 /* AS WIDE AS ITS CONTENT, MEASURED, NOT PICKED -- the same rule the bus column

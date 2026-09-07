@@ -97,6 +97,14 @@
     // a little further on every pass.
     sch.style.removeProperty('inline-size');
     sch.style.removeProperty('--sch-day-track');
+    // Cleared so the corner is measured at its own `max-content` again rather
+    // than at the width pinned on the last pass, which would never shrink.
+    sch.style.removeProperty('--sch-head-w');
+    // GROW IS RESTORED FOR THE MEASUREMENT. The stylesheet's `flex-grow: 1` is
+    // what makes the pane fill the board, and the pane's `clientWidth` below
+    // is how the available room is learned. Pinned to 0 from the last pass it
+    // would measure its own content instead.
+    sch.style.removeProperty('flex-grow');
     // MEASURED, NOT PARSED. The bus column is `max-content` in the stylesheet
     // so it is exactly as wide as the widest thing in it -- there is no length
     // to read, and hand-setting one would clip the day a four-digit bus number
@@ -116,11 +124,26 @@
       // and the pane keeps every pixel it has.
       day = Math.floor(dayMin);
       sch.style.removeProperty('inline-size');
+      // Nothing to hold back: the grid is wider than the pane and scrolls, so
+      // growing to fill whatever room there is is exactly right.
+      sch.style.removeProperty('flex-grow');
     } else {
       const border = sch.offsetWidth - sch.clientWidth;   // its own 1px each side
       sch.style.inlineSize = `${headBase + day * days + border}px`;
+      // AND NOW STOP GROWING, or the width just set is overridden and the
+      // remainder this narrowing exists to expel is handed straight back.
+      sch.style.flexGrow = '0';
     }
     sch.style.setProperty('--sch-day-track', `${day}px`);
+    // PIN THE HEAD TO THE PIXEL THAT WAS RESERVED FOR IT. `headBase` is the
+    // corner CEILED, and the pane's width is built from it -- but the column
+    // itself stayed `max-content`, so it kept its fractional width and the
+    // difference fell out as a gap at the right edge. Measured 2026-09-06 at
+    // 1440: a 42.203px corner reserved as 43, columns summing to 1309.203
+    // inside a 1310px content box, and 0.797px of daylight to the right of
+    // Sunday -- about two device pixels on a 2x display, which is what rux
+    // could see. Setting the column to the reserved figure closes it.
+    sch.style.setProperty('--sch-head-w', `${headBase}px`);
 
   }
 
