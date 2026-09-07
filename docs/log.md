@@ -4,6 +4,28 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - full width, because a board is scanned, not read.** rux asked
+whether the week should still be tiny on a large screen, and whether it should
+still scroll with the trip panel and the driver grid open when there is room
+either side. It should not, and the cause was not the board's.
+
+**Carbon's grid caps content at 99rem and centres it.** `.rux--css-grid` is
+`max-inline-size: 99rem; margin-inline: auto` -- a reading width, right for
+prose and forms. On a 2000px screen that left about 200px dead on each side
+while the board scrolled for want of room: with both the panel and the driver
+grid open it had 763px against the 995 seven columns need at their floor.
+
+**Carbon ships the answer.** `rux--css-grid--full-width` is
+`max-inline-size: 100%`, the modifier for exactly a data-dense page. Applied
+always rather than behind a toggle: a week board has no reading-width
+argument, and a toggle is a control that needs explaining for a state nobody
+would choose.
+
+Measured at 2000px: board only 1854 wide with 258px days; with the driver grid
+1577 and 219; with the driver grid AND the trip panel 1097 and 150 - all seven
+days on screen in every state, nothing scrolling. At 1440 nothing changes,
+since the cap was above the viewport there anyway.
+
 **2026-09-06 - the gutter restored, and the entry below corrected.** rux saw
 the board flush against the panel, border on border, and asked whether there
 should be space. There should, and there had been until the previous change

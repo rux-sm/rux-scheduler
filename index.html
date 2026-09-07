@@ -368,7 +368,13 @@
   holds. Not covered: no drag, no editor, no time-aligned mode, no realtime, no
   conflict marking (day granularity cannot tell a morning trip from an
   afternoon one on the same bus, so marking those would be a false alarm). -->
-  <div class="rux--css-grid">
+  <!-- FULL WIDTH, which is Carbon's own modifier for a data-dense page. The
+       grid's default caps content at 99rem and centres it, a reading width;
+       a week board is not read, it is scanned, and on a 2000px screen the cap
+       left 200px dead each side while the board scrolled for want of room.
+       With the trip panel and the driver grid both open the board had 763px
+       against the 995 seven columns need; full width gives it 1179. -->
+  <div class="rux--css-grid rux--css-grid--full-width">
     <div class="rux--css-grid-column rux--col-span-100">
       <!-- An app-owned wrapper so the page can make room for the side panel
            without a rule on a rux-- class. `--with-panel` is set by
