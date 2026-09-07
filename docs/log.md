@@ -4,6 +4,37 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the gutter restored, and the entry below corrected.** rux saw
+the board flush against the panel, border on border, and asked whether there
+should be space. There should, and there had been until the previous change
+took it away.
+
+**THE "RESERVED TWICE" REASONING BELOW WAS WRONG.** The 64px between the board
+and the panel was not the shell's gutter paid twice; it was the shell's gutter,
+once, doing its job - the same 64 the board has from the viewport's LEFT edge.
+The "384px gap" that reasoning started from was the panel measured
+mid-entrance, 320px right of where it settles, which that same entry then
+went on to warn about. Half of the entry was right: the transition really did
+stop the padding applying, and its removal stands.
+
+**What IBM does, which is what the original 30rem did.** The slide-in variant
+sets the page content's inline-end margin to the PANEL'S FULL WIDTH, and the
+content's own padding is what keeps it off the panel's edge. No capture
+records page content beside a panel - all nine hold a data table - so this
+comes from the component's contract rather than a story, and it is confirmed
+by the test that matters: the board is framed alike on both sides. Measured
+settled at 1440, left gutter 64, right gutter 64, borders not touching.
+
+The measurement in `sch.js` stays, set to the panel's width rather than a
+constant, so a panel at another size or a shell with another gutter is still
+right by it. The stylesheet's 30rem is the no-script fallback.
+
+**Three lessons from one afternoon of measuring this page**, each paid for: a
+hidden pane freezes transitions and reads their start value; a fronted pane
+still reads the panel 320px out until its entrance ends; and a number that
+happens to endorse a change already made deserves the most suspicion, not the
+least.
+
 **2026-09-06 - the space between the board and the panel, which was two
 bugs.** rux asked what sets it and whether that much was intended. It was not,
 and neither half of it was deliberate.

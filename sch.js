@@ -148,14 +148,23 @@
 
   }
 
-  /* THE ROOM THE PANEL ACTUALLY TAKES FROM THIS PAGE. The panel is fixed to
-     the viewport's right edge; `.sch-page` is inset from it by whatever the
-     shell's content region reserves -- 64px at 1440. Paying the panel's whole
-     width out of the page's own edge pays that 64 twice and leaves it empty
-     between the board and the panel. What is owed is only the overlap.
+  /* THE ROOM THE PANEL TAKES IS ITS WHOLE WIDTH, and the gutter comes free.
+     This is IBM's own slide-in contract: the panel sets the page content's
+     inline-end margin to the panel's width, and the content's own padding is
+     what keeps it off the panel's edge. The page is inset from the viewport
+     by the shell's gutter -- 64px at 1440 -- and reserving the full width
+     from the page's edge leaves exactly that 64 between the board and the
+     panel: the same inset the board has from the viewport's LEFT edge. The
+     board is framed the same on both sides, which is the test.
 
-     PADDING DOES NOT MOVE THE ELEMENT'S RIGHT EDGE, so reading `page.right`
-     after setting it is stable and there is no feedback loop.
+     A VERSION OF THIS RESERVED ONLY THE OVERLAP, for about an hour on
+     2026-09-06, on the reasoning that the 64 was "paid twice". It was not;
+     it was the gutter. The board ran flush against the panel and its 1px
+     border met the panel's 1px border as a double line, which rux saw. That
+     reasoning came from a panel measured mid-entrance -- 320px right of where
+     it settles -- and is corrected in the log. The measurement stays because
+     a panel at another size, or a shell with another gutter, is still right
+     by it; the stylesheet's 30rem is the no-script fallback.
 
      Called before the columns are measured, because it changes how much room
      they have. */
@@ -167,9 +176,7 @@
       page.style.removeProperty('padding-inline-end');
       return;
     }
-    const docRight = document.documentElement.clientWidth;
-    const overlap = panel.getBoundingClientRect().width - (docRight - page.getBoundingClientRect().right);
-    page.style.paddingInlineEnd = `${Math.max(0, Math.round(overlap))}px`;
+    page.style.paddingInlineEnd = `${Math.round(panel.getBoundingClientRect().width)}px`;
   }
 
   const sch = document.getElementById('sch');

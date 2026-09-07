@@ -461,16 +461,15 @@
    mid-transition and sized the grid for a width it was about to lose. Two
    defects for an animation nobody asked for, on a page where the panel itself
    already slides, is a poor trade. The room appears at once now. */
-/* THE VALUE IS A FALLBACK; sch.js measures the real one. The panel is
-   `position: fixed` against the VIEWPORT's right edge, and this page is not
-   there -- the shell's content region holds its own gutter, 64px at 1440. So
-   reserving the panel's full width from the PAGE's edge reserves those 64px
-   twice, and they show as dead space between the board and the panel. Only
-   the part of the panel that actually overlaps the page needs paying for, and
-   that is a measurement, not a constant: it changes with the shell's padding
-   and with the panel's own size. This 30rem is what renders if the script
-   never runs, which errs toward too much room rather than a board underneath
-   the panel. */
+/* THE PANEL'S FULL WIDTH, which is IBM's own slide-in contract: the page
+   content's inline-end margin is set to the panel's width and the content's
+   own padding keeps it off the panel's edge. The page is inset from the
+   viewport by the shell's gutter, 64px at 1440, so this leaves that same 64
+   between the board and the panel -- the inset the board already has from the
+   viewport's left edge. Framed alike on both sides. sch.js sets the measured
+   width at runtime; this is what renders if it never runs. A version that
+   reserved only the overlap put the board flush against the panel, border on
+   border, for about an hour on 2026-09-06. */
 .sch-page--with-panel { padding-inline-end: 30rem; }
 
 /* Definition rows in the panel. Carbon's structured list is the nearest
