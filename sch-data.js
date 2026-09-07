@@ -849,7 +849,9 @@
     head.appendChild(el('div', 'sch-avail__day sch-avail__day--head', 'Driver'));
     for (let i = 0; i < 7; i++) {
       const d = new Date(weekStart.getTime() + i * DAY);
-      const cell = el('div', 'sch-avail__day', d.toLocaleDateString(undefined, { weekday: 'short' }));
+      // ONE LETTER: M T W T F S S. The day number is directly above in the
+      // schedule's own header, and "T..." truncated twice said less than "T".
+      const cell = el('div', 'sch-avail__day', d.toLocaleDateString(undefined, { weekday: 'narrow' }));
       cell.dataset.day = String(i);
       head.appendChild(cell);
     }

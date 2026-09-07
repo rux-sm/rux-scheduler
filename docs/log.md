@@ -4,6 +4,19 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the availability grid at xs, on rux's reading.** Still on
+trial; this is the side layout made to fit its slot. Days are one letter,
+M T W T F S S, because the day number is already directly above in the
+schedule's own header and "T..." truncated twice said less than "T". The row
+is 24px, which is the step Carbon's data table calls xs, and the day cell is
+square at that: a day here is a STATE, so it wants to be a mark rather than a
+box with text in it. It was 25 by 32, which read as neither. Everything the
+squares do not need goes to the name - 80px before, 134 now.
+
+`minmax(0, 1fr)` on the name track and not `1fr`, because a track's automatic
+minimum is its content and a long name would have pushed the squares out of
+the panel instead of ellipsing. Read live: 24 by 24, square, 40 rows.
+
 **2026-09-06 - driver availability, built both ways to be decided from.**
 rux was unsure about section 7's answer and asked to try both. Both are built,
 one renderer fills one element, and the `Side`/`Dock` button moves it. **This

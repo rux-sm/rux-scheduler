@@ -493,10 +493,20 @@
 .sch-aside { flex: 0 0 auto; inline-size: 19rem; }
 .sch-dock { margin-block-start: var(--rux-spacing-05); }
 
-.sch--avail { max-block-size: 15rem; }
-/* In the side slot the grid sets its own columns: the day cell is a state,
-   not a destination, so it needs room for neither. */
-.sch-aside .sch--avail { --sch-head-w: 5rem; --sch-day-track: 1fr; max-block-size: 30rem; }
+/* XS, WHICH IS CARBON'S OWN SMALLEST ROW. 24px, the same step the data table
+   calls xs, and the cell is square at that: a day here is a STATE, so the
+   cell wants to be a mark rather than a box with text in it. Measured before:
+   25 tall by 32 wide, which read as neither. */
+.sch--avail { --sch-avail-h: 1.5rem; max-block-size: 15rem; }
+/* In the side slot every pixel the days do not need goes to the name, which
+   is the only thing there with anything to say. `minmax(0, 1fr)` and not
+   `1fr`: a grid track's automatic minimum is its content, so a long name
+   would push the squares out of the panel rather than ellipsing. */
+.sch-aside .sch--avail {
+  --sch-head-w: minmax(0, 1fr);
+  --sch-day-track: var(--sch-avail-h);
+  max-block-size: 30rem;
+}
 /* In the dock the schedule's own day header is directly above, so a second
    one is a repeat. */
 .sch-dock .sch-avail__days { display: none; }
@@ -509,11 +519,10 @@
 .sch-avail__cell,
 .sch-avail__day {
   border-block-end: 1px solid var(--rux-border-subtle-01);
-  min-block-size: calc(var(--sch-row-h) + var(--rux-spacing-03));
+  block-size: var(--sch-avail-h);
   display: flex;
   align-items: center;
   font-size: var(--sch-fs);
-  line-height: var(--rux-label-01-line-height);
   letter-spacing: var(--sch-ls);
 }
 .sch-avail__day,
@@ -528,15 +537,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
-  line-height: calc(var(--sch-row-h) + var(--rux-spacing-03));
+  line-height: var(--sch-avail-h);
 }
-.sch-avail__day { inset-inline-start: auto; position: static; }
+/* A single letter needs no padding and reads better centred over its square. */
+.sch-avail__day {
+  inset-inline-start: auto;
+  position: static;
+  padding-inline: 0;
+  text-align: center;
+}
 .sch-avail__day--head { position: sticky; inset-inline-start: 0; z-index: 3; }
 
 /* THE THREE STATES, and free is the one being looked for, so it is the one
    with nothing in it. Busy and off are Carbon's own tag tints, the same
    palette the trip bar uses, so the two grids read as one system. */
 .sch-avail__cell { padding-inline: var(--rux-spacing-02); overflow: hidden; }
+.sch-aside .sch-avail__cell { padding-inline: 0; }
 .sch-avail__cell--busy {
   background: var(--rux-tag-background-blue);
   color: var(--rux-tag-color-blue);
