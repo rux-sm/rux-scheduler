@@ -1,7 +1,7 @@
-tag     v0.1.8
-commit  fb0f22f194acb73d6b3f6ea837c7681674f5c5ed
-date    2026-09-06T18:57:03Z
-subject docs(gates): Restamp portal, 41 of 41 current
+tag     v0.1.9
+commit  4ca03b2f9ac72718d89cb40ecda1d074142e827e
+date    2026-09-07T20:17:37Z
+subject fix(pin): Aim vendored templates at the app mark
 
 Written by rux-ds tools/new-project.sh from the tag, not the tree. Re-run it to move
 the pin; do not edit anything under vendor/, the next run overwrites it.
