@@ -397,12 +397,20 @@
           <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-next" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
           <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-today">Today</button>
           <h2 class="sch-toolbar__range rux--type-heading-compact-02" id="sch-range">&nbsp;</h2>
-          <!-- NEW TRIP IS NOT HERE YET, and a disabled primary button is a worse
-               answer than none: it was the most prominent thing on the page and it
-               did nothing. It comes back, right-aligned after this spacer, on the
-               day the trip editor does. -->
+          <!-- New trip sits after the spacer, below. It was absent rather than
+               disabled until 2026-09-06, because a disabled primary button was
+               the most prominent thing on the page and did nothing. -->
           <div class="sch-toolbar__spacer"></div>
           <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-avail-toggle" aria-pressed="false">Drivers</button>
+          <!-- BACK, AND NOT DISABLED THIS TIME. The comment above promised it
+               for the day the editor could make a trip, which is today: dates
+               were the only thing standing in the way, and a trip with a start
+               date and no bus lands in the Unassigned row. Primary and
+               rightmost, which is Carbon's place for the one action that
+               creates something. -->
+          <button type="button" class="rux--btn rux--btn--primary rux--layout--size-sm" id="sch-new-trip">New trip
+            <svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg>
+          </button>
         </div>
 
         <!-- One live region for both states the loader can be in. It ships

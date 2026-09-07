@@ -632,6 +632,7 @@
   const panelEl = document.getElementById('sch-panel');
   const panelBody = document.getElementById('sch-panel-body');
   void panelBody;   // kept as the scroll container's handle; content goes in the tabs
+  const panelLabel = document.getElementById('sch-panel-label');
   const panelTitle = document.getElementById('sch-panel-title');
   const panelTitleCollapsed = document.getElementById('sch-panel-title-collapsed');
   const panelSubtitle = document.getElementById('sch-panel-subtitle');
@@ -936,30 +937,68 @@
   function refreshDirty() {
     const patch = patchOf();
     const startEl = document.getElementById('sch-f-start');
+    const destEl = document.getElementById('sch-f-destination');
     const startOk = !!isoOrNull(startEl?.value);
+    // DESTINATION IS REQUIRED because it is the bar's only label and because
+    // it is not null on ANY of the 743 rows -- a null would be the first.
+    const destOk = !!destEl?.value.trim();
+    destEl?.setAttribute('aria-invalid', String(!destOk));
     // `aria-invalid` ONLY. The first attempt hung a
     // `rux--date-picker--invalid` class on the root and check-classes failed
     // it: Carbon compiles no such class, and inventing one to hang a rule on
     // is the thing AGENTS.md forbids. The attribute is real, it is what a
     // screen reader reads, and Save being dead says the rest.
     startEl?.setAttribute('aria-invalid', String(!startOk));
-    panelSave.disabled = !startOk || !patch || Object.keys(patch).length === 0;
+    // A NEW TRIP IS SAVEABLE WITH NOTHING CHANGED, because its defaults are
+    // already a real trip -- the dirty test is for edits, not for creation.
+    const nothingToDo = !editing?.creating && (!patch || Object.keys(patch).length === 0);
+    panelSave.disabled = !startOk || !destOk || nothingToDo;
   }
 
-  function openPanel(bar) {
-    const trip = panelIndex.trips.get(bar.dataset.tripId);
+  /* NEW TRIP OPENS THE SAME PANEL WITH NOTHING IN IT. A trip needs one thing
+     to exist on the board -- a start date -- because `legsOf` builds the
+     outbound leg only `if (trip.start_date)`. With no assignment the render
+     pushes it into the Unassigned row, which is where a trip nobody has given
+     a bus belongs, so creation needs no bus and no drivers.
+
+     THE DEFAULTS ARE THE DATA'S, not invented. Across all 743 trips:
+     `trip_type` is never null and 705 are round trips, so that is the type;
+     `bus_count` is never null, so it is written as 1 rather than left for
+     `|| 1` to cover; `confirmed` is never null and 274 trips are false, so a
+     trip nobody has confirmed yet is a normal row and the box starts clear;
+     `destination` is never null in any of the 743, which is why it is
+     required below alongside the date. `customer` is null on 26, so it is
+     not. */
+  function openCreate() {
+    const start = iso(shown && cursor ? cursor : mondayOf(new Date()));
+    openPanel(null, {
+      id: null,
+      destination: '', customer: '',
+      trip_type: 'round_trip', confirmed: false,
+      start_date: start, end_date: start,
+      return_start_date: null, return_end_date: null,
+      req_sleeper: false, req_ada: false, req_56pax: false,
+      notes: '', trip_assignments: [], trip_stops: [],
+    });
+  }
+
+  function openPanel(bar, draft) {
+    const creating = !!draft;
+    const trip = draft ?? panelIndex.trips.get(bar.dataset.tripId);
     if (!trip) return;
-    const legName = bar.dataset.leg || 'outbound';
+    const legName = bar?.dataset.leg || 'outbound';
     const leg = legsOf(trip).find(l => l.leg === legName) ?? legsOf(trip)[0];
-    const bus = panelIndex.buses.get(bar.dataset.busId);
-    const assign = (trip.trip_assignments || []).find(a => a.id === bar.dataset.assignmentId);
+    const bus = bar ? panelIndex.buses.get(bar.dataset.busId) : null;
+    const assign = bar ? (trip.trip_assignments || []).find(a => a.id === bar.dataset.assignmentId) : null;
 
-    panelTitle.textContent = trip.destination || 'No destination';
-    panelTitleCollapsed.textContent = trip.destination || 'No destination';
-    panelSubtitle.textContent = trip.customer || '';
+    const heading = creating ? 'New trip' : (trip.destination || 'No destination');
+    panelLabel.textContent = creating ? 'Create' : 'Trip';
+    panelTitle.textContent = heading;
+    panelTitleCollapsed.textContent = heading;
+    panelSubtitle.textContent = creating ? '' : (trip.customer || '');
 
-    const legDays = daysBetween(parseISO(leg.from), parseISO(leg.to)) + 1;
-    const when = leg.from === leg.to
+    const legDays = leg ? daysBetween(parseISO(leg.from), parseISO(leg.to)) + 1 : 0;
+    const when = !leg ? '' : leg.from === leg.to
       ? parseISO(leg.from).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
       : `${parseISO(leg.from).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} to ${parseISO(leg.to).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} (${legDays} days)`;
 
@@ -977,7 +1016,7 @@
       trip.req_56pax ? '56 pax' : null,
     ].filter(Boolean).join(', ');
 
-    editing = { id: trip.id, before: {
+    editing = { id: trip.id, creating, before: {
       destination: trip.destination ?? null,
       customer: trip.customer ?? null,
       trip_type: trip.trip_type ?? null,
@@ -1039,7 +1078,10 @@
     // THE LEG'S OWN FACTS STAY READ-ONLY. Dates and times are not in this
     // pass; they are shown because the editor above is meaningless without
     // knowing which leg is on screen.
-    panelDetails.appendChild(section('This leg', def([
+    // NO LEG YET, SO NOTHING TO SAY ABOUT ONE. The section describes the bar
+    // that was clicked, and in create mode there is no bar; showing it with
+    // blanks would read as data that failed to load.
+    if (!creating) panelDetails.appendChild(section('This leg', def([
       ['Leg', legName === 'return' ? 'Return' : 'Outbound'],
       ['When', when],
       // THE SPOT TIME HAS A HOME HERE. The bar's one line of times could hold
@@ -1054,13 +1096,16 @@
     // tabs carried them for one commit, which read as a bug rather than a
     // convenience.
     panelFleet.replaceChildren();
-    panelFleet.appendChild(def([
+    if (creating) {
+      panelFleet.appendChild(el('p', 'sch-panel-hint',
+        'A new trip starts with no bus. Save it and it lands in the Unassigned row, where it can be dragged onto one.'));
+    } else panelFleet.appendChild(def([
       ['Bus', bus ? `${bus.number}${(leg.count || 1) > 1 ? ` — ${(assign?.position ?? 0) + 1} of ${leg.count}` : ''}` : 'Not assigned'],
       ['Drivers', names.join(', ') || (assign ? 'None assigned' : null)],
       ['Needs', reqs],
     ]));
 
-    const stops = (trip.trip_stops || [])
+    const stops = creating ? [] : (trip.trip_stops || [])
       .filter(st => (st.leg || 'outbound') === legName)
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     if (stops.length) {
@@ -1108,7 +1153,7 @@
     refreshDirty();
 
     panelOpener = bar;
-    markAvailDay(Number(bar.style.getPropertyValue('--sch-start')));
+    markAvailDay(bar ? Number(bar.style.getPropertyValue('--sch-start')) : null);
     panelEl.classList.remove('rux--side-panel--closing');
     panelEl.hidden = false;
     panelEl.classList.add('rux--side-panel--open');
@@ -1263,24 +1308,33 @@
   panelDetails?.addEventListener('change', refreshDirty);
 
   panelSave?.addEventListener('click', async () => {
+    if (!editing) return;
     const patch = patchOf();
-    if (!editing || !patch || !Object.keys(patch).length) return;
+    if (!editing.creating && (!patch || !Object.keys(patch).length)) return;
     const id = editing.id;
+    const creating = editing.creating;
     panelSave.disabled = true;
-    say('info', 'Saving the trip…');
+    say('info', creating ? 'Creating the trip…' : 'Saving the trip…');
     try {
-      const { error } = await withTimeout(client.from('trips').update(patch).eq('id', id).then(r => r));
+      // CREATE WRITES EVERY FIELD, not the diff: there is no row to diff
+      // against. `bus_count` is set to 1 rather than left null, because it is
+      // null on none of the 743 rows and `legsOf` would only paper over it.
+      const row = creating ? { ...readForm(), bus_count: 1 } : patch;
+      const { error } = await withTimeout(
+        (creating ? client.from('trips').insert(row) : client.from('trips').update(row).eq('id', id)).then(r => r));
       if (error) throw new Error(error.message);
       // READ IT BACK rather than trusting the write, as the drag does. The
       // render replaces every bar, so the panel closes with it.
       await show();
-      say('success', `Saved ${Object.keys(patch).length} change${Object.keys(patch).length === 1 ? '' : 's'}.`);
+      if (creating) say('success', 'Trip created. It is in the Unassigned row until it has a bus.');
+      else say('success', `Saved ${Object.keys(patch).length} change${Object.keys(patch).length === 1 ? '' : 's'}.`);
     } catch (e) {
-      say('error', `The trip was not saved. ${e.message}`);
+      say('error', `The trip was not ${creating ? 'created' : 'saved'}. ${e.message}`);
       panelSave.disabled = false;
     }
   });
 
+  document.getElementById('sch-new-trip')?.addEventListener('click', () => openCreate());
   document.getElementById('sch-panel-close')?.addEventListener('click', () => closePanel());
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !panelEl.hidden) { e.preventDefault(); closePanel(); }

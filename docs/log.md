@@ -4,6 +4,44 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - New trip, and the button's own promise kept.** The toolbar
+comment said it would come back "on the day the trip editor does", absent
+rather than disabled because a disabled primary button was the most prominent
+thing on the page and did nothing. Dates were the only thing standing in the
+way, so it is back: primary, rightmost, which is Carbon's place for the action
+that creates something.
+
+**It opens the same panel with nothing in it.** A trip needs exactly one thing
+to exist on the board - a start date, since `legsOf` builds the outbound leg
+only `if (trip.start_date)` - and with no assignment the render pushes it into
+the Unassigned row. So creation needs no bus and no drivers, and the Fleet tab
+says as much instead of showing blanks.
+
+**Every default is the data's, not invented.** Counted across all 743:
+`trip_type` never null and 705 round trips, so that is the type; `bus_count`
+never null, so it is written as 1 rather than left for `|| 1` to cover;
+`confirmed` never null with 274 already false, so a trip nobody has confirmed
+is a normal row and the box starts clear; `destination` null on NONE, which is
+why it joins the start date as required - a null would have been the first in
+the table. `customer` is null on 26, so it is not required.
+
+**A new trip is saveable with nothing touched**, because its defaults are
+already a real trip. The dirty test is for edits; creation only asks whether
+the two required fields are filled.
+
+**Created against production and deleted.** 743 rows before, 744 after, the
+row carrying exactly the defaults above, and the board drew ONE bar for it in
+the Unassigned row - `inUnassignedRow: [true]`, which is the claim this whole
+design rests on. Then deleted by id, back to 743, and a `like 'ZZ TEST%'`
+sweep returned empty.
+
+**A third invented class, caught by the gate.** The button was written with a
+`rux--btn__label` span around its text; Carbon compiles no such class and puts
+the label as bare text beside the icon, which is what `templates/table-page`
+does. That is three this session - the interpolated date-picker container, the
+invented date-picker invalid state, and this - all three caught by
+check-classes rather than by me.
+
 **2026-09-06 - the ring around the whole form, and two widths.** rux asked
 whether the form should be selectable like that, and whether notes and dates
 should span the panel.
