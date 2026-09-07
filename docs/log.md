@@ -4,6 +4,36 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the strip at the right edge, and a decision reversed.** rux saw
+the board's right edge failing to line up with the New trip button above it.
+Real, width-dependent, and mine: 0px at 1440, 2px at 1400 and 1365, 4px at
+1290.
+
+**IT WAS DELIBERATE AND THE DELIBERATION WAS WRONG.** `fitColumns` floors the
+day width and the leftover has to go somewhere; earlier today it was put
+OUTSIDE the pane, narrowing the board so the spare pixels sat in the page's
+padding "where nothing reads it as part of the grid". They do read as part of
+it - as a ragged edge against the toolbar, which is worse than what that
+choice was avoiding.
+
+**The bus column takes the remainder again.** The head becomes
+`pane - day * days`, so the columns fill the pane exactly and the right edges
+meet. Verified at three widths: gap 0 at 1440, 1400 and 1290, columns summing
+to the pane in each, with the head growing 43, 45, 47 to absorb it.
+
+**AND IT SIMPLIFIED THE CODE.** No explicit `inline-size` is needed at all now
+- the pane simply fills the board - which retires the `flex-grow` pinning
+added earlier today, whose only job was to stop the pane being stretched past
+a width nothing sets any more.
+
+**The cost is real and is the one the earlier note named.** Measured with a
+Range over the glyphs at 1290: the bus number sits 8px from the left of its
+column and 13.8px from the right, and that right figure moves as the window
+does. Element boxes read 8 and 9 and hid it - the number fills its cell, so
+only the glyph box tells the truth. If it grates, centring the number in the
+column splits the remainder evenly and is one declaration; rux's call, not
+taken here.
+
 **2026-09-06 - cancel, not delete, and a defect it uncovered.** rux described
 the old board's only bar action: cancel, which gives the trip a cancelled
 status and takes it off the schedule while leaving it on the trips page, "its

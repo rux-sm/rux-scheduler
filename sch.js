@@ -31,15 +31,26 @@
      columns themselves land between pixels, and the browser then paints every
      bar edge, and every day rule, across two of them.
 
-     THE REMAINDER GOES OUTSIDE THE PANE. Flooring the day width leaves up to
+     THE REMAINDER GOES IN THE BUS COLUMN. Flooring the day width leaves up to
      six pixels over. They cannot go in a day column -- one column wider than
-     its neighbours breaks the placement every bar is measured against. They
-     went into the bus column until 2026-09-06, and that column is now exactly
-     as wide as its content, so the leftover showed as up to 6px of extra space
-     to the right of the bus number: measured 8px of glyph padding on the left
-     against 9 to 14 on the right as the window moved. So the PANE gets that
-     much narrower instead, and the leftover sits beyond its border in the
-     page's own 32px of padding, where nothing reads it as part of the grid.
+     its neighbours breaks the placement every bar is measured against, since
+     bars are positioned by percentage across a track spanning all seven.
+
+     THIS REVERSES THE DECISION MADE EARLIER ON 2026-09-06, which put the
+     leftover OUTSIDE the pane: the pane was narrowed and the spare pixels sat
+     beyond its border in the page's padding, "where nothing reads it as part
+     of the grid". They do read as part of it. rux saw the board's right edge
+     failing to line up with the New trip button above it -- measured 0px at
+     1440, 2px at 1400 and 1365, 4px at 1290 -- and a ragged edge against the
+     toolbar is worse than the thing that reversal was avoiding, which was up
+     to 6px of extra space to the right of the bus number.
+
+     AND IT IS SIMPLER. The head takes `pane - day * days`, so the columns fill
+     the pane exactly and no explicit `inline-size` is needed at all; the pane
+     just fills the board. That also retires the `flex-grow` pinning added
+     earlier today, which existed only to stop the pane being stretched past a
+     width this no longer sets. The head can never fall below its measured
+     content width, because the remainder it absorbs is non-negative.
 
      WHEN THE FLOOR BINDS this does nothing but round: the columns are already
      at --sch-day-min and the grid scrolls, so there is no remainder to place.
@@ -100,11 +111,9 @@
     // Cleared so the corner is measured at its own `max-content` again rather
     // than at the width pinned on the last pass, which would never shrink.
     sch.style.removeProperty('--sch-head-w');
-    // GROW IS RESTORED FOR THE MEASUREMENT. The stylesheet's `flex-grow: 1` is
-    // what makes the pane fill the board, and the pane's `clientWidth` below
-    // is how the available room is learned. Pinned to 0 from the last pass it
-    // would measure its own content instead.
-    sch.style.removeProperty('flex-grow');
+    // The pane fills the board and its `clientWidth` below is how the available
+    // room is learned; nothing narrows it any more, so `flex-grow` is left to
+    // the stylesheet.
     // MEASURED, NOT PARSED. The bus column is `max-content` in the stylesheet
     // so it is exactly as wide as the widest thing in it -- there is no length
     // to read, and hand-setting one would clip the day a four-digit bus number
@@ -119,31 +128,23 @@
 
     const available = pane - headBase;
     let day = Math.floor(available / days);
+    let head = headBase;
     if (day < dayMin) {
-      // The floor binds and the grid scrolls: there is no leftover to place,
-      // and the pane keeps every pixel it has.
+      // The floor binds and the grid is wider than the pane: it scrolls, there
+      // is no leftover to place, and the head stays at its content width.
       day = Math.floor(dayMin);
-      sch.style.removeProperty('inline-size');
-      // Nothing to hold back: the grid is wider than the pane and scrolls, so
-      // growing to fill whatever room there is is exactly right.
-      sch.style.removeProperty('flex-grow');
     } else {
-      const border = sch.offsetWidth - sch.clientWidth;   // its own 1px each side
-      sch.style.inlineSize = `${headBase + day * days + border}px`;
-      // AND NOW STOP GROWING, or the width just set is overridden and the
-      // remainder this narrowing exists to expel is handed straight back.
-      sch.style.flexGrow = '0';
+      // Everything the day columns did not take. Never less than headBase,
+      // since `day` was floored from the same figure.
+      head = pane - day * days;
     }
     sch.style.setProperty('--sch-day-track', `${day}px`);
-    // PIN THE HEAD TO THE PIXEL THAT WAS RESERVED FOR IT. `headBase` is the
-    // corner CEILED, and the pane's width is built from it -- but the column
-    // itself stayed `max-content`, so it kept its fractional width and the
-    // difference fell out as a gap at the right edge. Measured 2026-09-06 at
-    // 1440: a 42.203px corner reserved as 43, columns summing to 1309.203
-    // inside a 1310px content box, and 0.797px of daylight to the right of
-    // Sunday -- about two device pixels on a 2x display, which is what rux
-    // could see. Setting the column to the reserved figure closes it.
-    sch.style.setProperty('--sch-head-w', `${headBase}px`);
+    // PIN THE HEAD, which is what closes the right edge. It was `max-content`
+    // and kept a fractional width while the arithmetic used a ceiled one, so
+    // the difference fell out as daylight to the right of Sunday: measured a
+    // 42.203px corner against a reserved 43 at 1440. It now carries the
+    // flooring remainder as well, so the columns sum to the pane exactly.
+    sch.style.setProperty('--sch-head-w', `${head}px`);
 
   }
 
