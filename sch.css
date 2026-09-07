@@ -147,6 +147,9 @@
   z-index: 4;
   border-inline-end: 1px solid var(--rux-border-subtle-01);
   padding-inline: var(--rux-spacing-03);
+  /* The head of a centred column. `.sch-day` keeps its own start alignment --
+     a day name and its date read left to right and are not centred. */
+  justify-content: center;
 }
 /* THE RULE IS PAINTED, NOT LAID OUT. As border-inline-start it sat inside the
    cell and pushed the label 1px right of every other thing measured from the
@@ -237,6 +240,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--rux-spacing-02);
+  /* CENTRED BECAUSE THE COLUMN'S WIDTH IS NOT FIXED. sch.js gives this column
+     the flooring remainder so the board's right edge meets the toolbar's, so
+     it breathes by up to six pixels as the window moves -- and left-aligned
+     that showed as a glyph sitting 8px from one edge and up to 13.8 from the
+     other, measured at 1290. Centred, the remainder splits and neither side
+     moves much. It carries an identity, not a value, so there is no column of
+     figures wanting a shared left edge. */
+  align-items: center;
+  text-align: center;
 }
 .sch-row-head__num {
   font-size: var(--rux-body-compact-01-font-size);

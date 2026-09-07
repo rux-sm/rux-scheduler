@@ -4,6 +4,21 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-06 - the bus number centred, which was the price of the last
+change.** Giving the bus column the flooring remainder aligned the board with
+the toolbar and left the number sitting 8px from one edge and 13.8 from the
+other at 1290, moving as the window did. Centred, the remainder splits.
+
+Measured over the glyphs, not the element box, because the number fills its
+cell and the box reads even either way: skew from 5.8px to 1px at 1290
+(10.4 and 11.4), and 1px at 1440 (8.4 and 9.4). The residual is the glyph's
+own side bearings, not a layout error. The corner's "Bus" centres with it -
+12.3 and 13.3 - and `.sch-day` keeps its start alignment, since a day name and
+its date read left to right. The board still meets the toolbar at 0 in both.
+
+The column carries an identity rather than a value, so nothing there wants a
+shared left edge with a column of figures.
+
 **2026-09-06 - the strip at the right edge, and a decision reversed.** rux saw
 the board's right edge failing to line up with the New trip button above it.
 Real, width-dependent, and mine: 0px at 1440, 2px at 1400 and 1365, 4px at
