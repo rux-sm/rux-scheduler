@@ -4,10 +4,127 @@
 so itself: it cannot see spacing, contrast, focus, behaviour or how the page
 looks. rux-ds has five gates for that, they need a real browser, and **they
 are not vendored with the pin** — `vendor/rux-ds/tools/` carries the app check
-and the server and nothing else. Running them here means copying them in from
-a rux-ds clone, sweeping, and deleting them again. That is what was done
-below, and it is a gap worth closing upstream: an app on a tag cannot check
-its own rendering without a checkout of the design system beside it.
+and the server and nothing else.
+
+**RUNNING THEM HERE DOES NOT MEAN COPYING THEM IN.** This header used to say
+it did, and on 2026-09-08 that sentence cost a session its plan: it was
+read, believed, and a whole restart was built around it while the correction
+sat forty lines below. Serve this app through the rux-ds clone's own origin
+with a gitignored symlink — `.brand/sched` → this repository — and the page
+loads from `localhost:8642/.brand/sched/index.html` with `/tools/check-*.js`
+already same-origin to `eval`. Nothing is copied into this repository and
+nothing is deleted from it. **The symlink does not survive**; it was gone by
+2026-09-08 and had to be remade. `.brand/` is in rux-ds's `.gitignore`, so
+`git add -A` there cannot sweep it up.
+
+Serving this app on its own port instead does not work: `tools/serve.mjs` sets
+no CORS headers, so gates on 8642 are unreadable from a page on 8643.
+
+It remains a gap worth closing upstream: an app on a tag cannot check its own
+rendering without a checkout of the design system beside it.
+
+## Swept 2026-09-08 at `52efa52`
+
+Both pages, white theme asserted by `--rux-field-hover` (#e8e8e8) and `body`
+`rgb(255,255,255)` read in the same execution, 1440×950, focus taken with Tab
+then blurred (`activeElement` BODY, `hasFocus` true), transitions and
+animations suppressed (`body` `transition-duration` 0s), IBM Plex serving,
+pointer parked with only HTML, BODY and MAIN.`rux--content` in `:hover`,
+settle asserted by the absence of `.rux--inline-loading` in the same execution
+as the gate, both pages looked at. `node tools/check.mjs` exits 0 at v0.1.11.
+
+| Gate | `index.html` | `specimen.html` |
+|---|---|---|
+| `check-runtime-classes` | 119 / 125, **5 stripped**, 11 added | 56 / 56, 0 stripped, 0 added |
+| `check-a11y` | 0 findings, 0 notes, ring check live | 0 findings, 0 notes, ring check live |
+| `check-spacing` | 51 checked, 46 matched, 1 known, **4 diverges**, 6 not comparable, 26 no reference | 30 checked, 28 matched, **2 diverges**, 1 not comparable, 9 no reference |
+| `check-rendered` | throws | throws |
+| `check-behaviour` | 4 of 18 | 4 of 18 |
+
+**The red run was done again, on both.** Stripping every `:focus` outline
+and box-shadow took `check-a11y` from 0 to **30** on `index.html` and from 0
+to 14 on `specimen.html`; removing the style returned both to 0.
+`index.html` read 20 red at `b8c373d` and reads 30 now, which is the
+direction the toolbar and the per-row toggletips should move it.
+
+**The five stripped classes are the same five, and still not a defect.** The
+`inline-loading` spinner set `sch-data.js` replaces on first read. Unchanged
+in kind since 2026-09-06.
+
+**Eleven added, and every one resolves.** They are the toggletip and popover
+sets the bus rows build at runtime. ADDED is the harmless direction for the
+ratchet, but "harmless" is not "resolves", so each was checked against the
+pinned `vendor/rux-ds/css/rux.css` by hand: all eleven are compiled there, as
+are `rux--btn--selected` and `rux--menu-item__selection-icon`. The only class
+this app BUILDS rather than writes out is `sch--no-${r}` over
+`VIEW_ROWS = ['client','time','reqs','drivers']` (`sch-data.js:1503`), and
+those four are exactly the four selectors at `sch.css:607`. No orphan.
+`rux--inline-` matches only a comment, not a built class.
+
+### Four divergences on `index.html`, two of them new
+
+`rux--header__name` and `rux--tab-content` are the standing pair, both
+adjudicated below and unchanged. The two new ones:
+
+**`rux--css-grid--full-width` — this app's own decision, already reasoned.**
+No inline padding where the capture has 16px, and the cause is
+`--rux-grid-margin: 0` in `rux-overrides.css`, whose comment records the
+alternative it rejected. **The comment's arithmetic was checked rather than
+taken.** Measured chain to the column's content: `MAIN.rux--content` pays
+32px of Carbon's own padding, the column's `margin-inline-start` pays 16px,
+content lands at 48px — and `.sch-board` also lands at 48px, so the two
+regions do agree. The comment's "16px" is the grid's OWN contribution, not
+the page's outer inset; read that way it holds. Not a defect.
+
+**`rux--tabs__nav-item` margin — Carbon caused it, exactly like
+`header__name`.** Ours reports `margin-inline-start: 1px` where the capture
+has none, on the second of two tabs. The rule is Carbon's own compiled CSS,
+untouched, at `vendor/rux-ds/css/rux.css:25485`:
+
+    .rux--tabs .rux--tabs__nav-item + .rux--tabs__nav-item { margin-inline-start: 0.0625rem; }
+
+An adjacent-sibling rule needs two adjacent tabs to fire. Nothing in this
+repository selects that class. Not a defect.
+
+**`specimen.html` is no longer unchanged figure for figure**, and one cause
+explains it: it picked up the same `rux--css-grid` divergence, taking it
+from 29 matched / 1 diverges to 28 / 2. Its `check-runtime-classes` and
+`check-a11y` readings are identical to every prior sweep.
+
+### The last two cells are corrected, not inherited
+
+Both were carried as "N/A" below. Both were run this time, and both readings
+are different from what that word implies.
+
+**`check-rendered` does not report N/A — it THROWS.** `TypeError: Cannot read
+properties of null (reading 'getBoundingClientRect')`, on both pages, because
+its unit is `.ks-sec` inside `.ks-main` (`tools/check-rendered.js:24`) and
+neither page has either. The cell is still empty; the reason is now measured.
+
+**`check-behaviour` reports failures it did not earn — the opposite of what
+was written below.** The prior entry said it "would report a pass it did not
+earn". It does not. It reports **4 passed of 18** on both pages, and all 14
+others read `no X on this page`. That message is section-id scoping, not
+absent components: every fixture is looked for inside a kitchen-sink section
+— `#ui-shell`, `#tabs`, `#accordion` — so no consumer app can ever satisfy
+one.
+
+**Proved by hand on `index.html`, since the gate cannot reach it.** The
+shell it calls absent works: nav 0 → 256 → 0 across two clicks of the
+trigger, glyph `#i-menu` → `#i-close` → `#i-menu`, `aria-label` "Close menu"
+while open, `side-nav--expanded` set. The tablist it calls "fewer than two
+tabs" has two, with roving `tabindex` 0 / -1 and `aria-selected` true /
+false. Both are exactly what the gate would have asserted had it been able
+to see them.
+
+The four that DO pass are real and worth the cell: `profile` (a theme radio
+moves `data-theme` and stores it; a typed name is stored) and `theme`
+(`apply()` puts the stored theme on `<html>`, and refuses a value that is
+not a theme name). Those test module APIs rather than sink markup, which is
+why they survive the move to an app. **This belongs in
+`docs/rux-ds-requests.md`:** the behaviour gate is unusable by consumers for
+14 of its 18 cases, and the fix is scoping the fixtures to the document
+rather than to a section id.
 
 ## Re-swept 2026-09-07 at `b8c373d`
 

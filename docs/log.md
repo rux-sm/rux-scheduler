@@ -4,6 +4,51 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-08 - the browser sweep at `52efa52`, and two gates that were never
+actually run.** Figures and conditions are in `docs/gate-coverage.md`; this is
+what the pass changed its mind about.
+
+**THE HEADER OF `gate-coverage.md` WAS WRONG AND IT COST A SESSION ITS PLAN.**
+It said running rux-ds's browser gates here means copying them into this
+repository and deleting them again. The `b8c373d` entry forty lines below
+already corrected that in bold. The header was read, believed, and a restart
+into a different working directory was planned around it before anything was
+measured. The header now says the true mechanism first. A correction that only
+exists below the thing it corrects is not a correction.
+
+**`check-rendered` AND `check-behaviour` WERE CARRIED AS "N/A" AND HAD NOT BEEN
+RUN.** Both were run this time and neither reading matches the word.
+`check-rendered` throws — `getBoundingClientRect` of null — because its unit is
+`.ks-sec` inside `.ks-main`. `check-behaviour` reports 4 passed of 18, and the
+prior entry's reasoning for the N/A was backwards: it said the gate "would
+report a pass it did not earn", when what it actually does is report fourteen
+failures it did not earn. Every one of those fourteen is a fixture scoped to a
+kitchen-sink section id, so no consumer app can satisfy one. Filed as a request
+in `docs/rux-ds-requests.md`.
+
+**WHAT THE GATE COULD NOT SEE WAS CHECKED BY HAND, AND WORKS.** The shell
+`check-behaviour` calls absent: nav 0 → 256 → 0 over two clicks, glyph
+`#i-menu` → `#i-close` → `#i-menu`, `aria-label` "Close menu" while open. The
+tablist it calls "fewer than two tabs": two, roving `tabindex` 0 / -1.
+
+**TWO NEW SPACING DIVERGENCES, NEITHER A DEFECT.** The `rux--css-grid`
+full-width inset is this app's own `--rux-grid-margin: 0`, and its comment's
+arithmetic was measured rather than taken on trust — `.rux--content` pays 32px,
+the column's margin pays 16px, content lands at 48px, and `.sch-board` lands at
+48px too, so the regions do agree and the comment's "16px" is the grid's own
+contribution. The `rux--tabs__nav-item` 1px margin is Carbon's own compiled
+rule at `vendor/rux-ds/css/rux.css:25485`, an adjacent-sibling selector that
+needs two tabs to fire; nothing here selects that class. Same category as the
+standing `rux--header__name` finding.
+
+**THE ELEVEN RUNTIME-ADDED CLASSES WERE RESOLVED, NOT ASSUMED.** ADDED is the
+harmless direction for the coverage ratchet, but harmless is not the same as
+resolves, so all eleven toggletip and popover classes were checked against the
+pinned `rux.css` by hand, along with `rux--btn--selected`. The one class this
+app builds rather than writes out, `sch--no-${r}`, has exactly four values and
+exactly four matching selectors at `sch.css:607`.
+
+
 **2026-09-07 - the toolbar's own pass, and two things left unbuilt on
 purpose.** Continues the entry below, same sitting.
 

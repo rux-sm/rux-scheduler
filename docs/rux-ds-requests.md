@@ -10,6 +10,37 @@ with the tag that carried it.
 
 ---
 
+## Open — `check-behaviour` cannot see a consumer app, 2026-09-08
+
+**Asked for:** scope the fixtures in `tools/check-behaviour.js` to the document
+rather than to kitchen-sink section ids, or let the section id be optional.
+
+**Why:** run against this app it reports 4 passed of 18 on both pages, and the
+other 14 all say `no X on this page`. That message is not true. `index.html`
+has a working shell and a two-tab tablist; the gate looks for
+`#ui-shell .rux--header__menu-trigger` (`tools/check-behaviour.js:247`) and
+`#tabs [role="tablist"]` (`:120`), and no consumer page carries a sink section
+id. The gate is therefore unusable by consumers for 14 of its 18 cases, and it
+reports that as failure rather than as absence — which reads, in a ledger, like
+14 broken behaviours.
+
+**Measured 2026-09-08 at `52efa52`, by hand, because the gate could not.** The
+shell it calls absent takes the nav 0 → 256 → 0 across two clicks of the
+trigger, swaps the glyph `#i-menu` → `#i-close` → `#i-menu`, sets `aria-label`
+to "Close menu" while open, and sets `side-nav--expanded`. The tablist it calls
+"fewer than two tabs" has two, with roving `tabindex` 0 / -1 and `aria-selected`
+true / false. Both are exactly what the gate would have asserted.
+
+**What already survives the move, and is worth keeping.** The four passing cases
+are `profile` (a theme radio moves `data-theme` and stores it; a typed name is
+stored) and `theme` (`apply()` puts the stored theme on `<html>`, and refuses a
+value that is not a theme name). Those test module APIs rather than sink markup,
+which is why they are the ones that work here.
+
+**Not asked for:** a headless runner. Roadmap §4.8 settled that, and this is a
+selector change.
+
+
 ## Open — two group icons for the sprite, 2026-09-07
 
 **Asked for:** `events` and `user--multiple`, added to
