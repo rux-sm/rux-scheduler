@@ -407,6 +407,23 @@
    tabular, semibold, and alone in a column with nothing competing, which is
    what makes it findable, not its size. It now matches the bar text it is read
    beside, one weight above it. */
+/* THE TRIGGER IS THE NUMBER. On a bus row the number is a `button` inside a
+   toggletip, so it gives back everything a button brings with it -- padding,
+   border, background, the UA's own font -- and keeps only the type below. The
+   container must not add a box either: this cell's height is read by the grid,
+   and the whole point of the change was that this column stopped setting it. */
+.sch-row-head .rux--popover-container { display: block; }
+button.sch-row-head__num {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: inherit;
+}
+/* Carbon's toggletip content is prose; these are one-line facts. */
+.sch-bus-tip p { margin: 0; }
 .sch-row-head__num {
   font-size: var(--rux-label-01-font-size);
   line-height: var(--rux-label-01-line-height);
@@ -582,6 +599,16 @@
 .sch-bar--to-next { inset-inline-end: 0; inline-size: auto; border-inline-end: 3px dotted var(--sch-border); }
 .sch-bar--from-prev.sch-bar--to-next { inline-size: auto; }
 
+/* THE ROWS THE VIEW MENU CAN TURN OFF. `display: none` rather than
+   `visibility: hidden`, because the point is to get the height BACK --
+   `--sch-bar-rows` drops with it and the bar shrinks, so more buses fit. The
+   destination has no toggle: a bar with no name on it is not a shorter bar, it
+   is an unreadable one. */
+.sch--no-client .sch-bar__client,
+.sch--no-time .sch-bar__time,
+.sch--no-reqs .sch-bar__reqs,
+.sch--no-drivers .sch-bar__drivers { display: none; }
+
 .sch-bar__row { display: flex; justify-content: space-between; gap: var(--rux-spacing-03); block-size: var(--sch-row-h); white-space: nowrap; overflow: hidden; }
 .sch-bar__row > * { overflow: hidden; text-overflow: ellipsis; }
 .sch-bar__dest { font-weight: 600; }
@@ -749,11 +776,26 @@
      rule above is about buttons touching each other. It is the only thing in
      this row that needs air, and `.sch-toolbar__range` carries it. */
   gap: 0;
-  flex-wrap: wrap;
+  /* IT DOES NOT STACK. `flex-wrap: wrap` put the week on its own line and the
+     two actions on a third, which is three rows of chrome above a board whose
+     whole argument is vertical room -- and it moved the paging buttons every
+     time it happened. One row, always; what gives way is the label, below. */
+  flex-wrap: nowrap;
   background: var(--rux-layer);
   min-block-size: 2rem;
 }
-.sch-toolbar__range { margin-inline: var(--rux-spacing-05); font-variant-numeric: tabular-nums; }
+/* THE LABEL IS THE ONLY THING THAT GIVES WAY, and it is the right one. A
+   truncated "September 7 – 13, 20…" still says which week; a hidden button says
+   nothing and cannot be pressed. `min-inline-size: 0` is what lets a flex item
+   shrink below its own text at all -- without it the row overflows instead. */
+.sch-toolbar__range {
+  margin-inline: var(--rux-spacing-05);
+  font-variant-numeric: tabular-nums;
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 /* Everything before this sits left, everything after it right. */
 .sch-toolbar__spacer { flex: 1; }
 
@@ -1041,7 +1083,20 @@
 /* The type moved up to the header ROW, where it covers the day letters too.
    What is left for this cell is set below, after the reset that would beat it. */
 
-/* A single letter needs no padding and reads better centred over its square. */
+/* THE DAY CELLS KEEP label-01 WHILE "Driver" TAKES THE TABLE HEADER'S 14px.
+   Three letters at 14px/600 is ~30px in a 32px square and the seven of them
+   touched; at 12px they sit clear. The two are different jobs in one row -- a
+   word labelling a column of names, and a day labelling a column of marks. */
+.sch-avail__days > .sch-avail__day {
+  font-size: var(--rux-label-01-font-size);
+  letter-spacing: var(--rux-label-01-letter-spacing);
+}
+.sch-avail__days > .sch-avail__day--head {
+  font-size: var(--rux-heading-compact-01-font-size);
+  letter-spacing: var(--rux-heading-compact-01-letter-spacing);
+}
+
+/* A day label needs no padding and reads better centred over its square. */
 .sch-avail__day {
   inset-inline-start: auto;
   position: static;

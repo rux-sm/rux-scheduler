@@ -437,7 +437,13 @@
                  disabled until 2026-09-06, because a disabled primary button was
                  the most prominent thing on the page and did nothing. -->
             <div class="sch-toolbar__spacer"></div>
-            <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-avail-toggle" aria-pressed="false">Drivers</button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-avail-toggle" aria-pressed="false">Drivers</button>
+            <!-- VIEW OPTIONS. screen-inventory.md section 7 left four of these
+               homeless when the specimen's menu went: they change how the board
+               DRAWS rather than what it holds, which is a menu's job and not a
+               toolbar's. Only the two that exist are here -- a control for a
+               mode this grid cannot draw would be a lie. -->
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-view-trigger" aria-label="View options" aria-haspopup="menu" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg></button>
             <!-- BACK, AND NOT DISABLED THIS TIME. The comment above promised it
                  for the day the editor could make a trip, which is today: dates
                  were the only thing standing in the way, and a trip with a start
@@ -564,6 +570,38 @@
        `Rux.menu.open`, which supplies Escape, outside-press and focus return.
        The module repositions only `position: fixed` surfaces, and this one is
        absolute inside `.sch-page`, so the placement set for it is left alone. -->
+  <!-- THE VIEW MENU. `--with-selectable-items` is what makes
+       `__selection-icon` display at all; the checkmark itself is put in and
+       taken out by sch-data.js rather than hidden by a rule, because a rule on
+       a rux-- class does not belong in this app (AGENTS.md).
+
+       FLAT, NOT GROUPED. `rux--menu-item-group` is compiled and nests a second
+       `ul`, which is more structure than two blocks of items need and more than
+       the menu module is known here to walk. A divider says the same thing. -->
+  <ul class="rux--menu rux--menu--sm rux--menu--open rux--menu--shown rux--menu--with-selectable-items" id="sch-view-menu" role="menu" tabindex="-1" hidden>
+    <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="true" tabindex="0" data-row="client">
+      <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__label">Customer</div>
+    </li>
+    <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="true" tabindex="0" data-row="time">
+      <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__label">Times</div>
+    </li>
+    <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="true" tabindex="0" data-row="reqs">
+      <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__label">Requirements</div>
+    </li>
+    <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="true" tabindex="0" data-row="drivers">
+      <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__label">Drivers on the bar</div>
+    </li>
+    <li class="rux--menu-item-divider" role="separator"></li>
+    <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="false" tabindex="0" data-view="sunday">
+      <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__label">Start week on Sunday</div>
+    </li>
+  </ul>
+
   <ul class="rux--menu rux--menu--sm rux--menu--open rux--menu--shown" id="sch-cell-menu" role="menu" tabindex="-1" hidden>
     <li class="rux--menu-item" role="menuitem" tabindex="0" id="sch-cell-menu-new">
       <div class="rux--menu-item__label">New trip here</div>

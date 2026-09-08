@@ -52,6 +52,42 @@ here would be inventing markup, which `AGENTS.md` forbids in both repositories.
 
 ---
 
+## Open — a date picker whose trigger is not its own input, 2026-09-07
+
+**Asked for:** a `--next` date picker that can be opened from an element the
+consuming page supplies, or a variant with no visible input -- an icon-only
+trigger whose value is read rather than shown.
+
+**Why:** `screen-inventory.md` section 7 decided that jumping to a date is the
+week LABEL's job -- "a permanent mini calendar spends standing space on an
+occasional action" -- and that decision cannot be built. Paging is one week a
+click, so a month away is eight of them.
+
+**What the contract says, and it is not a gap in the module.**
+`js/date-picker.js` is explicit: a `.rux--date-picker--next` containing a
+`.rux--date-picker__calendar-container` is claimed on load, and "the trigger is
+`.rux--date-picker__icon` inside the same root, so the markup already relates
+them". That rule is the right one -- it is the same rule menu.js settled, and
+it is why a picker needs no `data-rux-*`. The shape simply has no room for a
+trigger the page owns.
+
+**The three ways round it, and why each is barred here.** Putting
+`rux--date-picker__icon` on this app's own label is a Carbon class repurposed
+on an app element. Hiding the picker's input needs a rule on a Carbon part from
+an app stylesheet, which `AGENTS.md` forbids in both repositories. Showing the
+input leaves a toolbar reading "Sep 7 - 13, 2026" beside a `2026-09-07` field --
+two date displays of one week -- or replaces the range readout, which is the
+most-read thing in that row.
+
+**What it is not:** a request to portal the calendar, or to change the keyboard
+model. Only where the open command may come from.
+
+**Nothing is built here in the meantime.** A date picker in the shape the
+component allows would be shipped knowing it is the wrong one, and reverting it
+later costs more than the eight clicks.
+
+---
+
 ## Settled
 
 Nothing yet.

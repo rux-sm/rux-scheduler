@@ -51,7 +51,13 @@
   const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const parseISO = s => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, m - 1, d); };
   const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-  const mondayOf = d => addDays(d, -((d.getDay() + 6) % 7));
+  /* THE WEEK'S FIRST DAY IS A PREFERENCE NOW, not a constant. `mondayOf` is
+     kept as the name because that is what it returns by default and what every
+     call site means by it; `weekStartsSunday` shifts it by one when set.
+     `getDay()` is 0 for Sunday, so Monday-first is `(day + 6) % 7` and
+     Sunday-first is simply `day`. */
+  let weekStartsSunday = false;
+  const mondayOf = d => addDays(d, -(weekStartsSunday ? d.getDay() : (d.getDay() + 6) % 7));
   // Math.round, because a span crossing a daylight-saving change is 23 or 25
   // hours and integer division would drop or add a day.
   const daysBetween = (a, b) => Math.round((b - a) / DAY);
@@ -210,7 +216,11 @@
   // 2026", which is what sent me looking.
   function setRange(weekStart, weekEnd) {
     if (!rangeEl) return;
-    const fmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+    /* SHORT MONTH: "Sep 7 – 13, 2026" against "September 7 – 13, 2026", which
+       is about 70px back on the widest thing in the toolbar. The month is read
+       once and the DAYS are what change week to week; spelling it out cost more
+       than it said, and it was the first thing pushing this row to wrap. */
+    const fmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
     rangeEl.textContent = typeof fmt.formatRange === 'function'
       ? fmt.formatRange(weekStart, weekEnd)
       : `${fmt.format(weekStart)} - ${fmt.format(weekEnd)}`;
@@ -390,7 +400,19 @@
     rows.push({ id: UNASSIGNED, bus: null, empty: !tracks.has(UNASSIGNED) });
 
     gridEl.replaceChildren();
-    gridEl.appendChild(el('div', 'sch-corner', 'Bus'));
+    /* "#", NOT "Bus". The column holds bus NUMBERS and the corner labels them;
+       "#" is the conventional heading for a column of identifiers and it stops
+       the heading being wider than the things under it.
+
+       IT SAVES NO WIDTH, and rux asked for it on that basis, so it is worth
+       being exact: the column floors at 2rem to square the corner, and the
+       widest bus number is already under that floor. "Bus" at 20.5px was not
+       what set this column either. What changes is that the heading no longer
+       says a word the whole grid already says. The title carries the sense for
+       anyone who needs it spelled out. */
+    const corner = el('div', 'sch-corner', '#');
+    corner.title = 'Bus number';
+    gridEl.appendChild(corner);
 
     // TODAY IS THE HEADER CELL AND NOTHING ELSE. There was a rule down the
     // column until 2026-09-06; sch.css says why it went and why nothing
@@ -425,7 +447,46 @@
       // "No bus", not "Unassigned": the word was the widest thing in the
       // column and set its width on its own. This one wraps, and the row's
       // title carries the full sense.
-      head.append(el('div', 'sch-row-head__num', r.bus ? String(r.bus.number) : 'No\nbus'));
+      /* THE NUMBER IS A TOGGLETIP TRIGGER when there is a bus behind it.
+         Structure from `carbon-ibm-products-dom.json`: a `popover-container`
+         carrying `--caret`, a placement and `toggletip`, holding a
+         `toggletip-button`, then `popover > popover-content > toggletip-content`
+         and the caret as the container's last child. js/popover.js opens it on
+         click from the markup alone -- the module reads the mode off the classes
+         and wants no attribute.
+
+         `right-start` because this column is the board's left edge: anywhere
+         else and the tip covers the week it is describing. */
+      if (r.bus) {
+        const tip = el('span', 'rux--popover-container rux--popover--caret rux--popover--drop-shadow rux--popover--right-start rux--toggletip');
+        const trigger = el('button', 'rux--toggletip-button sch-row-head__num');
+        trigger.type = 'button';
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-label', `Bus ${r.bus.number} details`);
+        trigger.textContent = String(r.bus.number);
+        const pop = el('span', 'rux--popover');
+        const content = el('span', 'rux--popover-content');
+        const inner = el('div', 'rux--toggletip-content sch-bus-tip');
+        inner.appendChild(el('p', 'rux--toggletip-label', `Bus ${r.bus.number}`));
+        const spec = [
+          [r.bus.capacity ? `${r.bus.capacity} pax` : null, r.bus.type].filter(Boolean).join(' · '),
+          [r.bus.year, r.bus.make, r.bus.model].filter(Boolean).join(' '),
+          r.bus.color,
+          [r.bus.ada_lift ? 'ADA lift' : null, r.bus.sleeper ? 'Sleeper' : null].filter(Boolean).join(' · '),
+          r.bus.vin ? `VIN ${r.bus.vin}` : null,
+          r.bus.status && r.bus.status !== 'active' ? `Status: ${r.bus.status}` : null,
+        ].filter(Boolean);
+        // EVERY VALUE WITH textContent, as everywhere else here: these rows were
+        // authored in another application and a bus colour is data, never markup.
+        for (const line of spec) inner.appendChild(el('p', null, line));
+        if (!spec.length) inner.appendChild(el('p', null, 'Nothing recorded for this bus.'));
+        content.appendChild(inner);
+        pop.appendChild(content);
+        tip.append(trigger, pop, el('span', 'rux--popover-caret'));
+        head.appendChild(tip);
+      } else {
+        head.append(el('div', 'sch-row-head__num', 'No\nbus'));
+      }
       if (!r.bus) head.title = 'Trips with no bus yet';
       if (r.bus) {
         head.title = [
@@ -442,6 +503,22 @@
       // the smallest size Carbon ships it in, so these are not all one box:
       // accessibility and hotel exist only at 32, warning--filled at 16. Drawing
       // a 16-box symbol inside a 32-box svg scales it to a quarter of the space.
+      /* THE EQUIPMENT ICONS ARE GONE FROM THIS COLUMN, 2026-09-07, and the
+         reason is not tidiness: they were SETTING THE ROW HEIGHT. A head is
+         the number stacked over its icons, and two of them came to about 74px
+         against a 5-row bar's 88 -- invisible until the view menu let a bar
+         drop to two rows, at which point the row's height was decided by
+         whether that bus happens to have a lift. rux saw it at five rows too:
+         the two-icon rows measurably taller than the one-icon rows beside them,
+         so the grid's rhythm was set by metadata nobody was reading.
+
+         THEY ARE IN THE TOGGLETIP ON THE NUMBER NOW, with everything else the
+         bus knows. `ada_lift` and `sleeper` are ATTRIBUTES -- constant, and a
+         dispatcher learns their own fleet -- so they belong behind a press.
+
+         OUT OF SERVICE STAYS IN THE COLUMN. It is a STATE, it changes what the
+         row can accept this week, and the drag already reads it as a warning.
+         One icon cannot make a row taller than a bar. */
       const kit = el('div', 'sch-row-head__kit');
       const flag = (href, box, label, cls) => {
         const span = el('span', cls || null);
@@ -451,8 +528,6 @@
         span.appendChild(svgUse(href, '16', box));
         kit.appendChild(span);
       };
-      if (r.bus?.ada_lift) flag('#i-accessibility', '0 0 32 32', 'ADA lift');
-      if (r.bus?.sleeper) flag('#i-hotel', '0 0 32 32', 'Sleeper');
 
       const windows = (oosByBus.get(r.id) ?? []).filter(w => clip(w.start_date, w.end_date, weekStart, weekEnd));
       if (windows.length) {
@@ -1335,8 +1410,15 @@
          anything, and one letter cannot tell Tuesday from Thursday or Saturday
          from Sunday -- four of the seven columns unreadable in the pane whose
          job is answering "who is free THEN".
-         The cells are 32px squares since the rows went to sm, which is what
-         makes "Wed" possible where 24px would not have. */
+
+         CRAMPED AT THE HEADER'S OWN TYPE, which rux saw: "Wed" at 14px/600 is
+         about 30px in a 32px square and the seven of them touch. The fix is the
+         TYPE, not the words -- the day cells drop to label-01 where "Driver"
+         beside them keeps the table header's 14px. A day letter labels a column
+         of marks; the name labels a column of names, and Carbon's own table has
+         header cells of different weights for exactly that reason. Single
+         letters would have solved the cramping by reintroducing the ambiguity
+         this comment exists to describe. */
       const cell = el('div', 'sch-avail__day', d.toLocaleDateString(undefined, { weekday: 'short' }));
       cell.dataset.day = String(i);
       head.appendChild(cell);
@@ -1400,6 +1482,82 @@
      and this listener has nothing left to wait for. */
 
   availToggle?.addEventListener('click', () => { availOn = !availOn; placeAvailability(); });
+
+  /* ── VIEW OPTIONS ─────────────────────────────────────────────────────────
+     WHAT IS HERE AND WHAT IS NOT. `screen-inventory.md` section 7 lists four
+     homeless options: time-aligned, start on Sunday, two weeks, and the bar-row
+     toggles. Two of them are built below. Time-aligned and two-week are NOT:
+     this grid places by DAY and fetches one week, so a control for either would
+     be a switch attached to nothing -- worse than its absence, because it
+     promises a mode that does not exist.
+
+     THE BAR ROWS ARE THE USEFUL HALF. A bar reserves five lines whatever it
+     holds, and the requirements line is empty on nearly every trip -- 16px of
+     every 88px bar spent on nothing. Turning a row off REMOVES it rather than
+     blanking it: `--sch-bar-rows` is the count, so the bar shrinks and the row
+     with it, and more buses fit on screen.
+
+     LOCAL, AND FORGIVING. `screen-inventory.md` says these preferences stay in
+     `localStorage` and are read with a try-catch; a browser that refuses
+     storage gets the defaults and no error. */
+  const VIEW_ROWS = ['client', 'time', 'reqs', 'drivers'];
+  const view = { client: true, time: true, reqs: true, drivers: true, sunday: false };
+  const VIEW_KEY = 'rux-scheduler.view';
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(VIEW_KEY) || '{}');
+    for (const k of [...VIEW_ROWS, 'sunday']) if (typeof saved[k] === 'boolean') view[k] = saved[k];
+  } catch { /* no storage, or nothing worth reading: the defaults stand */ }
+  // BEFORE `cursor` IS FIRST COMPUTED, further down: `mondayOf` reads this, and
+  // a saved Sunday preference has to be in force for the very first week drawn,
+  // not from the first time the menu is opened.
+  weekStartsSunday = view.sunday;
+
+  const viewMenu = document.getElementById('sch-view-menu');
+  const viewTrigger = document.getElementById('sch-view-trigger');
+
+  function applyView() {
+    weekStartsSunday = view.sunday;
+    for (const r of VIEW_ROWS) schEl.classList.toggle(`sch--no-${r}`, !view[r]);
+    // One for the destination, which never goes, plus whatever is left on.
+    schEl.style.setProperty('--sch-bar-rows', String(1 + VIEW_ROWS.filter(r => view[r]).length));
+    for (const item of viewMenu?.querySelectorAll('[role="menuitemcheckbox"]') || []) {
+      const key = item.dataset.row || item.dataset.view;
+      const on = !!view[key];
+      item.setAttribute('aria-checked', String(on));
+      const slot = item.querySelector('.rux--menu-item__selection-icon');
+      if (slot) { if (on) slot.replaceChildren(svgUse('#i-checkmark', 16, 32)); else slot.replaceChildren(); }
+    }
+    try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch { /* nothing to do */ }
+    window.Rux?.schedule?.fit?.();
+  }
+
+  viewTrigger?.addEventListener('click', () => {
+    if (!viewMenu) return;
+    // Anchored to the button rather than to a pointer, which is the only way
+    // this differs from the two context menus: same placement arithmetic, a
+    // rect's corner standing in for the click.
+    const r = viewTrigger.getBoundingClientRect();
+    popMenuAt(viewMenu, { clientX: r.left, clientY: r.bottom });
+  });
+
+  viewMenu?.addEventListener('click', e => {
+    const item = e.target.closest('[role="menuitemcheckbox"]');
+    if (!item) return;
+    const key = item.dataset.row || item.dataset.view;
+    if (!(key in view)) return;
+    view[key] = !view[key];
+    applyView();
+    // Changing the first day re-asks the server for a different seven days;
+    // the row toggles are drawing only and need no fetch.
+    if (key === 'sunday') { cursor = mondayOf(cursor); show(); }
+  });
+  viewMenu?.addEventListener('rux:menu-closed', () => { viewMenu.hidden = true; });
+
+  // Once at start, so the saved rows are off before the first week is drawn
+  // rather than blinking off after it.
+  applyView();
+
 
   /* CLOSING FROM THE GRID'S OWN HEAD. The toolbar toggle still turns it on and
      still reports state through `aria-pressed`; this is the second way to turn

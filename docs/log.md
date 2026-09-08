@@ -4,6 +4,64 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-07 - the toolbar's own pass, and two things left unbuilt on
+purpose.** Continues the entry below, same sitting.
+
+**IT DOES NOT STACK.** `flex-wrap: wrap` had put the week on a second line and
+the actions on a third -- three rows of chrome above a board whose argument is
+vertical room, and it moved the paging buttons every time it happened. One row
+now; the LABEL is what gives way, truncating, because a shortened
+"Sep 7 - 13, 20..." still says which week and a hidden button says nothing. The
+month is `short` for the same reason: about 70px back on the widest thing there.
+
+**RUX PROPOSED HIDING `New trip` AT NARROW WIDTHS** on the grounds that a trip
+can be made by right-clicking an empty cell. Declined, and recorded because it
+was a reasonable ask: that gesture is a LONG PRESS on touch, which this same day
+taught to mean "pick up a bar", and a right-click menu is a power path rather
+than how anyone learns an app can create something. Hiding the primary action at
+the width where the app is hardest to use inverts it. `Drivers` is the better
+candidate if one has to go.
+
+**THE VIEW MENU, WITH TWO OF THE FOUR OPTIONS SECTION 7 LISTS.** Bar rows --
+customer, times, requirements, drivers -- and start on Sunday. Turning a row off
+REMOVES it: `--sch-bar-rows` is the count, so the bar shrinks and more buses fit,
+which is the first thing done about the blank requirements line the review found.
+**Time-aligned and two-week are deliberately absent.** This grid places by day
+and fetches one week; a control for either would be a switch attached to nothing.
+Preferences are `localStorage` with a try-catch, read before `cursor` is first
+computed so a saved Sunday holds for the first week drawn.
+
+**THE EQUIPMENT ICONS WERE SETTING THE ROW HEIGHT**, which rux saw and I had
+argued against removing a day earlier. Two icons stacked under a number come to
+about 74px; the rows carrying two measured taller than the rows carrying one.
+The view menu makes it far worse -- a two-row bar is 40px, so equipment would
+decide every row. `ada_lift` and `sleeper` are attributes and moved to a
+toggletip on the bus number, built from the `popover-container` /
+`toggletip-button` / `popover-content` structure in
+`carbon-ibm-products-dom.json`. Out of service STAYS: it is a state, it changes
+what the row accepts this week, and one icon cannot out-measure a bar.
+
+**"#", NOT "Bus", and it saves no width.** rux asked for it to save space; the
+column floors at 2rem to square the corner and the widest bus number is already
+under it. What changes is a heading that stopped saying a word the grid says.
+
+**THE DAY LETTERS WERE CRAMPED, AND THE FIX WAS THE TYPE.** rux asked for single
+letters back. "Wed" at the table header's 14px is about 30px in a 32px square, so
+the seven touched -- but one letter cannot tell Tuesday from Thursday, which is
+what put three letters there this morning. The day cells drop to label-01 and
+"Driver" keeps 14px: a word labelling names and a day labelling marks are
+different jobs in one row.
+
+**NOT BUILT, AND BOTH ARE UPSTREAM.** The Drivers button stays text: the sprite's
+only person is `user--avatar` and the shell's Account button already uses it.
+And the week label cannot become a date-picker trigger, which section 7 decided
+it should be -- `js/date-picker.js`'s contract is that the trigger is
+`__icon` INSIDE the picker's root, and every way round it either puts a Carbon
+class on an app element or an app rule on a Carbon part. A picker in the shape
+the component allows would be shipped knowing it is the wrong one. Both are in
+`docs/rux-ds-requests.md`, which is new and is this app's record of what it has
+asked for.
+
 **2026-09-07 - the board rebuilt against Carbon's data table, in one long
 pass with rux at the screen.** rux asked for a design review of the schedule --
 "the most important page to get right as it will be the most used" -- and then
