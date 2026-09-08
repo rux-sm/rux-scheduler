@@ -10,6 +10,64 @@ with the tag that carried it.
 
 ---
 
+## Open — `ui-shell.js` calls a shell state invented that the CSS ships three
+rules for, 2026-09-08
+
+**Asked for:** correct or qualify the comment in `js/ui-shell.js:7-11` — "A
+template showing the button at desktop invents a state IBM's design does not
+have" — or, if the state really is out of bounds, say what a consumer using the
+rail shell should do instead. Either way, capture the shell with a permanent
+toggle, so `check-spacing` has a reference for it.
+
+**Why:** this app renders `--side-nav--ux --side-nav--hidden` with a
+`__menu-toggle` that carries no `__hidden`, so the hamburger is visible at every
+width. `check-spacing` therefore reports `rux--header__name` at 8px of inline
+start where the capture has 16, on both pages, in every sweep since the first.
+It is adjudicated in `docs/gate-coverage.md` as Carbon-caused and not a defect,
+and it has to be re-adjudicated each time because the comment above says the
+configuration causing it is not a real one. Re-arguing a settled thing is what
+this file exists to stop.
+
+**THE COMMENT IS CONTRADICTED BY THREE SEPARATE PIECES OF COMPILED CSS**, all in
+`css/rux.css` at v0.1.11 and none of them ours to change.
+
+**One — `__hidden` is markup-applied, not automatic.**
+`.rux--header__menu-toggle__hidden { display: none }` exists only inside
+`@media (min-width: 66rem)` (`rux.css:27317`). Nothing in the stylesheet adds
+that class. "Carbon hides it above 66rem" is therefore true only of a page that
+writes the class in, and is a statement about the consumer's markup rather than
+about the design.
+
+**Two — the spacing rule cannot mean what a responsive-only hamburger would need
+it to mean.** `.rux--header__menu-toggle:not(.__hidden) ~ .rux--header__name`
+(`rux.css:27364`) carries no media query. In a page that writes `__hidden`, the
+class is present at EVERY width, so below 66rem — where that toggle is on screen
+— the selector does not match and the name keeps its 16px. The one case a
+"space the name while the button is beside it" rule would exist for is exactly
+the case it misses. The only configuration it ever fires in is a toggle with no
+`__hidden`: a permanent one.
+
+**Three — the cascade order of the nav's own classes only pays off at desktop.**
+`.rux--side-nav--hidden { inline-size: 0 }` (`:27657`) is declared AFTER
+`--side-nav--ux`'s `16rem` (`:27643`) at equal specificity, so it wins; and
+`--side-nav--expanded { 16rem }` (`:27661`) is declared after `--hidden`, so it
+wins over that. Below 66rem `--ux` is already 0 and `--hidden` changes nothing,
+so that ordering does no work at all except above 66rem — where its only use is
+letting a consumer collapse and reopen a nav at desktop.
+
+**What this is not.** Not a request to change any of those rules: they are
+right, and this app depends on all three. Not a request to make the rail shell
+the default, and not a claim that the persistent shell is wrong. The ask is only
+that the doctrine and the stylesheet agree, and that whichever way it is settled
+is written down once.
+
+**If the comment stands and the state is declined:** this app needs to be told
+what to render instead, because the alternative shipped in the pin — `--ux`
+persistent at 16rem above 66rem — is a permanent 256px column on a page whose
+whole argument is horizontal room for a week. See `docs/log.md` 2026-09-08: at
+1440 the board is already 323px short of a week with both companions open.
+
+
 ## Open — `check-behaviour` cannot see a consumer app, 2026-09-08
 
 **Asked for:** scope the fixtures in `tools/check-behaviour.js` to the document

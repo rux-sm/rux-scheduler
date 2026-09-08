@@ -4,6 +4,112 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-08 - the layout review, and the arithmetic that settled three
+open questions at once.** rux was finalising the layout with both companions
+under review and asked three things: whether the driver grid has to match the
+main table, whether xs and md could differ between them, and whether the trip
+editor's fields want another variant or fluid. All three were answered by one
+measurement neither question had asked for.
+
+**THE THREE COLUMNS DO NOT FIT A WEEK AT 1440, AND NOTHING ABOUT DENSITY CAN
+PAY FOR IT.** Measured live at 1440x950, both companions open: the board is
+1344, the roster 331, the editor 320, two gaps 32, and seven day columns need
+984 -- the `--sch-day-min` floor of 8.5rem times seven plus a 32px bus column.
+1667 wanted against 1344 had, so the week runs **323px short** and Saturday and
+Sunday scroll off the right edge. A charter board that hides the weekend is the
+one failure this layout cannot have, and it had it. Either companion ALONE
+fits: 997 of 997 with the roster, 1008 of 984 with the editor. Both together
+never do -- all three need a 1763px viewport, which is why it looked correct on
+rux's screen and broke on a laptop.
+
+**WHY DENSITY WAS THE WRONG LEVER, WHICH IS WHAT THE QUESTIONS ASSUMED.** xs
+rows give back 56px and the editor at `--xs` gives 64: 120 of the 323. There is
+no arrangement of the three at 1440. The editor cannot go below its own 16rem
+clamp, so the answer had to be about WHICH regions coexist, not how tight they
+are.
+
+**THE ROSTER YIELDS TO THE EDITOR, AND ONLY ON THE WAY IN.** `fitColumns` in
+sch.js already computed this exact condition -- `day < dayMin` IS "the week does
+not fit" -- so it is named `crowded` and returned rather than measured a second
+time somewhere else. `fitPanelRoom` is why: docs/log.md records the afternoon
+three places disagreed about one number, and a second budget would have been
+the fourth. sch-data.js reads it once, as the editor OPENS, and hides the
+roster; closing gives it back. Not on every fit -- this runs on every resize
+frame, and yielding on a measurement that moves under the pointer would
+collapse the roster while a window edge is being dragged.
+
+**THE TOGGLE WAS WRITTEN WRONG FIRST AND THE BROWSER CAUGHT IT.**
+`aria-pressed` came from `availOn`, the wanted state, so a yielded roster left a
+lit button with nothing behind it -- and pressing it flipped the invisible want
+to false: pressed, still nothing, control dead. Both now come from `shown`.
+`availOn` still survives the editor, which is how the roster returns unasked;
+it is simply no longer the thing announced. Verified through six steps: on,
+yield, overrule, a second bar clicked with the overrule holding, off, close.
+
+**XS ROWS UNDER AN SM HEAD, AND THE FLIP-FLOP ENDS ON AN ARGUMENT.** The row
+height has been 24, 32, 24, 32 and is now 24. Every previous turn was fought
+over how many drivers fit and the readings were genuinely even, which is why it
+kept turning. What broke the tie: the consistency the last turn protected was
+not there. It traded eight drivers for "one module on the page" and the page
+does not have one -- a bus row is 95px. The 32px module lives in the toolbar
+and the two header BANDS, never in a body row, so what the rows were matched to
+was a band. The band is still 32px and still explicit. Carbon's own row-height
+control offers exactly this shape: five row heights under an unchanged header.
+Measured at 1440x950: **32 of 40 drivers, up from 24**.
+
+**THE DAY COLUMNS STOPPED FOLLOWING THE ROW, WHICH FORFEITS THE 56px ON
+PURPOSE.** `--sch-day-track` WAS `--sch-avail-h`, so xs took the seven columns
+with it. It also clipped the head: "Wed" is 26px at label-01 in a 24px column,
+measured. Three letters are there because one cannot tell Tuesday from Thursday,
+settled 2026-09-07, and reopening it for 56px that does not close a 323px gap
+would be paying a real cost for nothing. The cell is 32x24 now rather than
+square, which costs nothing -- what it draws is a bar spanning days.
+
+**THE TRIP EDITOR'S FIELDS ARE UNCHANGED, AND FLUID WAS THE WRONG ASK.** Every
+field measures 64px: a 20px label, a 40px control, 4px. The control is md
+because `.rux--text-input` clamps to `--rux-layout-size-height-md` by default,
+which is what the explicitly-md select already was, so they agreed before
+anyone set them. **Fluid is `min-block-size: 4rem` -- 64px, identical**, because
+it trades the outer label for an inner one; it buys no height at all. It also
+hides `form__helper-text`, and there is no fluid checkbox in the pin, so the
+four Status and needs boxes could not follow and the form would mix fluid with
+default -- the one thing fluid must not do. `size-sm` works and was measured at
+56px a field, but the panel's content is 729px inside a 729px box: it does not
+overflow, so it would buy nothing but a smaller target on the only thing here
+anyone types into. Left at 40. The board is scanned and the editor is typed
+into; that is the same argument that frees the roster's rows, pointed the other
+way.
+
+**RUX PROPOSED ONE SHARED RIGHT-HAND SLOT** -- both companions in the same
+place, mutually exclusive by construction -- and it is the better mechanism
+against the worse model. It makes the budget structural: one slot cannot
+overflow, no `crowded`, no restore. Declined because it costs the task the app
+exists for. Assigning a driver means the editor open and the roster answering
+who is free; the width budget keeps that wherever there is room -- verified at
+2000x950, both open, schedule 1221 of 984 needed, no yield taken -- and gives
+it up only where it cannot be had. The shared slot gives it up at every width
+including the one rux works at. The 2026-09-06 note about the right-hand slot
+putting the grid "between the board and the panel describing it" does NOT apply
+here and was not the reason.
+
+**AND THE HEADER QUESTION THAT CAME OUT OF IT, FILED RATHER THAN FIXED.** rux
+compared this app's `rux--header__name` against another rux-ds app's and asked
+which padding is correct. Neither is wrong: Carbon ships three values — 16/32
+plain, 8/32 when a visible hamburger sits beside it, 16/16 below 41.98rem — and
+this app gets the middle one because its toggle carries no `__hidden`. Nothing
+in this repository touches that class. Checking it turned the standing note at
+the foot of the 2026-09-06 entry into a real request: `js/ui-shell.js` calls a
+desktop hamburger invented, and three separate compiled rules only do work in
+that configuration. Written up in `docs/rux-ds-requests.md`, which now has four
+open. The brand stays content-width, which is what Carbon's own header is —
+there is no reserved slot to align to a rail that measures 0 most of the time.
+
+**NOT DONE.** The bars themselves, still: the review's own findings from
+2026-09-07 are all open. No undo, no weekend tint -- which this pass makes
+sharper, since the weekend is exactly what was falling off. The gates were not
+re-run; this was measured by hand in the browser at 1440x950 and 2000x950,
+white and g90, and `node tools/check.mjs` passes with the token count at 80.
+
 **2026-09-08 - the browser sweep at `52efa52`, and two gates that were never
 actually run.** Figures and conditions are in `docs/gate-coverage.md`; this is
 what the pass changed its mind about.

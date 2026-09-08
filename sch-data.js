@@ -848,6 +848,10 @@
     for (const b of document.querySelectorAll('.sch-bar[aria-pressed="true"]')) b.setAttribute('aria-pressed', 'false');
     const opener = panelOpener;
     panelOpener = null;
+    // THE ROSTER COMES BACK FIRST, so the fit below measures a board that
+    // already has it. `placeAvailability` fits too, so the restoring case runs
+    // two -- the second is idempotent and the un-yielded case still runs one.
+    if (availYielded) { availYielded = false; placeAvailability(); }
     window.Rux?.schedule?.fit?.();
     if (returnFocus && opener?.isConnected) opener.focus();
   }
@@ -1326,9 +1330,19 @@
 
     panelOpener = bar;
     markAvailDay(bar ? Number(bar.style.getPropertyValue('--sch-start')) : null);
+    const wasOpen = !panelEl.hidden;
     panelEl.hidden = false;
     if (tripEl) tripEl.hidden = false;
     window.Rux?.schedule?.fit?.();
+    /* ONLY ON THE WAY IN. Clicking a second bar while the editor is already
+       open calls this again, and re-taking the yield there would undo a
+       `Drivers` press the person made in between. The fit above is what makes
+       `crowded` true or false for the layout the editor is now part of, so it
+       has to run first; taking the roster away runs another. */
+    if (!wasOpen && availOn && !availYielded && window.Rux?.schedule?.crowded?.()) {
+      availYielded = true;
+      placeAvailability();
+    }
     document.getElementById('sch-panel-close')?.focus();
   }
 
@@ -1353,6 +1367,21 @@
   const availGrid = document.getElementById('sch-avail-grid');
   const availToggle = document.getElementById('sch-avail-toggle');
   let availOn = false;
+  /* THE ROSTER YIELDS TO THE EDITOR WHEN THE WEEK CANNOT AFFORD BOTH, added
+     2026-09-08. Measured at 1440x950: the board is 1344, the roster takes 331,
+     the editor 320, two gaps 32, and seven days need 984 -- 1667 against 1344,
+     so the week runs 323px short and Saturday and Sunday scroll off. A charter
+     board that hides the weekend is the one failure this layout cannot have.
+     Either companion ALONE fits: 997 of 997 with the roster, 1008 of 984 with
+     the editor. Both never do, at any density -- xs rows and an xs panel
+     together return 120 of the 323.
+
+     SEPARATE FROM `availOn`, WHICH IS WHAT RUX ASKED FOR. Yielding is the
+     layout's doing and is undone the moment the editor closes; `availOn`
+     survives it, which is how the roster comes back without being asked for
+     twice. An explicit press of `Drivers` overrules the yield and stands, week
+     scrolling and all -- see the toggle. */
+  let availYielded = false;
   let availRows = [];
 
   function availabilityRows({ trips, drivers, timeOff, weekStart, weekEnd }) {
@@ -1462,17 +1491,25 @@
   };
 
   function placeAvailability() {
+    /* THE TOGGLE REPORTS WHAT IS ON SCREEN, NOT WHAT WAS WANTED. It was written
+       the other way first -- `aria-pressed` from `availOn` -- so a yielded
+       roster left a lit button with nothing behind it, and a press flipped the
+       invisible want to false instead of bringing the roster back: pressed,
+       and still nothing. That is a lie to anyone reading the state and a dead
+       control to anyone using it, so `shown` drives both. `availOn` stays the
+       thing that survives the editor; it is no longer the thing announced. */
+    const shown = availOn && !availYielded;
     if (asideSlot) {
-      asideSlot.hidden = !availOn;
-      if (availOn) asideSlot.appendChild(availEl);
+      asideSlot.hidden = !shown;
+      if (shown) asideSlot.appendChild(availEl);
     }
-    availEl.hidden = !availOn;
-    availToggle.setAttribute('aria-pressed', String(availOn));
+    availEl.hidden = !shown;
+    availToggle.setAttribute('aria-pressed', String(shown));
     /* AND IT HAS TO LOOK PRESSED. `aria-pressed` was the only thing saying so,
        and Carbon compiles no `[aria-pressed]` styling -- zero rules in rux.css
        -- so the button looked identical on and off. `rux--btn--selected` is
        Carbon's own compiled state for exactly this and needs no rule of ours. */
-    availToggle.classList.toggle('rux--btn--selected', availOn);
+    availToggle.classList.toggle('rux--btn--selected', shown);
     window.Rux?.schedule?.fit?.();
   }
 
@@ -1481,7 +1518,15 @@
      applying at all -- so the fit inside openPanel measures the final width
      and this listener has nothing left to wait for. */
 
-  availToggle?.addEventListener('click', () => { availOn = !availOn; placeAvailability(); });
+  /* THE PRESS ACTS ON WHAT IS ON SCREEN. Off-screen for either reason -- never
+     asked for, or yielded to the editor -- a press means SHOW IT, which clears
+     both. On screen, a press means hide it. Overruling the budget this way
+     holds, because the yield is only ever taken as the editor OPENS. */
+  availToggle?.addEventListener('click', () => {
+    if (availOn && !availYielded) { availOn = false; }
+    else { availOn = true; availYielded = false; }
+    placeAvailability();
+  });
 
   /* ── VIEW OPTIONS ─────────────────────────────────────────────────────────
      WHAT IS HERE AND WHAT IS NOT. `screen-inventory.md` section 7 lists four

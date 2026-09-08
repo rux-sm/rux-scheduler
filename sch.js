@@ -161,12 +161,13 @@
     const dayMin = px(sch, '--sch-day-min');
     const days = parseInt(getComputedStyle(sch).getPropertyValue('--sch-days'), 10) || 7;
     const pane = sch.clientWidth;
-    if (!pane || !Number.isFinite(headBase) || !Number.isFinite(dayMin)) return;
+    if (!pane || !Number.isFinite(headBase) || !Number.isFinite(dayMin)) return false;
 
     const available = pane - headBase;
     let day = Math.floor(available / days);
     let head = headBase;
-    if (day < dayMin) {
+    const crowded = day < dayMin;
+    if (crowded) {
       // The floor binds and the grid is wider than the pane: it scrolls, there
       // is no leftover to place, and the head stays at its content width.
       day = Math.floor(dayMin);
@@ -183,6 +184,14 @@
     // flooring remainder as well, so the columns sum to the pane exactly.
     sch.style.setProperty('--sch-head-w', `${head}px`);
 
+    /* THE ONE PLACE THAT KNOWS THE WEEK DOES NOT FIT. `crowded` is not a new
+       measurement -- it is the branch above, named. The day floor binding IS
+       "seven days need more room than the pane has", and sch-data.js needs to
+       know it to decide which companion yields. Returning it keeps that
+       arithmetic in one place: the last function that reserved room for a
+       panel by computing it a second time is the one docs/log.md records an
+       afternoon of disagreeing with itself. */
+    return crowded;
   }
 
   /* THE PANEL TAKES ITS OWN ROOM NOW, so nothing here reserves it.
@@ -199,7 +208,13 @@
   if (sch && 'ResizeObserver' in window) {
     // Observing the PANE, not the grid: the grid's width is what this changes,
     // so observing it would feed its own output back in.
-    const fit = () => { fitHeight(sch); fitColumns(sch); };
+    /* WHAT `crowded` MEANS TO A CALLER: the week is scrolling, so a region
+       beside the board is costing days that are off the screen. It is read at
+       the moment the trip editor opens and nowhere else -- this function runs
+       on every resize frame, and yielding a panel on a measurement that moves
+       under the pointer would collapse the roster mid-drag of a window edge. */
+    let crowded = false;
+    const fit = () => { fitHeight(sch); crowded = fitColumns(sch) === true; };
 
     // THE THREE WAYS THIS IS ASKED TO RUN, and why none of them alone is
     // enough. `window.resize` is the obvious one and is the only one proven
@@ -221,7 +236,7 @@
     if (sch.parentElement) watch.observe(sch.parentElement);
     window.addEventListener('resize', fit);
     window.Rux = window.Rux || {};
-    window.Rux.schedule = { fit };
+    window.Rux.schedule = { fit, crowded: () => crowded };
     fit();
   }
 })();

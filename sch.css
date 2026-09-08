@@ -956,32 +956,42 @@ button.sch-row-head__num {
    three. A driver's name and a form field have no equivalent. */
 .sch-aside { flex: 0 0 auto; inline-size: max-content; max-inline-size: 22rem; order: -1; }
 
-/* SM, 32px, ON RUX'S CALL 2026-09-07, AND IT REVERSES A MEASURED DECISION.
-   This has now been 24 (xs), 32, 24 again, and 32. The number that argued for
-   24 is still true and is worth keeping in front of whoever changes it next:
-   at 32 the pane shows 23 of 40 drivers where at 24 it showed 31, so this
-   costs eight drivers -- about a fifth of the roster -- in the one pane whose
-   job is answering who is free.
+/* XS ROWS UNDER AN SM HEAD, 2026-09-08, AND THE FLIP-FLOP ENDS ON AN ARGUMENT
+   RATHER THAN A PREFERENCE. This has been 24, 32, 24, 32 and is now 24. Every
+   previous turn was fought over one number -- how many drivers fit -- and the
+   two readings were genuinely even, which is why it kept turning. Measured at
+   1440x950: 24 of 40 drivers at 32px, 32 of 40 at 24px.
 
-   WHAT WAS TRADED FOR IT: consistency with Carbon's small table, which is what
-   the rest of this page now is. The toolbar, both header bands and the toolbar
-   buttons are all 32px; a 24px row was the last thing on the page at a
-   different module, and rux would rather have one. Carbon does support xs rows
-   under an sm header -- that is what its own row-height control offers -- so
-   the old value was never off-system. This is a preference between two valid
-   readings, not a correction of a wrong one.
+   WHAT BROKE THE TIE IS THAT THE CONSISTENCY BEING PROTECTED WAS NOT THERE.
+   The entry this replaces traded eight drivers for "one module on the page",
+   and the page does not have one: a bus row is 95px. The 32px module lives in
+   the toolbar and the two header BANDS, never in a body row, so what the
+   driver rows were matched to was a band -- and the band is still 32px, still
+   explicit below, and still the thing that keeps the two grids' top edges on
+   one line. Carbon's own row-height control offers exactly this: five row
+   heights under an unchanged header.
 
-   IT COSTS WIDTH AS WELL AS HEIGHT, which is the part the earlier measurement
-   did not name. `--sch-day-track` IS this value, so the seven day squares grow
-   with the row: 8px each, 56px across, taken from the board beside it. */
-.sch--avail { --sch-avail-h: 2rem; max-block-size: 15rem; }
+   THE DAY COLUMNS DO NOT FOLLOW THE ROW ANY MORE, and that is a real cost paid
+   on purpose. `--sch-day-track` WAS this value, so xs took the seven columns
+   to 24px with it and handed 56px back to the board. It also clipped the
+   header: "Wed" is 26px at label-01 in a 24px column, measured. Three letters
+   are there because one cannot tell Tuesday from Thursday -- settled
+   2026-09-07 and not reopened for 56px, especially since 56 does not close the
+   gap that matters. See `.sch-frame`: at 1440 with both companions open the
+   week is 323px short, which no density here can pay. */
+.sch--avail { --sch-avail-h: var(--rux-layout-size-height-xs); max-block-size: 15rem; }
 /* In the side slot every pixel the days do not need goes to the name, which
    is the only thing there with anything to say. `minmax(0, 1fr)` and not
    `1fr`: a grid track's automatic minimum is its content, so a long name
    would push the squares out of the panel rather than ellipsing. */
 .sch-aside .sch--avail {
   --sch-head-w: minmax(0, max-content);
-  --sch-day-track: var(--sch-avail-h);
+  /* THE DAY COLUMN IS THE HEAD'S SIZE, NOT THE ROW'S, split 2026-09-08 when the
+     rows went xs. It reads as the sm module because it labels itself: the
+     column carries "Mon".."Sun" in its sticky head and has to hold three
+     letters. The cell below it is 32x24 rather than square, which costs
+     nothing -- what it draws is a bar spanning days, not a square. */
+  --sch-day-track: var(--rux-layout-size-height-sm);
   /* FILLS WHAT THE HEAD LEAVES. sch.js gives the ASIDE the board's height; this
      takes the remainder under the head. `max-block-size: none` lifts the base
      `.sch` cap, which is a viewport expression and would otherwise re-cap this
