@@ -71,3 +71,107 @@
    fixed-length string and the width is a decision, not an oversight. Two of
    them leaving space to their right is how a Carbon form looks. */
 .rux--side-panel .rux--text-area { flex: 1 1 auto; }
+
+
+/* ── THE SIDE PANEL, IN FLOW ────────────────────────────────────────────────
+   Added 2026-09-07. The trip editor is a column inside the schedule board now
+   rather than an overlay (index.html says why, and it reopens
+   screen-inventory.md section 7). Every part INSIDE the panel is styled by
+   descendant selectors from `.rux--side-panel`, so the class stays and only
+   the shell's own positioning is undone here -- which is what this file is
+   for, and it is done at Carbon's own specificity, one class, later in the
+   cascade rather than louder.
+
+   `--right-placement` and `--slide-in` are off the element entirely, so their
+   rule sets never match and the entrance and exit animations are not
+   suppressed so much as absent. The app owns only open and closed.
+
+   The app's own `.sch-trip` wrapper carries the width and the height; this
+   rule deliberately sets neither, so a change to the column's size is a change
+   in sch.css and never here. */
+.rux--side-panel {
+  position: static;
+  z-index: auto;
+  inset-block-start: auto;
+  block-size: 100%;
+  transition: none;
+}
+/* AND NO ELEVATION, 2026-09-07. Carbon drops a shadow on a side panel that has
+   no overlay behind it -- `0 0.125rem 0.25rem` of `--rux-overlay` -- because a
+   floating panel over a page it does not dim has to say it is ABOVE that page.
+   This one is not above anything: it is the third column in a flex row, level
+   with the schedule and the driver grid, and it was the only surface on the
+   board casting a shadow. rux saw it.
+
+   Same category as the fixed positioning above, and the last of it: the shadow
+   was asserting an elevation the move to a column removed. The `:not()` is
+   matched exactly rather than dropped, because Carbon's rule is two classes and
+   a single-class override would simply lose. */
+.rux--side-panel:not(.rux--side-panel--has-overlay) {
+  box-shadow: none;
+}
+
+
+/* ── THE PAGE GRID'S OUTER MARGIN ───────────────────────────────────────────
+   Added 2026-09-07. The board's inset was two things stacked and neither was
+   16px on its own:
+
+     --rux-grid-margin    the grid's own padding-inline    16px
+     --rux-grid-gutter/2  the column's margin-inline       16px
+                                                           ----
+                                                           32px a side
+
+   Measured on the page as 1337 outside against 1273 inside. And it was not
+   even constant: `--rux-grid-margin` is 0 below 42rem, 1rem to 99rem and 1.5rem
+   above it, so the inset stepped to 40px on a wide window.
+
+   ZEROING THE GRID'S OWN MARGIN LEAVES THE COLUMN GUTTER AS THE INSET, which is
+   already exactly 16px and, unlike the margin, has no breakpoints -- Carbon's
+   `--rux-grid-gutter` is a flat 2rem at every width. So the page gets one
+   inset, 16px, at every size, matching the 16px `.sch-board` already puts
+   between its three regions. One number across the whole page.
+
+   THE ALTERNATIVE WAS `--rux-grid-gutter: 0`, keeping the margin. It reaches
+   16px too, but by removing the gutter BETWEEN columns -- harmless on a page
+   with one full-span column, wrong the moment there are two. This way the
+   gutter keeps doing its job and only the outer margin, which had nothing to
+   separate the page from, goes.
+
+   It hands 32px back to the board. */
+.rux--css-grid {
+  --rux-grid-margin: 0;
+}
+
+
+/* ── THE TRIP EDITOR'S HEAD, IN THE PAGE'S MODULE ───────────────────────────
+   Added 2026-09-07. Carbon's side panel header is `padding: 1rem` over a
+   `min-block-size: 2.5rem` title carrying a 1rem transparent bottom border --
+   about 84px in total, and the tabs under it landed some 44px BELOW the two
+   grids' column headers. Every other region on this board spends exactly 32px
+   on its head and then starts its second row; this one did not, so the three
+   regions agreed on their first line and disagreed on their second.
+
+   AND THE TYPE WAS THE WRONG PAIRING. `__title-text` is `heading-03`, 20px at
+   400, while the driver grid's title was `heading-compact-01` at 600 -- the same
+   type as the COLUMN headers under it. So each region title matched something
+   other than the other region title, and one of them matched its own subordinate.
+   Both are `heading-compact-02` now, 16px at 600: one step above the column
+   headers' 14px, which keeps Carbon's table header where rux put it and gives
+   the region titles somewhere to sit above it.
+
+   THE ANIMATED TITLE IS NOT IN PLAY. `--animated-title` is not on the element
+   and `__collapsed-title-text` is inert without it, so collapsing the header to
+   one row cannot strand it. */
+.rux--side-panel__header {
+  padding-block: 0;
+  min-block-size: 2rem;
+}
+.rux--side-panel__title {
+  border-block-end: 0;
+}
+.rux--side-panel__title-text {
+  font-size: var(--rux-heading-compact-02-font-size);
+  font-weight: var(--rux-heading-compact-02-font-weight);
+  line-height: var(--rux-heading-compact-02-line-height);
+  letter-spacing: var(--rux-heading-compact-02-letter-spacing);
+}

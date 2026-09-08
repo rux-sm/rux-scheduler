@@ -4,6 +4,102 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-07 - the board rebuilt against Carbon's data table, in one long
+pass with rux at the screen.** rux asked for a design review of the schedule --
+"the most important page to get right as it will be the most used" -- and then
+drove it component by component from IBM's own data table pages. Everything
+below is one sitting; the order is the order it happened, because several
+entries correct the one before them.
+
+**THE REVIEW'S OWN FINDINGS, AND WHICH SURVIVED.** Colour spends itself on the
+normal case (every bar blue, the one teal override doing all the work); five
+lines per bar with the requirements row blank on nearly all of them; the
+destination truncating while times never do; 70% of the board drawn as boxes;
+four of five bar lines at one weight. **None of these are fixed.** They are the
+content of the bars, and this pass was the frame around them.
+
+**WHAT THE TABLE GAVE, in the order rux asked for it.** No box around the pane
+-- Carbon's table draws none and the header band closes the top edge, and it
+retired the line that met the trip panel's border as a doubled edge. No vertical
+day rules, on rux's call to try the table's own terms; the arithmetic is
+deliberately untouched so it is one paste back, and the thing to judge it on is
+an EMPTY row, where nothing but the header seven columns away says which day is
+which. No rule under either header band. The row rule runs through the bus
+column, which only became possible because the row heads left `layer-accent-01`
+-- the old comment measured 1.00:1 in g10 on that surface and every figure in it
+still holds. The last row draws its rule again, which the pane's border had been
+covering for.
+
+**THE 32px MODULE, AFTER TWO WRONG ANSWERS.** rux asked whether the headers
+should be md/40 and whether both could be 40 wide. Measured in Plex: "218" is
+25.2px at 14px and 21.6 at 12, "1234" 33.6 and 28.8. 40 needs 12px type; 48
+(Carbon's default table) was tried and reverted; 32 is where it landed, because
+Carbon's SMALL table is what this board actually is. **The 32 was already right
+and nobody had noticed**: `.sch-avail__days` was pinned at 2rem to meet the
+schedule's day header, and the 40 and 48 experiments had silently broken that
+for a day.
+
+**THE TOOLBAR IS PART OF THE BOARD.** `.rux--table-toolbar` is `--rux-layer` at
+3rem, the SAME surface as the grid body with the day band the only accent -- the
+obvious guess, that the toolbar shares the header band's colour, is wrong and
+the source screenshot shows it. It was first hung over the whole board on the
+argument that `.sch-board` keeps its width when Drivers is toggled. **That was
+wrong and rux saw it**: the driver grid has its own header row, so one toolbar
+over two heads read as one table. It belongs to the schedule, in `.sch-frame`.
+
+**THE TRIP EDITOR IS A COLUMN, NOT AN OVERLAY**, on rux's ask after IBM's
+condensed-grid pages, and it reopens `screen-inventory.md` section 7. No rux-ds
+module claims `side-panel`, so nothing was lost. What went with it:
+`fitPanelRoom()`, `.sch-page--with-panel`, its no-script fallback, and the
+`animationend` plus 400ms timer that existed to stop a one-frame flash on close.
+Three places that had to agree about one number, and the log above records the
+afternoon they did not.
+
+**FOUR BUGS FOUND BY BUILDING IT.** A wrapper at `min-inline-size: 0` around a
+panel with Carbon's `16rem` floor, which is why the editor escaped its own box.
+`display: flex` on `.sch-aside` beating the UA's `[hidden]` rule -- the same
+trap `.sch-row` documents twenty lines up, in a file that had already written
+the lesson down. A definite height needed where a `max-block-size` was given,
+without which the panel's `auto 1fr auto` rows never constrain and the Save bar
+is pushed down the page instead of pinned. And `.sch-page` was **never**
+`position: relative`, though `popMenuAt` has offset menus by its rect since the
+day they were built -- every ancestor to `.rux--content` is static, so the
+right-click menus have been landing about 96px out.
+
+**THE PAGE'S INSET IS ONE NUMBER NOW.** It was `--rux-grid-margin` plus half a
+gutter, 32px a side, stepping to 40 above 99rem. Zeroing the grid's own margin
+leaves the column gutter, which is a flat 2rem at every width: 16px a side
+always, matching what `.sch-board` puts between its regions.
+
+**THE AUDIT RUX ASKED FOR AT THE END, and one finding I withdrew.** Times were
+`String(t).slice(0, 5)` -- a truncation, not a format, and the only thing on the
+page ignoring the reader; they are 12 hour. Tabs were `--contained`, which is
+built to fill its container and filled half of a 20rem column. Both region
+titles were wrong against each other rather than against their own subordinates,
+and are `heading-compact-02` over the columns' `heading-compact-01`. The Drivers
+toggle set `aria-pressed` and nothing else -- Carbon compiles no `[aria-pressed]`
+styling at all, and `rux--btn--selected` is its own compiled answer. The driver
+grid's single day letters could not tell Tuesday from Thursday, and the comment
+justifying them cited an alignment that stopped existing when the grid moved
+left. **Withdrawn:** that the bus and driver columns disagree on alignment. They
+hold a 32px square of digits and a column of names; centred and start are both
+right.
+
+**NOT DONE.** No undo on a bus move. No weekend tint, so an empty row still
+cannot be counted. Nothing about the bars themselves. The equipment icons stay
+until a vehicle panel exists to hold what they say. Two icons are requested from
+rux-ds in `docs/rux-ds-requests.md` and the Drivers button stays text until they
+land. The duplicate driver names -- two Bennys, two Ernestos -- are untouched
+and make the roster ambiguous in the one pane meant to resolve it.
+
+**AND THE HONEST PART: almost none of this was verified by me.** The browser
+preview stayed pinned to the rux-ds project through a folder change and three
+restarts, so every check was `node tools/check.mjs`, `node --check`, a markup
+balance parser, and text measured in Plex through a harness. rux looked at every
+step and sent screenshots; several changes above exist because of what those
+showed. The five browser gates have not been run against this pass at all, and
+`docs/gate-coverage.md` is stale from `b8c373d`.
+
 **2026-09-07 - moving a bus by accident on a phone, which was two faults.**
 rux: *"i keep by mistake moving buses on mobile"*, and asked whether a
 confirmation screen was the answer. It is not the first answer, because

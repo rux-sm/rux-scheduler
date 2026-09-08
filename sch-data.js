@@ -273,7 +273,20 @@
     for (const p of parts) if (p != null) r.appendChild(p);
     bar.appendChild(r);
   };
-  const hhmm = t => (t ? String(t).slice(0, 5) : '');
+  /* TWELVE HOUR, COMPACT. This was `String(t).slice(0, 5)` -- not a format at
+     all, a truncation of Postgres's `HH:MM:SS` -- so the one thing on this page
+     that never respected a reader was the time. Charter dispatch reads 12 hour
+     and the day column is 136px at its floor, so "7:50a" rather than
+     "7:50 AM": the suffix has to survive beside a second time and an en dash.
+     Midnight and noon are the two the modulo gets wrong if written naively;
+     `|| 12` covers both. */
+  const hhmm = t => {
+    if (!t) return '';
+    const [h, m] = String(t).split(':');
+    const hr = Number(h);
+    if (!Number.isFinite(hr) || m === undefined) return String(t).slice(0, 5);
+    return `${hr % 12 || 12}:${m}${hr < 12 ? 'a' : 'p'}`;
+  };
 
   function barEl(b, driversById) {
     const { trip, leg, assign, place, slot } = b;
@@ -711,12 +724,11 @@
   const panelSave = document.getElementById('sch-panel-save');
 
   const panelEl = document.getElementById('sch-panel');
+  const tripEl = document.getElementById('sch-trip');
   const panelBody = document.getElementById('sch-panel-body');
   void panelBody;   // kept as the scroll container's handle; content goes in the tabs
-  const panelLabel = document.getElementById('sch-panel-label');
   const panelTitle = document.getElementById('sch-panel-title');
   const panelTitleCollapsed = document.getElementById('sch-panel-title-collapsed');
-  const panelSubtitle = document.getElementById('sch-panel-subtitle');
   const pageEl = document.querySelector('.sch-page');
 
   const def = (rows) => {
@@ -734,44 +746,29 @@
     return wrap;
   };
 
-  /* THE EXIT IS ENDED BY THE ANIMATION, NEVER BY A TIMER. Carbon's exit is a
-     150ms animation with `forwards`, and that fill is the only thing holding
-     the panel off-screen once it finishes -- remove `--closing` and the
-     element SNAPS back to opacity 1 at its original position. A
-     `setTimeout(150)` loses that race every time: the timer starts when it is
-     called and the animation starts a frame later, so the class came off at
-     about 88% of the way through. Sampled every frame on 2026-09-06: at 143ms
-     the panel was still at opacity 0.176 and 263px out, and the next frame had
-     it back at opacity 1 and x=0. That one full-strength frame is the flash
-     rux reported -- the panel appearing again just as it should have gone.
+  /* CLOSING IS NOW `hidden`, AND THE APPARATUS BELOW IT IS GONE.
+     The editor is a flex child of the board rather than a fixed overlay, so
+     there is no entrance or exit animation to wait out -- `--right-placement`
+     and `--slide-in` are off the element and their rule sets never match.
 
-     ORDER MATTERS AS MUCH AS THE TRIGGER. `hidden` goes on FIRST, while the
-     fill still holds the panel out of sight, and only then does the class come
-     off; the snap happens to an element that is already `display: none`.
+     WHAT WAS HERE, and it was hard won, so it is worth saying what stopped
+     being needed rather than deleting it silently: an `animationend` listener
+     plus a 400ms fallback timer, because removing the `--closing` class while
+     the exit animation still ran made the panel SNAP back to opacity 1 at its
+     original position for one full-strength frame -- the flash rux reported.
+     Sampled every frame on 2026-09-06: at 143ms the panel was at opacity 0.176
+     and 263px out, and the next frame had it back at opacity 1 and x=0. The fix
+     was ordering `hidden` first, while the fill still held the panel out of
+     sight, and the timer stayed as a fallback because `animationend` never
+     arrives when a stylesheet suppresses animations, which the gate sweep does
+     deliberately.
 
-     The timer stays as a FALLBACK, not the mechanism. `animationend` does not
-     arrive if a stylesheet suppresses animations -- which the gate sweep does
-     deliberately -- and a panel that never hides is worse than one that
-     flashes. It runs long, and whichever fires first wins. */
-  function endClose() {
-    if (!panelEl.classList.contains('rux--side-panel--closing')) return;
-    panelEl.removeEventListener('animationend', onExitEnd);
-    panelEl.hidden = true;
-    panelEl.classList.remove('rux--side-panel--closing');
-  }
-
-  // NOT `{ once: true }`: the header runs animations of its own and they
-  // bubble, so a listener spent on the first event to arrive would be spent on
-  // the wrong one. This waits for an animation that ended on the panel itself.
-  function onExitEnd(e) { if (e.target === panelEl) endClose(); }
-
+     None of that has anything to hold now. An element that was never animating
+     cannot flash on the way out. */
   function closePanel(returnFocus = true) {
     if (panelEl.hidden) return;
-    panelEl.classList.remove('rux--side-panel--open');
-    panelEl.classList.add('rux--side-panel--closing');
-    panelEl.addEventListener('animationend', onExitEnd);
-    setTimeout(endClose, 400);
-    pageEl?.classList.remove('sch-page--with-panel');
+    panelEl.hidden = true;
+    if (tripEl) tripEl.hidden = true;
     markAvailDay(null);
     for (const b of document.querySelectorAll('.sch-bar[aria-pressed="true"]')) b.setAttribute('aria-pressed', 'false');
     const opener = panelOpener;
@@ -1077,11 +1074,22 @@
     const bus = bar ? panelIndex.buses.get(bar.dataset.busId) : null;
     const assign = bar ? (trip.trip_assignments || []).find(a => a.id === bar.dataset.assignmentId) : null;
 
-    const heading = creating ? 'New trip' : (trip.destination || 'No destination');
-    panelLabel.textContent = creating ? 'Create' : 'Trip';
+    /* THE TITLE STATES THE VERB, NOT THE TRIP. It was a "Create"/"Trip" label
+       over the DESTINATION with the CUSTOMER as a subtitle -- three lines, two
+       of which the form repeats as its first two fields, and one of which would
+       go stale the moment the destination was edited.
+
+       WHAT MADE IDENTITY REDUNDANT IS THE MOVE TO A COLUMN. While this was an
+       overlay it covered the board, so the header was the only thing saying
+       which trip was open. Beside the board, the bar you clicked is still on
+       screen and still `aria-pressed` -- selection is the state of record and
+       it is two inches to the left. The header does not have to say it again.
+
+       "New trip" and "Edit trip" say what Save will do, which is the panel's
+       whole contract and its only action. */
+    const heading = creating ? 'New trip' : 'Edit trip';
     panelTitle.textContent = heading;
     panelTitleCollapsed.textContent = heading;
-    panelSubtitle.textContent = creating ? '' : (trip.customer || '');
 
     const legDays = leg ? daysBetween(parseISO(leg.from), parseISO(leg.to)) + 1 : 0;
     const when = !leg ? '' : leg.from === leg.to
@@ -1243,10 +1251,8 @@
 
     panelOpener = bar;
     markAvailDay(bar ? Number(bar.style.getPropertyValue('--sch-start')) : null);
-    panelEl.classList.remove('rux--side-panel--closing');
     panelEl.hidden = false;
-    panelEl.classList.add('rux--side-panel--open');
-    pageEl?.classList.add('sch-page--with-panel');
+    if (tripEl) tripEl.hidden = false;
     window.Rux?.schedule?.fit?.();
     document.getElementById('sch-panel-close')?.focus();
   }
@@ -1321,9 +1327,17 @@
     head.appendChild(el('div', 'sch-avail__day sch-avail__day--head', 'Driver'));
     for (let i = 0; i < 7; i++) {
       const d = new Date(weekStart.getTime() + i * DAY);
-      // ONE LETTER: M T W T F S S. The day number is directly above in the
-      // schedule's own header, and "T..." truncated twice said less than "T".
-      const cell = el('div', 'sch-avail__day', d.toLocaleDateString(undefined, { weekday: 'narrow' }));
+      /* THREE LETTERS, NOT ONE, 2026-09-07. It was `weekday: 'narrow'` -- M T W
+         T F S S -- on the reasoning that "the day number is directly above in
+         the schedule's own header". That was true while this grid was docked
+         UNDER the schedule sharing its day columns. It has been left of the
+         board since 2026-09-06 with its own column widths, so nothing is above
+         anything, and one letter cannot tell Tuesday from Thursday or Saturday
+         from Sunday -- four of the seven columns unreadable in the pane whose
+         job is answering "who is free THEN".
+         The cells are 32px squares since the rows went to sm, which is what
+         makes "Wed" possible where 24px would not have. */
+      const cell = el('div', 'sch-avail__day', d.toLocaleDateString(undefined, { weekday: 'short' }));
       cell.dataset.day = String(i);
       head.appendChild(cell);
     }
@@ -1372,6 +1386,11 @@
     }
     availEl.hidden = !availOn;
     availToggle.setAttribute('aria-pressed', String(availOn));
+    /* AND IT HAS TO LOOK PRESSED. `aria-pressed` was the only thing saying so,
+       and Carbon compiles no `[aria-pressed]` styling -- zero rules in rux.css
+       -- so the button looked identical on and off. `rux--btn--selected` is
+       Carbon's own compiled state for exactly this and needs no rule of ours. */
+    availToggle.classList.toggle('rux--btn--selected', availOn);
     window.Rux?.schedule?.fit?.();
   }
 
@@ -1381,6 +1400,17 @@
      and this listener has nothing left to wait for. */
 
   availToggle?.addEventListener('click', () => { availOn = !availOn; placeAvailability(); });
+
+  /* CLOSING FROM THE GRID'S OWN HEAD. The toolbar toggle still turns it on and
+     still reports state through `aria-pressed`; this is the second way to turn
+     it OFF, next to the thing being turned off. Focus goes back to the toggle,
+     because that is where the control now is and leaving it on a button that
+     has just been hidden strands a keyboard user. */
+  document.getElementById('sch-avail-close')?.addEventListener('click', () => {
+    availOn = false;
+    placeAvailability();
+    availToggle?.focus();
+  });
 
   // DIRTY IS COMPUTED, NOT TRACKED. Every input event re-reads the form and
   // compares it against the values the panel opened with, so typing a change

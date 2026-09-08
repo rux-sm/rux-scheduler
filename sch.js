@@ -88,16 +88,53 @@
     const next = `${height}px`;
     if (sch.style.maxBlockSize !== next) sch.style.maxBlockSize = next;
 
+    /* THE PANELS ARE MEASURED FROM THE BOARD, NOT FROM THE GRID. They used to
+       start where `.sch` starts -- pushed down past the toolbar by a 2rem
+       margin -- so one measurement served all three. Each region carries its
+       own head in that band now and they all begin at `.sch-board`'s top, which
+       is 32px above the grid. Measuring from `.sch` and applying it here would
+       run both panels exactly one toolbar past the bottom of the board. */
+    const board = sch.closest('.sch-board');
+    const panelTop = board ? board.getBoundingClientRect().top : top;
+    const panelNext = `${Math.max(12 * 16, Math.round(window.innerHeight - panelTop - below))}px`;
+
     // BESIDE THE BOARD MEANS AS TALL AS THE BOARD. The availability pane starts
     // at the same y as the grid, so a hand-set cap of its own just stopped it
     // short: 18 of 40 drivers with empty page below it. It gets the measured
     // height instead and the two bottoms line up.
+    /* THE HEIGHT GOES ON THE ASIDE, NOT ON THE PANE INSIDE IT. The aside carries
+       a head of its own now, so giving the pane the board's full height made the
+       two of them 32px taller than everything beside them. The aside takes the
+       measurement and the pane fills what is left under the head -- see
+       `.sch-aside .sch--avail`, which is `flex: 1 1 auto` with the base `.sch`
+       cap lifted so it can. */
     const aside = document.getElementById('sch-aside');
     const avail = document.getElementById('sch-avail');
     if (aside && avail && !aside.hidden && aside.contains(avail)) {
-      if (avail.style.maxBlockSize !== next) avail.style.maxBlockSize = next;
-    } else if (avail && avail.style.maxBlockSize) {
-      avail.style.removeProperty('max-block-size');
+      if (aside.style.blockSize !== panelNext) aside.style.blockSize = panelNext;
+    } else if (aside && aside.style.blockSize) {
+      aside.style.removeProperty('block-size');
+    }
+    if (avail && avail.style.maxBlockSize) avail.style.removeProperty('max-block-size');
+
+    /* AND THE TRIP EDITOR, THE THIRD THING BESIDE THE BOARD. Same reason as the
+       availability pane -- it starts at the same y as the grid, so it should
+       end where the grid ends -- and the stylesheet's own
+       `max(24rem, 100dvh - 15rem)` is the hand-tuned number this function
+       exists to replace. Left to it the editor came out visibly short of the
+       other two, which is what rux saw.
+
+       ONE DIFFERENCE, AND IT MATTERS: this takes a DEFINITE `block-size`, not a
+       cap. Carbon's side panel inside it resolves `block-size: 100%` against
+       this box, and a percentage against a parent with only a MAXIMUM resolves
+       to auto -- which leaves the panel's `auto 1fr auto` rows unconstrained,
+       the form unscrollable and the Save bar pushed down the page instead of
+       pinned to the bottom. A cap here would look right and behave wrong. */
+    const trip = document.getElementById('sch-trip');
+    if (trip && !trip.hidden) {
+      if (trip.style.blockSize !== panelNext) trip.style.blockSize = panelNext;
+    } else if (trip && trip.style.blockSize) {
+      trip.style.removeProperty('block-size');
     }
   }
 
@@ -148,42 +185,21 @@
 
   }
 
-  /* THE ROOM THE PANEL TAKES IS ITS WHOLE WIDTH, and the gutter comes free.
-     This is IBM's own slide-in contract: the panel sets the page content's
-     inline-end margin to the panel's width, and the content's own padding is
-     what keeps it off the panel's edge. The page is inset from the viewport
-     by the shell's gutter -- 64px at 1440 -- and reserving the full width
-     from the page's edge leaves exactly that 64 between the board and the
-     panel: the same inset the board has from the viewport's LEFT edge. The
-     board is framed the same on both sides, which is the test.
-
-     A VERSION OF THIS RESERVED ONLY THE OVERLAP, for about an hour on
-     2026-09-06, on the reasoning that the 64 was "paid twice". It was not;
-     it was the gutter. The board ran flush against the panel and its 1px
-     border met the panel's 1px border as a double line, which rux saw. That
-     reasoning came from a panel measured mid-entrance -- 320px right of where
-     it settles -- and is corrected in the log. The measurement stays because
-     a panel at another size, or a shell with another gutter, is still right
-     by it; the stylesheet's 30rem is the no-script fallback.
-
-     Called before the columns are measured, because it changes how much room
-     they have. */
-  function fitPanelRoom() {
-    const page = document.querySelector('.sch-page');
-    if (!page) return;
-    const panel = document.getElementById('sch-panel');
-    if (!panel || panel.hidden || !page.classList.contains('sch-page--with-panel')) {
-      page.style.removeProperty('padding-inline-end');
-      return;
-    }
-    page.style.paddingInlineEnd = `${Math.round(panel.getBoundingClientRect().width)}px`;
-  }
+  /* THE PANEL TAKES ITS OWN ROOM NOW, so nothing here reserves it.
+     `fitPanelRoom()` stood here and set `.sch-page`'s `padding-inline-end` to
+     the measured width of a FIXED panel. The editor is a flex child of
+     `.sch-board` since 2026-09-07 and makes room by existing, so the function,
+     the `.sch-page--with-panel` class it keyed off and the stylesheet's
+     no-script fallback are all gone -- three places that had to agree about one
+     number. docs/log.md records the afternoon they did not: room reserved
+     twice, a width read 320px mid-entrance, and a transitionend refit waiting
+     on an animation that had been removed. */
 
   const sch = document.getElementById('sch');
   if (sch && 'ResizeObserver' in window) {
     // Observing the PANE, not the grid: the grid's width is what this changes,
     // so observing it would feed its own output back in.
-    const fit = () => { fitPanelRoom(); fitHeight(sch); fitColumns(sch); };
+    const fit = () => { fitHeight(sch); fitColumns(sch); };
 
     // THE THREE WAYS THIS IS ASKED TO RUN, and why none of them alone is
     // enough. `window.resize` is the obvious one and is the only one proven
