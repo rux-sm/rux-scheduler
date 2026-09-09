@@ -11,8 +11,8 @@ Verdicts: **keep** builds in the first pass, **later** builds after the grid
 and the record tables work, **drop** is not rebuilt. A drop can be reopened;
 say so in `docs/log.md` when it is.
 
-Vocabulary: a *template* is one of the ten in `vendor/rux-ds/templates/`; a
-*module* is a `vendor/rux-ds/js/*.js` behaviour; an *app component* is this
+Vocabulary: a *template* is one of the ten in rux-ds's `templates/`; a
+*module* is one of rux-ds's `js/*.js` behaviours; an *app component* is this
 app's own markup and stylesheet, prefixed `sch-`, built from rux-ds tokens.
 Two app components exist so far, the week grid and the trip bar; a third is
 listed under *later*.

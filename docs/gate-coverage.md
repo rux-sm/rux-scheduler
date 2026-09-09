@@ -3,7 +3,7 @@
 `node tools/check.mjs` reads classes, tokens, files, ids and the pin. It says
 so itself: it cannot see spacing, contrast, focus, behaviour or how the page
 looks. rux-ds has five gates for that, they need a real browser, and **they
-are not vendored with the pin** — `vendor/rux-ds/tools/` carries the app check
+are not vendored with the pin** — rux-ds's `tools/` carries the app check
 and the server and nothing else.
 
 **RUNNING THEM HERE DOES NOT MEAN COPYING THEM IN.** This header used to say
@@ -54,7 +54,7 @@ in kind since 2026-09-06.
 **Eleven added, and every one resolves.** They are the toggletip and popover
 sets the bus rows build at runtime. ADDED is the harmless direction for the
 ratchet, but "harmless" is not "resolves", so each was checked against the
-pinned `vendor/rux-ds/css/rux.css` by hand: all eleven are compiled there, as
+pinned rux-ds's `css/rux.css` by hand: all eleven are compiled there, as
 are `rux--btn--selected` and `rux--menu-item__selection-icon`. The only class
 this app BUILDS rather than writes out is `sch--no-${r}` over
 `VIEW_ROWS = ['client','time','reqs','drivers']` (`sch-data.js:1503`), and
@@ -79,7 +79,7 @@ the page's outer inset; read that way it holds. Not a defect.
 **`rux--tabs__nav-item` margin — Carbon caused it, exactly like
 `header__name`.** Ours reports `margin-inline-start: 1px` where the capture
 has none, on the second of two tabs. The rule is Carbon's own compiled CSS,
-untouched, at `vendor/rux-ds/css/rux.css:25485`:
+untouched, at rux-ds's `css/rux.css:25485`:
 
     .rux--tabs .rux--tabs__nav-item + .rux--tabs__nav-item { margin-inline-start: 0.0625rem; }
 

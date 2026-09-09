@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 //
-// Re-inlines the vendored sprite into every page at this app's root.
+// Re-inlines rux-ds's sprite into every page at this app's root, read from
+// the checkout beside this repository (or DS=<dir>) since 2026-09-09, when
+// this app stopped vendoring a copy (rux-ds roadmap §8.4, step 2).
 //
 // WHY A PAGE INLINES IT AT ALL, rather than pointing <use> at the file:
 // WebKit has never supported a cross-document <use>, and both failures are
@@ -19,13 +21,14 @@
 //   node tools/sprite.mjs --check    exit 1 if any page is out of date
 //
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const check = process.argv.includes('--check');
+const DS = resolve(root, process.env.DS ?? '../rux-ds');
 
-const sprite = readFileSync(join(root, 'vendor/rux-ds/assets/icons.svg'), 'utf8').trim();
+const sprite = readFileSync(join(DS, 'assets/icons.svg'), 'utf8').trim();
 const BEGIN = /<!-- SPRITE:BEGIN[\s\S]*?-->\n/;
 const END = '<!-- SPRITE:END -->';
 
@@ -41,14 +44,14 @@ for (const file of readdirSync(root).filter(f => f.endsWith('.html'))) {
   const next = head + sprite + '\n' + tail;
   if (next === html) { console.log(`  ${file} — current`); continue; }
   stale++;
-  if (check) { console.log(`  ${file} — STALE against vendor/rux-ds/assets/icons.svg`); continue; }
+  if (check) { console.log(`  ${file} — STALE against ${DS}/assets/icons.svg`); continue; }
   writeFileSync(path, next);
   written++;
   console.log(`  ${file} — rewritten`);
 }
 
 if (check && stale) {
-  console.log(`\n  ${stale} page(s) carry a sprite older than the pin. Run: node tools/sprite.mjs`);
+  console.log(`\n  ${stale} page(s) carry a sprite older than rux-ds's. Run: node tools/sprite.mjs`);
   process.exit(1);
 }
-console.log(`\n  ${written} page(s) rewritten from the pinned sprite (${(sprite.match(/<symbol/g) ?? []).length} symbols)`);
+console.log(`\n  ${written} page(s) rewritten from rux-ds's sprite (${(sprite.match(/<symbol/g) ?? []).length} symbols)`);
