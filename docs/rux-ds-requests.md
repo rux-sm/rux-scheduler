@@ -10,6 +10,78 @@ with the tag that carried it.
 
 ---
 
+## Open — no combo box that filters, 2026-09-09
+
+**Asked for:** the filtering half of `rux--combo-box` in `js/list-box.js` -- a
+text field that narrows a list as it is typed and reports the chosen row -- or
+a statement that the combo box is select-only in this system, so a consumer
+needing search knows to look elsewhere.
+
+**Why:** the trip editor picks a booking contact out of **196 rows**, and
+first names repeat, so the field has to search and has to show enough to tell
+two people apart.
+
+**THE MODULE SAYS SO ITSELF.** `js/list-box.js` lists among what is NOT
+reimplemented: "multiselect selection itself, the selection-count tag, and
+filtering", and closes with "NOT VERIFIED: the multiselect and combo-box
+forms... a combo box has a text input and its own filtering, and nothing here
+should be read as covering it." 38 rules of `rux--combo-box` are compiled, so
+the CSS is there and the behaviour is not.
+
+**What this app did in the meantime, and why it is not a workaround.** It uses
+a native `<datalist>` on a `rux--text-input`. That is not a Carbon component
+wearing the wrong behaviour -- it is the platform's own control, it filters and
+announces itself with no script of ours, and the input is a Carbon text input
+used exactly as intended. Writing the filtering over `rux--combo-box` markup
+would have been implementing a component rux-ds owns, which `AGENTS.md` makes a
+request rather than a local rule.
+
+**What it costs, so the trade is on the record.** A datalist cannot carry a
+value separate from its label, so the app builds one string per contact and
+matches it back to find the id; and it cannot be styled, so the dropdown is the
+browser's rather than Carbon's. Both are acceptable for one field and neither
+would be for a form of them.
+
+---
+
+## Open — the date picker's input format is fixed to ISO, 2026-09-09
+
+**Asked for:** let a consumer choose what the `--next` date picker DISPLAYS in
+its input -- mm/dd/yyyy for a US product -- while the module keeps whatever
+internal value it wants. Or say that ISO in the field is deliberate, so a
+product wanting Carbon's own presentation knows not to expect it.
+
+**Why:** rux compared this app against Carbon's `range-with-calendar` story,
+where the inputs read `09/08/2026`, and asked for that format everywhere dates
+appear. Everywhere this app renders a date ITSELF it now does. The picker's own
+fields cannot follow.
+
+**THE FORMAT IS HARD-CODED IN TWO DIRECTIONS.** `js/date-picker.js` reads with
+`parse()`, whose regex is `^(\d{4})-(\d{2})-(\d{2})$` and which returns null
+for anything else (`:126`). It writes with `pick()`, which assigns the ISO
+`dateStr` straight into the field at four places (`:257`, `:266`, `:271`,
+`:272`). So a field showing mm/dd/yyyy is a field the module cannot read: no
+calendar position, no range arithmetic, and the first pick overwrites the
+display anyway.
+
+**THERE IS NO HOOK TO USE INSTEAD.** No `data-rux-*` is consulted for a format
+-- the only dataset read in the module is `ruxDate` on the day buttons.
+`.rux--date-picker--short` is a WIDTH, `inline-size: 5.7rem` on the input
+(`rux.css:14594`), not a format. And Carbon's own reference clearly separates
+the two, since its story shows mm/dd/yyyy in the field while the component
+still works.
+
+**What this app did in the meantime.** Nothing to the picker. `mdy()` formats
+the dates this app renders itself -- the Billing tab's payments list today --
+and the picker's inputs are left in ISO rather than fought with. Writing a
+display layer over a module that owns the field is the shape of workaround
+`AGENTS.md` forbids.
+
+**What it is not:** not a request to change the internal value, the calendar,
+or who owns the input. Only what the person reads.
+
+---
+
 ## Open — a toggle's words cannot be the product's, 2026-09-09
 
 **Asked for:** let a consumer supply the two words `setToggle` writes, or say

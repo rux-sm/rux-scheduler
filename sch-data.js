@@ -182,6 +182,23 @@
     // deposit_amount 31, invoice_number 43, po_ref 42, po_amount 47,
     // contract_status 336, invoice_status 336, balance_paid 751, date_paid 24.
     // All nine are real and in use, so all nine are fetched.
+    /* THE BOOKING CONTACT, added 2026-09-09. Counted first, as ever: `contacts`
+       holds 196 rows with name 196, phone 140, email 134 and client 160
+       populated -- all four real. What is NOT real is a link on most trips:
+       only 292 of 751 carry a `booking_contact_id`, so the section has to have
+       something to say for the other 459. */
+    'booking_contact_id',
+    'contacts:booking_contact_id(id,name,phone,email,client)',
+    /* THE DAY-OF CONTACTS, five columns because the schema has five. Counted:
+       64 trips carry a first, 7 a second, and one carries all five, so 687 of
+       751 have none at all -- which is why the section renders one row and not
+       a stack of empty ones. 34 of the 64 point at the booking contact itself,
+       which is what the "same as booking" box is for. */
+    'trip_contact_1_id', 'trip_contact_2_id', 'trip_contact_3_id',
+    'trip_contact_4_id', 'trip_contact_5_id',
+    'c1:trip_contact_1_id(id,name,phone)', 'c2:trip_contact_2_id(id,name,phone)',
+    'c3:trip_contact_3_id(id,name,phone)', 'c4:trip_contact_4_id(id,name,phone)',
+    'c5:trip_contact_5_id(id,name,phone)',
     'quoted_price,deposit_amount,invoice_number,po_ref,po_amount',
     'contract_status,invoice_status,balance_paid,date_paid',
     // 34 rows across the table today. Read-only here: the old app REWRITES every
@@ -214,7 +231,7 @@
     const hi = iso(weekEnd);
     const unwrap = r => { if (r.error) throw new Error(r.error.message); return r.data ?? []; };
 
-    const [buses, trips, drivers, oos, timeOff] = await withTimeout(Promise.all([
+    const [buses, trips, drivers, contacts, oos, timeOff] = await withTimeout(Promise.all([
       client.from('buses').select('id,number,capacity,type,status,sort_order,ada_lift,sleeper').order('sort_order').then(unwrap),
       // A CANCELLED TRIP IS NOT ON THE SCHEDULE. `cancelled_at` is set on 41 of
       // the 743 rows and this read never excluded it, so cancelled work has
@@ -225,12 +242,18 @@
       client.from('trips').select(TRIP_COLUMNS).is('cancelled_at', null)
         .gte('start_date', lo).lte('start_date', hi).order('start_date').then(unwrap),
       client.from('drivers').select('id,name,short_name').then(unwrap),
+      /* EVERY CONTACT, ONCE, FOR THE SEARCH. 196 rows of four short columns is
+         a few kilobytes and it does not change while a week is open, so it is
+         read with the week rather than on each keystroke -- a lookup per
+         character against a table this size would be more requests than it is
+         worth. */
+      client.from('contacts').select('id,name,phone,email,client').order('name').then(unwrap),
       client.from('bus_out_of_service').select('bus_id,start_date,end_date,reason').lte('start_date', hi).gte('end_date', iso(weekStart)).then(unwrap),
       // OVERLAP, NOT CONTAINMENT: a driver away across the whole fortnight has
       // neither date inside this week and is still away every day of it.
       client.from('driver_time_off').select('driver_id,start_date,end_date,reason').lte('start_date', hi).gte('end_date', lo).then(unwrap),
     ]));
-    return { buses, trips, drivers, oos, timeOff, weekStart, weekEnd };
+    return { buses, trips, drivers, contacts, oos, timeOff, weekStart, weekEnd };
   }
 
   // formatRange, not two formatted dates joined by a dash: only it knows that
@@ -401,12 +424,12 @@
   }
 
   function render(data) {
-    const { buses, trips, drivers, oos, timeOff, weekStart, weekEnd } = data;
+    const { buses, trips, drivers, contacts, oos, timeOff, weekStart, weekEnd } = data;
     const driversById = new Map(drivers.map(d => [d.id, d]));
     // What the panel reads when a bar is clicked: the bar carries ids, not
     // objects, and re-fetching a trip already in hand would be a round trip
     // for nothing.
-    panelIndex = { trips: new Map(trips.map(t => [t.id, t])), buses: new Map(buses.map(b => [b.id, b])), driversById };
+    panelIndex = { trips: new Map(trips.map(t => [t.id, t])), buses: new Map(buses.map(b => [b.id, b])), driversById, contacts: contacts || [] };
 
     const tracks = new Map();
     const push = (key, bar) => { if (!tracks.has(key)) tracks.set(key, []); tracks.get(key).push(bar); };
@@ -827,7 +850,7 @@
      because it measures its pane. Carbon's slide-in variant exists for
      exactly this and drops the shadow a floating panel would carry.
      ────────────────────────────────────────────────────────────────────────*/
-  let panelIndex = { trips: new Map(), buses: new Map(), driversById: new Map() };
+  let panelIndex = { trips: new Map(), buses: new Map(), driversById: new Map(), contacts: [] };
   let panelOpener = null;
   const panelDetails = document.getElementById('sch-panel-details');
   const panelFleet = document.getElementById('sch-panel-fleet');
@@ -1027,6 +1050,51 @@
     outer.appendChild(wrap);
     return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
   }
+
+  /* A SEARCH OVER THE CONTACTS, ON THE PLATFORM'S OWN CONTROL, 2026-09-09.
+     196 contacts and duplicate first names mean a bare text field cannot tell
+     two Ashleys apart; the option list carries name, organisation and phone so
+     it can -- "Ashley Pearl - Pearl Elite Getaways - 956-648-9691".
+
+     WHY `<datalist>` AND NOT CARBON'S COMBO BOX. `js/list-box.js` says in as
+     many words that filtering is NOT reimplemented and that the combo-box form
+     is NOT VERIFIED -- "a combo box has a text input and its own filtering, and
+     nothing here should be read as covering it". Writing that filtering here
+     would be implementing a component the design system owns, which AGENTS.md
+     makes a request rather than a local rule. A datalist is not a Carbon
+     component at all: it is the browser's, it filters and announces itself
+     without any script of ours, and the input wearing `rux--text-input` is that
+     component used correctly. A real filtering combo box is filed instead.
+
+     THE OPTION VALUE IS THE LABEL, which is how datalist works -- there is no
+     value/label pair. So the picked row is found by matching the rendered
+     string back, and `data-contact-id` records the resolved id for the save. */
+  function contactSearch(id, label, listId, contacts, current) {
+    const outer = el('div', 'rux--text-input__field-outer-wrapper');
+    const wrap = el('div', 'rux--text-input__field-wrapper');
+    const input = el('input', 'rux--text-input');
+    input.type = 'text';
+    input.id = id;
+    input.setAttribute('list', listId);
+    input.autocomplete = 'off';
+    input.placeholder = 'Search contacts';
+    input.value = current ? contactLabel(current) : '';
+    if (current) input.dataset.contactId = current.id;
+    const list = el('datalist');
+    list.id = listId;
+    for (const c of contacts) {
+      const o = el('option');
+      o.value = contactLabel(c);
+      list.appendChild(o);
+    }
+    wrap.append(input, list);
+    outer.appendChild(wrap);
+    return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
+  }
+
+  // One string per contact, and the same one everywhere, so a picked option can
+  // be matched back to the row it came from.
+  const contactLabel = c => [c.name, c.client, c.phone].filter(Boolean).join(' - ');
 
   function selectField(id, label, value, options) {
     const box = el('div', 'rux--select rux--layout--size-md');
@@ -1249,7 +1317,39 @@
     { key: 'invoice_status', get: f => on(f['sch-f-invoice']) ? 'Invoiced' : 'Pending' },
     { key: 'balance_paid', get: f => on(f['sch-f-paid']) },
     { key: 'date_paid', get: f => isoOrNull(f['sch-f-datepaid'].value) },
+    /* THE CONTACT LINKS ARE TRIP COLUMNS, so they diff here rather than with
+       the contact's own fields. Read straight from the DOM and not through
+       `f`: these controls exist only when a trip is open, and `readForm`
+       returns null the moment one id in its list is missing, which would kill
+       Save on the create panel. `linkId` returns undefined when the field is
+       absent and `patchOf` then compares undefined against the before-value,
+       so a missing control is simply no change. */
+    { key: 'booking_contact_id', get: () => linkId('sch-f-cfind') },
+    { key: 'trip_contact_1_id', get: () => dayLink(1) },
+    { key: 'trip_contact_2_id', get: () => dayLink(2) },
+    { key: 'trip_contact_3_id', get: () => dayLink(3) },
+    { key: 'trip_contact_4_id', get: () => dayLink(4) },
+    { key: 'trip_contact_5_id', get: () => dayLink(5) },
   ];
+
+  // The id a search field resolved to, or null when the box was cleared or
+  // typed freehand. `undefined` means the control is not on screen at all.
+  const linkId = id => {
+    const e = document.getElementById(id);
+    if (!e) return undefined;
+    return e.value.trim() ? (e.dataset.contactId || null) : null;
+  };
+
+  /* SAME AS BOOKING POINTS ROW ONE AT THE BOOKING CONTACT and empties the
+     rest. That is what the box means, and writing it here rather than copying
+     values into hidden inputs keeps one answer in one place: the rows are
+     hidden precisely because they are not the thing being answered. */
+  const dayLink = n => {
+    const box = document.getElementById('sch-f-samecontact');
+    if (!box) return undefined;
+    if (box.checked) return n === 1 ? (linkId('sch-f-cfind') ?? null) : null;
+    return linkId(`sch-f-d${n}`) ?? null;
+  };
 
   // A toggle's state lives on `aria-checked`, which is what Carbon's own
   // markup carries -- there is no `.checked` to read.
@@ -1286,9 +1386,55 @@
   // cut to HH:MM before anything is compared or sent.
   const hhmmOrNull = t => (t ? String(t).slice(0, 5) : null);
 
+  /* mm/dd/yyyy, ON RUX'S CALL 2026-09-09, FOR THE DATES THIS APP RENDERS
+     ITSELF. The picker's own inputs CANNOT take this format and are left
+     alone: `date-picker.js` accepts one shape, `^(\d{4})-(\d{2})-(\d{2})$`
+     in `parse()`, and writes ISO back into the field on every pick. A field
+     showing mm/dd/yyyy would be a field the module could not read -- no
+     calendar position, no range arithmetic -- so that half is a request to
+     rux-ds rather than a format applied here. See docs/rux-ds-requests.md.
+
+     STRING WORK, NOT `new Date()`. A bare `new Date('2026-07-06')` is parsed
+     as UTC midnight and then printed in local time, which is the previous day
+     anywhere west of Greenwich -- the payment dated the 6th would read as the
+     5th. The column is a plain date with no zone, so it is split rather than
+     parsed. */
+  const mdy = d => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || '').trim());
+    return m ? `${m[2]}/${m[3]}/${m[1]}` : (d || '');
+  };
+
   // Whole dollars: every amount in the table is a round number -- 2800, 1108,
   // 600 -- so cents would be two characters of noise on every row.
   const usd = n => `$${Math.round(n).toLocaleString('en-US')}`;
+
+  /* WHAT THE CUSTOMER SECTION WOULD WRITE. Same shape as `stopsPatch`: one
+     update for one row, empty when nothing moved.
+
+     IT EDITS A RECORD SHARED BY OTHER TRIPS, and that is a fact about the data
+     rather than a flaw in the form. Measured: 55 of the 162 linked contacts
+     serve more than one trip and the busiest serves 18, so correcting a phone
+     number here corrects it on all 18. That is what a contact IS -- one person
+     who books repeatedly -- and it is how the old app already works, per
+     `backend-inventory.md`, which lists `contacts` as written by both the
+     customer editor and the trip editor. The section says so on screen rather
+     than letting it be discovered. */
+  function contactPatch() {
+    if (!editing?.contact) return null;
+    const val = id => document.getElementById(id)?.value.trim() || null;
+    /* NAME IS NOT IN THIS DIFF ANY MORE. It used to be its own field; the
+       search replaced it, and a search FINDS a contact rather than renaming
+       one -- its value is "Name - Organisation - Phone", not a name. Renaming
+       belongs to the Customers view, which owns the record. Picking a
+       different contact is a change to `trips.booking_contact_id`, which is a
+       trip column and diffs with the rest of them. */
+    // `client` left this form with the duplicate Organization field; the
+    // Customers view still owns it. Phone and email are what remain editable.
+    const now = { phone: val('sch-f-cphone'), email: val('sch-f-cemail') };
+    const patch = {};
+    for (const k of Object.keys(now)) if (!same(now[k], editing.contact[k])) patch[k] = now[k];
+    return Object.keys(patch).length ? { id: editing.contact.id, patch } : null;
+  }
 
   /* WHAT THE SCHEDULE SECTION WOULD WRITE, as one update per row and only for
      rows that changed. Returns [] when nothing moved, which is what lets Save
@@ -1366,7 +1512,8 @@
     // stop patch; asking only the first left a panel where changing the spot
     // time did nothing and Save stayed grey.
     const stopWork = stopsPatch().length > 0;
-    const nothingToDo = !editing?.creating && !stopWork
+    const contactWork = !!contactPatch();
+    const nothingToDo = !editing?.creating && !stopWork && !contactWork
       && (!patch || Object.keys(patch).length === 0);
     panelSave.disabled = !startOk || !destOk || nothingToDo;
   }
@@ -1472,6 +1619,12 @@
       invoice_status: trip.invoice_status === 'Invoiced' ? 'Invoiced' : 'Pending',
       balance_paid: !!trip.balance_paid,
       date_paid: trip.date_paid ?? null,
+      booking_contact_id: trip.booking_contact_id ?? null,
+      trip_contact_1_id: trip.trip_contact_1_id ?? null,
+      trip_contact_2_id: trip.trip_contact_2_id ?? null,
+      trip_contact_3_id: trip.trip_contact_3_id ?? null,
+      trip_contact_4_id: trip.trip_contact_4_id ?? null,
+      trip_contact_5_id: trip.trip_contact_5_id ?? null,
     } };
 
     /* THE SCHEDULE'S BEFORE IS KEPT APART FROM THE TRIP'S, because it is a
@@ -1479,6 +1632,18 @@
        fields are rows in `trip_stops`, so they diff separately and write
        separately. Folding them into one patch object would have `trips.update`
        sent columns it does not have. */
+    /* THE CONTACT'S BEFORE IS A THIRD TABLE, kept apart from the trip's and the
+       stops' for the same reason: `EDITS`/`patchOf` build a patch for `trips`,
+       and sending it a `name` or a `client` would be sending `trips` columns it
+       does not have. */
+    editing.contact = (creating || !trip.contacts) ? null : {
+      id: trip.contacts.id,
+      name: trip.contacts.name ?? null,
+      phone: trip.contacts.phone ?? null,
+      email: trip.contacts.email ?? null,
+      client: trip.contacts.client ?? null,
+    };
+
     editing.stops = creating ? null : (() => {
       const { pickup, back } = stopsOfLeg(trip, legName);
       return {
@@ -1510,7 +1675,24 @@
     form.append(
       dateRange('sch-f-start', 'sch-f-end', 'Start date', 'End date', trip.start_date, trip.end_date || trip.start_date),
       textField('sch-f-destination', 'Destination', trip.destination),
-      textField('sch-f-customer', 'Customer', trip.customer),
+      /* ORGANIZATION, AND THERE IS ONLY ONE OF THEM NOW, 2026-09-09 on rux's
+         call. This field and the booking block's `Organization or group` read
+         the same on nearly every trip -- "TMS" against "TMS" -- and rux saw
+         them stacked and cut one.
+
+         `trips.customer` IS THE ONE THAT SURVIVES, because it is the one that
+         is there: 725 of 751 trips carry it, where `contacts.client` exists
+         only for the 292 with a linked contact and only 160 of the 196
+         contacts have one. Keeping the contact's copy would have blanked the
+         field on 433 trips.
+
+         WHAT IT GIVES UP, ONCE, SO IT IS NOT REDISCOVERED: 13 trips have a
+         `customer` that differs from their contact's `client` -- "Mission
+         CISD" books for "Vaquero Indoor", "Raymondville ISD" for "Raymondville
+         High School". Billed-to and travelling-group were two facts and are
+         now one. `contacts.client` still holds the other and the Customers
+         view still edits it; this panel simply stops showing it. */
+      textField('sch-f-customer', 'Organization', trip.customer),
       selectField('sch-f-type', 'Type', trip.trip_type, [
         ['', '—'],
         ['round_trip', 'Round trip'],
@@ -1542,6 +1724,114 @@
       trip.return_start_date, trip.return_end_date || trip.return_start_date)));
     returnDates.hidden = trip.trip_type !== SPLIT;
     form.appendChild(returnDates);
+    /* ── BOOKING CONTACT ────────────────────────────────────────────────────
+       Rebuilt 2026-09-09 against three orderings rux collected. The structure
+       is the third's and two behaviours are the first's; the reasoning is in
+       docs/log.md, and the two things all three got wrong are recorded there
+       rather than argued again here.
+
+       THE LABELS DROP THE PREFIX because the section heading carries it. In a
+       320px panel that is width rather than tidiness: "Booking contact phone"
+       wraps and "Phone" does not.
+
+       THE SEARCH SUGGESTS AND DOES NOT LOCK. Picking a contact fills
+       organisation, phone and email, and every one of them stays editable --
+       measured, 13 trips have a `customer` that differs from their contact's
+       `client` ("Mission CISD" books for "Vaquero Indoor"), so an agency
+       booking for a school is a real shape here and a hard autofill would
+       stamp the agency onto trips that are not theirs. */
+    const contact = creating ? null : trip.contacts;
+    const allContacts = panelIndex.contacts || [];
+    {
+      /* THE CONTACT BLOCKS RENDER ON A NEW TRIP, 2026-09-09 on rux's ask, and
+         nothing about them needed the trip to exist: the search picks from
+         contacts that already exist, and the six link columns are `trips`
+         columns that join the insert like any other. A booking contact is
+         often the FIRST thing known about a trip -- someone rang -- so hiding
+         it until after a save had the order backwards. */
+      const book = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      book.appendChild(
+        contactSearch('sch-f-cfind', 'Find or add booking contact', 'sch-contacts', allContacts, contact));
+      const pair = el('div', 'sch-two-up');
+      pair.append(
+        textField('sch-f-cphone', 'Phone', contact?.phone),
+        textField('sch-f-cemail', 'Email', contact?.email),
+      );
+      book.appendChild(pair);
+      if (contact) {
+        book.appendChild(el('p', 'sch-panel-hint',
+          'This contact books other trips too. Editing it here changes it on all of them.'));
+      }
+      form.appendChild(section('Booking contact', book));
+
+      /* ── DAY-OF-TRIP CONTACTS ─────────────────────────────────────────────
+         "Day-of-trip" and not "on-site": the person may be travelling with the
+         group or coordinating from a desk, and only some of them stand at the
+         pickup.
+
+         ONE ROW, NOT FIVE. The schema has `trip_contact_1..5_id` and the data
+         has almost none of them -- 687 of 751 trips carry no day-of contact at
+         all, 57 carry one, 6 carry two and a single trip carries five. Five
+         empty rows would be noise on 91% of trips, so the rows that exist are
+         drawn plus one empty, and `+ Add another contact` reveals the next up
+         to the schema's five.
+
+         SAME AS BOOKING IS THE COMMONEST CASE AND IS A CHECKBOX. 34 of the 64
+         first day-of contacts ARE the booking contact -- 53% of the ones that
+         exist are that person retyped. */
+      const dayRows = [1, 2, 3, 4, 5].map(i => trip[`c${i}`]).filter(Boolean);
+      const day = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      const sameWrap = el('div', 'rux--form-item rux--checkbox-wrapper');
+      const same = el('input', 'rux--checkbox');
+      same.type = 'checkbox';
+      same.id = 'sch-f-samecontact';
+      same.checked = !!(contact && dayRows[0] && dayRows[0].id === contact.id);
+      const sameLab = el('label', 'rux--checkbox-label', 'Same as booking contact');
+      sameLab.setAttribute('for', 'sch-f-samecontact');
+      sameWrap.append(same, sameLab);
+      day.appendChild(sameWrap);
+
+      const rowsHost = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      const drawRow = (c, n) => {
+        const row = el('div', 'sch-two-up');
+        row.append(
+          contactSearch(`sch-f-d${n}`, n === 1 ? 'Name' : `Name ${n}`, 'sch-contacts', allContacts, c),
+          textField(`sch-f-dphone${n}`, 'Phone', c?.phone),
+        );
+        rowsHost.appendChild(row);
+      };
+      const shown = dayRows.length ? dayRows : [null];
+      shown.forEach((c, i) => drawRow(c, i + 1));
+      day.appendChild(rowsHost);
+
+      /* THE BUTTON SAYS WHAT IT ADDS. A bare `+` is ambiguous once a form
+         carries two kinds of contact, and this one sits under the second of
+         them. It stops at five because the schema does. */
+      const addBtn = el('button', 'rux--btn rux--btn--ghost rux--layout--size-sm', 'Add another contact');
+      addBtn.type = 'button';
+      addBtn.id = 'sch-f-dadd';
+      addBtn.prepend(svgUse('#i-add', '16', '0 0 32 32'));
+      let count = shown.length;
+      const syncAdd = () => { addBtn.disabled = count >= 5 || same.checked; };
+      addBtn.addEventListener('click', () => {
+        if (count >= 5) return;
+        count += 1;
+        drawRow(null, count);
+        syncAdd();
+      });
+      /* CHECKING THE BOX HIDES THE ROWS RATHER THAN COPYING INTO THEM. Copying
+         would leave two editable copies of one person and no way to tell which
+         the save meant; hiding says the rows are not the thing being answered. */
+      const syncSame = () => {
+        rowsHost.hidden = same.checked;
+        syncAdd();
+      };
+      same.addEventListener('change', syncSame);
+      syncSame();
+      day.appendChild(addBtn);
+      form.appendChild(section('Day-of-trip contacts', day));
+    }
+
     const flags = el('fieldset', 'rux--checkbox-group');
     flags.setAttribute('aria-disabled', 'false');
     const legend = el('legend', 'rux--label rux--type-heading-compact-01', 'Status and needs');
@@ -1586,8 +1876,18 @@
        NOT IN CREATE MODE. A trip being made has no stops to edit and no leg to
        scope them to; the section appears once the trip exists, which is the
        rule `This leg` already followed and for the same reason. */
-    if (!creating) {
-      const { pickup, back } = stopsOfLeg(trip, legName);
+    {
+      /* SCHEDULE RENDERS ON A NEW TRIP TOO, and unlike the blocks above this
+         one needed a decision rather than just the guard removed. These four
+         write `trip_stops`, and a trip being created has none.
+
+         MAKING THE FIRST STOP IS NOT THE SAME AS INVENTING ONE. `stopsPatch`
+         refuses to create a row for an EXISTING leg that has no pickup,
+         because where that row belongs among the others is the itinerary
+         editor's business. A brand-new trip has no others: leg `outbound`,
+         position 0, type `pickup` is the only thing it could mean. So on
+         create the rows are inserted, and on edit the refusal stands. */
+      const { pickup, back } = creating ? { pickup: null, back: null } : stopsOfLeg(trip, legName);
       const sched = el('div', 'rux--stack-vertical rux--stack-scale-5');
       const times = el('div', 'sch-times');
       times.append(
@@ -1608,7 +1908,9 @@
          missing case says so instead. */
       for (const [id, row] of [['sch-f-pickup', pickup], ['sch-f-depart', pickup],
                                ['sch-f-spot', pickup], ['sch-f-return', back]]) {
-        if (row) continue;
+        // On create there is no row YET, which is not the same as a leg that
+        // has none: the save makes them. Only an existing leg disables.
+        if (row || creating) continue;
         const input = sched.querySelector(`#${id}`);
         if (input) { input.disabled = true; input.title = 'This leg has no stop to hold it yet.'; }
       }
@@ -1636,10 +1938,20 @@
        here, and the amount outstanding is shown beside it as arithmetic rather
        than stored twice. */
     panelBilling.replaceChildren();
-    if (creating) {
-      panelBilling.appendChild(el('p', 'sch-panel-hint',
-        'Billing opens once the trip exists. Save it first.'));
-    } else {
+    {
+      /* BILLING RENDERS ON A NEW TRIP TOO, 2026-09-09, and this is a BUG FIX as
+         much as rux's request. It used to show "Billing opens once the trip
+         exists" and build no fields -- and `readForm` returns null the moment
+         ONE id in its list is missing, which nine of these were. `patchOf`
+         then returned null, and the create path is
+         `{ ...readForm(), bus_count: 1 }`, which spreads null to nothing: a new
+         trip inserted as `{bus_count: 1}`, with no destination and no start
+         date. `legsOf` builds no leg without a start date, so the row would
+         have existed and never appeared on the board. Save is disabled until a
+         date is typed, which is the only reason this was not seen.
+
+         Every column here is on `trips`, so on create they simply join the
+         insert. Nothing about them needed the trip to exist first. */
       const pricing = el('div', 'rux--stack-vertical rux--stack-scale-5');
       pricing.append(
         moneyField('sch-f-quoted', 'Quoted price', trip.quoted_price),
@@ -1680,10 +1992,12 @@
         .slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
       panelBilling.appendChild(section('Payments', pays.length
         ? def(pays.map(p => [
-            [p.date || 'No date', p.method].filter(Boolean).join(' · '),
+            [p.date ? mdy(p.date) : 'No date', p.method].filter(Boolean).join(' · '),
             [usd(Number(p.amount) || 0), p.ref].filter(Boolean).join(' — '),
           ]))
-        : el('p', 'sch-panel-hint', 'No payments recorded.')));
+        : el('p', 'sch-panel-hint', creating
+            ? 'Payments can be recorded once the trip is saved.'
+            : 'No payments recorded.')));
     }
 
     // FLEET IS THE BUS AND WHO IS ON IT, and nothing else -- the leg's own
@@ -2020,8 +2334,55 @@
   // DIRTY IS COMPUTED, NOT TRACKED. Every input event re-reads the form and
   // compares it against the values the panel opened with, so typing a change
   // and typing it back out again disables Save rather than leaving it armed.
+  /* A PICKED OPTION IS RESOLVED BACK TO ITS ROW, and a typed one is not.
+     `<datalist>` has no value/label pair -- the option's value IS what lands in
+     the field -- so the only way to know which contact was chosen is to match
+     the string `contactLabel` built. A name typed freehand matches nothing and
+     clears the id, which is correct: it is not a contact until it is one, and
+     the save writes no link for it.
+
+     SUGGESTS, NEVER LOCKS. Choosing a booking contact fills organisation,
+     phone and email and leaves all three editable -- 13 trips have a customer
+     that differs from their contact's client, so overwriting has to stay
+     cheap. */
+  panelDetails?.addEventListener('input', e => {
+    const t = e.target;
+    if (!t || t.tagName !== 'INPUT' || !t.getAttribute('list')) return;
+    const hit = (panelIndex.contacts || []).find(c => contactLabel(c) === t.value);
+    if (hit) t.dataset.contactId = hit.id; else delete t.dataset.contactId;
+    if (!hit) return;
+    if (t.id === 'sch-f-cfind') {
+      const put = (id, v) => { const e2 = document.getElementById(id); if (e2) e2.value = v ?? ''; };
+      const suggest = (id, v) => { const e2 = document.getElementById(id); if (e2 && !e2.value) e2.value = v ?? ''; };
+      /* PHONE AND EMAIL ARE REPLACED; ORGANIZATION IS ONLY SUGGESTED. The
+         first version suggested all three and it was wrong on screen within a
+         minute: picking Adan Molina left Louise Reece's phone and email
+         sitting under his name, because "only fill what is empty" treats the
+         PREVIOUS contact's data as though someone had typed it. They are not
+         the same thing. A phone belongs to the person, so choosing a different
+         person replaces it.
+
+         ORGANIZATION IS THE ONE THAT STAYS A SUGGESTION, and for the reason
+         the agency case gives: it is a TRIP column, 13 trips have one that
+         differs from their contact's, and an agency booking for a school must
+         not stamp itself over the school. Empty, it fills; filled, it stands. */
+      put('sch-f-cphone', hit.phone);
+      put('sch-f-cemail', hit.email);
+      suggest('sch-f-customer', hit.client);
+    } else if (/^sch-f-d\d$/.test(t.id)) {
+      const ph = document.getElementById(`sch-f-dphone${t.id.slice(-1)}`);
+      if (ph && !ph.value) ph.value = hit.phone ?? '';
+    }
+  });
+
   panelDetails?.addEventListener('input', refreshDirty);
   panelDetails?.addEventListener('change', refreshDirty);
+  // The add button reveals a row rather than changing a value, so it fires
+  // neither input nor change; without this a contact chosen in the new row
+  // arms Save but the row appearing does not, which reads as a dead control.
+  panelDetails?.addEventListener('click', e => {
+    if (e.target?.closest?.('#sch-f-dadd')) refreshDirty();
+  });
   /* BILLING IS A SECOND TAB AND NEEDED SAYING SO. These were on `panelDetails`
      alone, so every Billing field was dead to Save: typing a quoted price left
      the button grey and the edit was simply lost. Found by driving it.
@@ -2046,7 +2407,19 @@
       // CREATE WRITES EVERY FIELD, not the diff: there is no row to diff
       // against. `bus_count` is set to 1 rather than left null, because it is
       // null on none of the 743 rows and `legsOf` would only paper over it.
-      const row = creating ? { ...readForm(), bus_count: 1 } : patch;
+      /* A NULL FORM MUST NEVER BECOME AN INSERT. `readForm` returns null when
+         one id in its list is missing, and `{ ...null }` is `{}` -- so a
+         missing field used to turn "create this trip" into
+         `{ bus_count: 1 }`: a row with no destination and no start date, which
+         `legsOf` draws no leg for and nobody could ever find. That is exactly
+         what a hidden Billing tab caused until today.
+
+         The fields are all present now, so this cannot happen; the guard is
+         here because the last one was invisible until someone read the spread,
+         and the next field added to `readForm` deserves to fail loudly. */
+      const form = creating ? readForm() : null;
+      if (creating && !form) throw new Error('The form is not complete — a field is missing from the panel.');
+      const row = creating ? { ...form, bus_count: 1 } : patch;
       const wantBus = creating ? createBusId : null;
       /* TWO WRITES WHEN A CELL ASKED FOR A BUS, and they cannot be one:
          the assignment needs the trip's id, which only exists after the
@@ -2080,6 +2453,47 @@
          the assignment write below already takes: the trip is saved, the time
          is not, and the message says which rather than claiming everything
          failed. */
+      /* THE CONTACT IS A THIRD WRITE and goes last, after the trip and before
+         nothing. Its own row, its own table, and a failure here leaves the
+         trip saved -- said plainly rather than reported as a whole-save
+         failure, which is the rule the stop write and the assignment write
+         below both already follow. */
+      /* THE FIRST STOPS, WRITTEN ONLY ON CREATE. A pickup row carries the
+         location, the yard departure and the spot; a return row carries the
+         arrival. Neither is written unless something was typed into it --
+         a trip saved with the Schedule left blank gets no stops, which is what
+         687 of the existing 751 trips look like.
+
+         POSITION AND LEG ARE NOT GUESSES HERE. The trip is new, so there is
+         nothing to order against: outbound, 0 and 1. On an existing trip this
+         same arithmetic would be a guess, which is why `stopsPatch` refuses it
+         there. */
+      if (creating && made?.id) {
+        const v = id => document.getElementById(id)?.value.trim() || null;
+        const where = v('sch-f-pickup'), dep = v('sch-f-depart'), spot = v('sch-f-spot');
+        const back = v('sch-f-return');
+        const rows = [];
+        if (where || dep || spot) {
+          rows.push({ trip_id: made.id, leg: 'outbound', position: 0, type: 'pickup',
+                      name: where, depart_prev: dep, spot });
+        }
+        if (back) {
+          rows.push({ trip_id: made.id, leg: 'outbound', position: rows.length, type: 'return',
+                      arrive: back });
+        }
+        if (rows.length) {
+          const { error: stErr } = await withTimeout(client.from('trip_stops').insert(rows).then(r => r));
+          if (stErr) throw new Error(`The trip was created, but its schedule was not: ${stErr.message}`);
+        }
+      }
+
+      const cWork = creating ? null : contactPatch();
+      if (cWork) {
+        const { error: cErr } = await withTimeout(
+          client.from('contacts').update(cWork.patch).eq('id', cWork.id).then(r => r));
+        if (cErr) throw new Error(`The trip saved, but the customer did not: ${cErr.message}`);
+      }
+
       for (const w of stopWork) {
         const { error: sErr } = await withTimeout(
           client.from('trip_stops').update(w.patch).eq('id', w.id).then(r => r));

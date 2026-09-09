@@ -4,6 +4,229 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-09 - every field on a new trip, and the regression that asking for
+it uncovered.** rux asked for all fields to be visible when creating. Building
+it found that the Billing tab had broken trip CREATION four commits ago.
+
+**THE BUG, WHICH WAS MINE AND IS ALREADY COMMITTED AT `c125087`.** The Billing
+tab rendered nothing on a new trip -- "Billing opens once the trip exists" --
+so nine of the ids `readForm` requires did not exist. `readForm` returns null
+the moment ONE is missing. The create path is `{ ...readForm(), bus_count: 1 }`
+and `{ ...null }` is `{}`, so a new trip would have inserted as
+**`{ bus_count: 1 }`**: no destination, no start date. `legsOf` builds no leg
+without a start date, so the row would have existed and never appeared on any
+week -- created and lost in the same click. Save is disabled until a date is
+typed, which is the only reason it was never seen.
+
+**THE FIX IS THE FEATURE.** Every column on the Billing tab is a `trips`
+column; none of them needed the trip to exist. The same was true of the two
+contact blocks -- the search picks contacts that already exist, and the six
+link columns join the insert like any other. A booking contact is often the
+first thing known about a trip, someone having rung, so hiding it until after a
+save had the order backwards.
+
+**AND A GUARD, BECAUSE THE NEXT ONE DESERVES TO FAIL LOUDLY.** The create path
+now refuses to insert from a null form instead of spreading it into nothing.
+The fields are all present, so it cannot fire; it is there because this fault
+was invisible until someone read the spread.
+
+**SCHEDULE NEEDED A DECISION RATHER THAN A GUARD REMOVED.** Its four fields
+write `trip_stops` and a new trip has none. `stopsPatch` refuses to create a
+row for an EXISTING leg with no pickup, because where it belongs among the
+others is the itinerary editor's business -- but a brand-new trip has no
+others, so leg `outbound`, position 0, type `pickup` is the only thing it could
+mean. On create the rows are inserted; on edit the refusal stands. Nothing is
+written unless something was typed, which is what 687 of the 751 existing trips
+look like.
+
+**VERIFIED: the panel. NOT VERIFIED: the insert.** All 21 ids `readForm` wants
+are present on the create panel and none is missing. Destination gates Save and
+clearing it re-disables with `aria-invalid`. Pickup, yard depart and a quoted
+price all accept input there. **No insert was sent** -- same standing limit.
+
+**NOTICED AND NOT FIXED: an end date can precede a start date.** Setting start
+to 2026-09-10 left end at 2026-09-07 and nothing objected. `date-picker.js`
+swaps them when a range is picked THROUGH the calendar, so this only shows when
+a value arrives another way. Pre-existing, not introduced here, and left for a
+decision rather than fixed in passing.
+
+**2026-09-09 - one Organization, and an autofill rule that was wrong twice
+over.** rux opened the panel, saw `Customer` reading "TMS" above `Organization
+or group` reading "TMS", and cut one.
+
+**`trips.customer` IS THE SURVIVOR AND IT IS NOT A COIN TOSS.** It is on 725 of
+751 trips; `contacts.client` exists only for the 292 with a linked contact, and
+only 160 of the 196 contacts carry one. Keeping the contact's copy would have
+blanked the field on 433 trips. Relabelled `Organization`, and the booking
+block's field is gone.
+
+**WHAT IT GIVES UP, STATED ONCE.** 13 trips have a `customer` that differs from
+their contact's `client` -- "Mission CISD" books for "Vaquero Indoor". Billed-to
+and travelling-group were two facts and are now one on this panel.
+`contacts.client` still holds the other and the Customers view still edits it;
+this form simply stops showing it. Raised before the cut and decided by rux
+after it was raised.
+
+**AND THE AUTOFILL RULE WAS WRONG, WHICH THE SCREEN SHOWED WITHIN A MINUTE.**
+"Fill only what is empty" was written to stop an agency stamping itself over a
+school. Applied to all three fields it produced something worse: picking Adan
+Molina left **Louise Reece's phone and email** sitting under his name, because
+the rule treats the PREVIOUS contact's data as though a person had typed it.
+They are not the same thing.
+
+**THE SPLIT IS BY WHO OWNS THE FACT.** A phone and an email belong to the
+person, so choosing a different person REPLACES them. Organization is a trip
+column that 13 trips disagree with their contact about, so it stays a
+suggestion: empty it fills, filled it stands. Driven: picking Adan Molina now
+gives 361-695-7512 and adan.molina@ccisd.us while Organization holds "TMS".
+
+**2026-09-09 - the contact block rebuilt, and the three orderings judged
+against the data.** rux collected three proposals for the form's order and
+asked which to take. The answer was the third's structure with two of the
+first's behaviours, and the reasons are measurements rather than taste.
+
+**WHAT WAS TAKEN, AND WHY EACH SURVIVED A COUNT.** Section headings so the
+labels can drop their prefix -- in a 320px panel "Booking contact phone" wraps
+and "Phone" does not, so this is width and not tidiness. A search over the
+contacts, because there are **196** of them and 55 of the 162 linked ones serve
+more than one trip, so a bare name field cannot tell two Ashleys apart. One
+day-of row rather than five, because **687 of 751 trips carry no day-of contact
+at all** -- 57 carry one, 6 carry two, one carries five -- so five empty rows
+would be noise on 91% of trips. "Day-of-trip" over "on-site", since the person
+may be travelling with the group or working a desk.
+
+**AND THE TWO BEHAVIOURS FROM THE FIRST PROPOSAL, both of which the data
+argues for.** `Same as booking contact` is a checkbox because
+`trip_contact_1_id` EQUALS `booking_contact_id` on **34** trips -- 53% of every
+day-of contact that exists is the booking contact retyped. And the autofill
+suggests rather than locks, because 13 trips have a `customer` that differs
+from their contact's `client`: "Mission CISD" books for "Vaquero Indoor",
+"Raymondville ISD" for "Raymondville High School". An agency booking for a
+school is a real shape here, and a hard fill would stamp the agency onto trips
+that are not theirs. Only empty fields are filled.
+
+**WHAT WAS REJECTED, WITH THE NUMBER THAT REJECTED IT.** Trip type first, on
+the argument that it decides whether an end date is meaningful: **705 of 751
+trips are round trips** and one-way keeps a range too (25 of 26 run a day, one
+runs three), so the field is the same value 94% of the time and the main range
+is meaningful for every type. Type governs only the conditional `Pick-up` pair,
+which already sits directly beneath it. The second proposal's review screen is
+wizard shape and this is a side panel; its combined range picker is already
+Carbon's; its visual grouping is already `section()`.
+
+**THREE FIELDS ALL THREE PROPOSALS WANTED CANNOT BE BUILT.** `passenger_count`,
+`pax` and `passengers` are all absent -- capacity lives on `buses` and
+`req_56pax` is a boolean need -- as are `role` and `contact_role`, and the
+email thread, which six name probes could not find. All three are schema
+additions and rux's to make. Four more of the first proposal's "missing" fields
+already existed: pickup location, yard depart, spot and return are the Schedule
+section from earlier today.
+
+**THE SEARCH IS A NATIVE `<datalist>`, NOT CARBON'S COMBO BOX**, and that is a
+deliberate choice rather than a shortcut. `js/list-box.js` says filtering is not
+reimplemented and the combo-box form is not verified -- "nothing here should be
+read as covering it" -- so writing the filtering would have been implementing a
+component rux-ds owns. A datalist is the platform's, it filters and announces
+itself with no script of ours, and the input wearing `rux--text-input` is that
+component used correctly. Filed as a seventh request. The cost is on the record
+there: no value/label pair, so one string per contact is built and matched
+back, and the dropdown is the browser's rather than Carbon's.
+
+**THE NAME STOPPED BEING EDITABLE HERE, which is a change worth naming.** It
+was its own field this morning; the search replaced it, and a search FINDS a
+contact rather than renaming one. Renaming belongs to the Customers view that
+owns the record. Picking a different person is a change to
+`trips.booking_contact_id`, a trip column, so it diffs with the trip rather
+than with the contact.
+
+**DRIVEN, ALL OF IT EXCEPT THE WRITE.** 196 options in the list. Opening a
+linked trip fills Louise Reece - TMS - 240-224-4044 with organisation, phone
+and email beside it. Picking another contact resolves its id and arms Save;
+typing a name that matches nothing clears the id, which is correct -- it is not
+a contact until it is one. Checking `Same as booking contact` hides the rows
+and disables the add button; clearing it brings them back. `Add another
+contact` stops at five, which is where the schema stops. **No write was sent**,
+same standing limit as everything else here.
+
+**2026-09-09 - Customer details, four fields of five, and two facts the
+mockup could not show.** rux asked to include the mockup's Customer Details
+card. Counted before building, as with Billing.
+
+**FOUR MAP CLEANLY.** `contacts` holds 196 rows: name 196, phone 140, email
+134, client 160 -- all four real and all four editable. Customer name, Customer
+phone, Business/School and Email are in.
+
+**`Business/School` IS NOT THE `Customer` FIELD ABOVE IT**, which is the thing
+that looked like duplication and is not. Of the 275 trips carrying both, 262
+agree and 13 genuinely differ: "Mission CISD" books for "Vaquero Indoor",
+"Raymondville ISD" for "Raymondville High School", "Santa Rosa TX" for "Santa
+Rosa HS". `trips.customer` is who the trip is billed to, `contacts.client` is
+the group travelling. Both stay, and the panel now shows both.
+
+**`Email thread` IS NOT BUILT BECAUSE THERE IS NO COLUMN.** Asked the table for
+`missive_url`, `email_thread`, `email_thread_url`, `thread_url`,
+`missive_link` and `conversation_url`; all six came back absent. A Missive link
+is a schema addition and rux's to make, the same answer `service_type` got on
+the Billing tab. Nothing was invented to fill the space.
+
+**459 OF 751 TRIPS HAVE NO CONTACT AT ALL**, which is the case the mockup
+cannot show and the section has to be honest about. Only 292 carry a
+`booking_contact_id`, so an unlinked trip gets a line saying so -- and saying
+that the Customer field above is the billing name -- rather than four dead
+boxes. Attaching one means choosing from 196 contacts, which is a picker and a
+separate piece of work. Both branches were driven: a linked trip fills with
+Louise Reece / 240-224-4044 / TMS / lreece@tms.com, an unlinked one shows the
+hint.
+
+**IT EDITS A SHARED RECORD, AND THE PANEL SAYS SO ON SCREEN.** 55 of the 162
+linked contacts serve more than one trip and the busiest serves 18, so
+correcting a phone here corrects it on all 18. That is what a contact IS, and
+it is how the old app already works -- `backend-inventory.md` lists `contacts`
+as written by the trip editor as well as the customer editor -- so this
+follows it rather than inventing a rule. What would have been wrong is leaving
+it implicit, so a hint under the fields states it.
+
+**A THIRD TABLE MEANS A THIRD WRITE.** `contactPatch` diffs one row the way
+`stopsPatch` does and the save sends it separately; `trips.update` has no
+`name` or `client` to receive. A failure there leaves the trip saved and says
+which half did not, the rule the stop and assignment writes already follow.
+
+**VERIFIED: reads, both branches, arming. NOT VERIFIED: the write.** Save is
+dead at open, arms on a phone edit, dies again on the way back. The `contacts`
+update was not sent -- same standing limit as every other write here.
+
+**2026-09-09 - mm/dd/yyyy where it can be had, and the mono zero settled by
+looking at it.** rux asked for the date format everywhere and whether the mono
+face is really loading.
+
+**THE FONT IS LOADING AND IT IS THE REAL FACE.** Rendered `0O` at 200px and
+looked: the zero carries IBM Plex Mono's centre DOT and the capital O does not,
+and both measure 240px, so it is the monospaced face rather than a fallback
+wearing its name. That is the check that settles it -- the width probes in the
+entry below could only say "not the fallback", where the dot says "this font".
+
+**THE FORMAT SPLITS IN TWO, AND ONLY ONE HALF IS OURS.** `mdy()` now formats
+every date this app renders itself; the Billing payments list is the one place
+today. It does STRING work rather than `new Date()`, because a bare
+`new Date('2026-07-06')` is parsed as UTC midnight and printed local, which is
+the previous day west of Greenwich -- the payment dated the 6th would have read
+as the 5th.
+
+**THE PICKER'S OWN FIELDS CANNOT FOLLOW, and they are left alone.**
+`date-picker.js` reads one shape -- `^(\d{4})-(\d{2})-(\d{2})$` in `parse()`
+-- and writes ISO straight back into the input on every pick, at four places.
+A field showing mm/dd/yyyy is a field the module cannot read: no calendar
+position, no range arithmetic. There is no format hook, and
+`--short` is a width rather than a format. Filed as a sixth request. Writing a
+display layer over a module that owns the field is the workaround shape
+`AGENTS.md` forbids, so nothing was written.
+
+**A TEST OF MINE WAS BADLY DESIGNED AND IS NOT EVIDENCE.** The first attempt to
+show the module rejects mm/dd/yyyy typed the format into the start field and
+read a highlighted day off the calendar as acceptance. The highlight came from
+the OTHER input, still ISO. The source settles it; that probe did not, and
+saying so is cheaper than someone re-running it.
+
 **2026-09-09 - the date labels, and a mono question answered by measuring.**
 `From`/`To` are `Start date`/`End date`, matching Carbon's own story. The
 `Pick-up` return pair took the same words rather than keeping the old ones: two

@@ -1238,3 +1238,21 @@ button.sch-row-head__num {
 .sch-times .rux--text-input__field-outer-wrapper,
 .sch-times .rux--text-input__field-wrapper { min-inline-size: 0; inline-size: 100%; }
 .sch-times .rux--text-input { inline-size: 100%; min-inline-size: 0; }
+
+
+/* ── TWO FIELDS ON ONE ROW ──────────────────────────────────────────────────
+   Carbon pairs two DATES with `rux--date-picker--range` and ships nothing for
+   an arbitrary pair, so this is the `sch-` rule for it -- Phone beside Email,
+   and a day-of contact's Name beside their Phone. Same reasoning and the same
+   shape as `.sch-times`: the track is `minmax(0, 1fr)` and the control is told
+   to fill it, because an <input> carries an intrinsic width from its own
+   default `size` and would otherwise overflow a track narrower than that. */
+.sch-two-up {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--rux-spacing-03);
+}
+.sch-two-up > .rux--form-item,
+.sch-two-up .rux--text-input__field-outer-wrapper,
+.sch-two-up .rux--text-input__field-wrapper { min-inline-size: 0; inline-size: 100%; }
+.sch-two-up .rux--text-input { inline-size: 100%; min-inline-size: 0; }
