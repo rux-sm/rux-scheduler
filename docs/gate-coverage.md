@@ -260,7 +260,34 @@ story has the toggle hidden, because it was captured at desktop where Carbon
 hides it by default; this app deliberately shows it at every width, so
 Carbon's own rule fires and the padding is correct rather than wrong.
 
-Worth noting where the decision was made: rux-ds's `js/ui-shell.js` says a
-desktop hamburger "invents a state IBM's design does not have". Carbon ships
-a stylesheet rule for exactly that arrangement, which is evidence the other
-way. Raised here rather than acted on.
+**THIS ADJUDICATION IS NOW PERMANENT, NOT PROVISIONAL, 2026-09-08.** It used to
+have to be re-argued each sweep because rux-ds's `js/ui-shell.js` called the
+configuration causing it invented -- "a desktop hamburger invents a state IBM's
+design does not have" -- so a reader had no standing answer. Both halves of that
+are now settled, on rux-ds `main` and in no tag:
+
+**The comment was corrected** (`a545cc1`). `ui-shell.js` names both shells,
+and the three compiled readings this app raised -- `__hidden` is markup-applied
+and the stylesheet never adds it; the `:not(.__hidden) ~ __header__name` rule
+carries no media query and so can only fire in a permanent-toggle shell; the
+`--ux`/`--hidden`/`--expanded` cascade order does work only above the breakpoint
+-- are the documented doctrine rather than a consumer's complaint. The
+collapsible desktop shell is legitimate. So the padding here is Carbon
+behaving correctly for the shell this app chose, which is what this entry
+already said.
+
+**And the capture fix was DECLINED, with a reason that settles it for good.**
+`carbon-react-spacing.json` keys on an element's own class signature plus its
+parents, and holds exactly one entry for `cds--header__name`:
+`paddingInlineStart` 16px, parent `cds--header`. Our 8px comes from a SIBLING
+selector, and both shells give the name an identical signature and an identical
+parent -- so no capture can tell them apart inside `check-spacing`'s model.
+`check-spacing.js:482` passes a signature on ANY recorded variant, so adding an
+8px variant would make 8px acceptable on all eleven persistent-shell templates
+and on rux-ds's own `index.html`, where it would be a real regression. What
+would fix it is teaching `check-spacing` to express a sibling condition, which
+is a change to a control and a different ask.
+
+**So: keep adjudicating it, and stop treating that as a stopgap.** The finding
+is correct, the padding is correct, and there is no upstream change coming that
+would remove either. We are not waiting on rux-ds for this one.

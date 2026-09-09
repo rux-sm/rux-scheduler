@@ -4,6 +4,58 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-08 - rux-ds answered all four requests in one afternoon, and three
+of the four answers are unreachable.** The rux-ds session reported back and
+every claim below was checked in the clone rather than relayed.
+
+**THREE LANDED ON `main` AND ARE IN NO TAG.** `a545cc1` corrects the
+`ui-shell.js` comment and names both shells the CSS supports; `0527a30` scopes
+`check-behaviour` to the document; `89e14fd` lets a page own the date-picker
+trigger. `c869d7f` adds `#i-user--multiple`. **The pin is on v0.1.11 and that
+work sits 42 commits past it**, so none of it is consumable here -- the pin only
+ever moves to a tag. Cutting one is rux's call and rux-ds has put it to them; a
+minor bump by their §8.2, both being additions. We are not asking for one, and
+said so.
+
+**WHAT THAT UNBLOCKS WHEN IT ARRIVES.** The date-picker trigger makes
+`screen-inventory.md` §7 buildable -- jumping to a date is the week LABEL's job
+-- which has been undecidable rather than merely unbuilt since 2026-09-07.
+Nothing is built for it yet.
+
+**`#i-events` IS DECLINED AND THE DRIVERS BUTTON IS NOW OUR PROBLEM.** Judged by
+rasterising each glyph at its real device size and magnifying, not from a
+screenshot: at 16 device px `events` merges the front figure's head and
+shoulders into one smear. At 32 all three read, so the decline is a 1x call.
+This app asked for a pair because a toolbar button draws its icon at 16px; with
+one glyph the toggle either goes icon-only on `user--multiple` or stays text.
+rux-ds agrees that is ours. Unanswered here.
+
+**THE 8px ADJUDICATION STOPS BEING PROVISIONAL, WHICH IS THE MOST USEFUL THING
+IN THE REPLY.** The capture half of our shell request was DECLINED, and the
+reason is stronger than the fix would have been:
+`carbon-react-spacing.json` keys on an element's own signature plus its parents
+and holds one entry for `cds--header__name`; our 8px comes from a SIBLING
+selector, and both shells give the name an identical signature and parent, so no
+capture can separate them. `check-spacing.js:482` passes on ANY recorded
+variant, so an 8px entry would license 8px across eleven persistent-shell
+templates and rux-ds's own index.html -- a real regression to buy a cosmetic
+pass here. **An exception list would not have been a passing check.**
+`docs/gate-coverage.md` now says the finding is permanent and that we are not
+waiting on anyone.
+
+**AND WE WERE TOLD TO CHECK OUR OWN SHELL MARKUP, SO IT WAS CHECKED.**
+`check-behaviour` found eleven rux-ds templates carrying an invented
+`aria-label="Toggle navigation"`, which silently disabled `ui-shell.js`'s name
+swap: the glyph and `aria-expanded` moved while the accessible name did not.
+`index.html:219` carries `aria-label="Open menu"` -- the recognised pair, no
+`data-rux-label-*` needed -- and driven live here, open gives "Close menu",
+`#i-close` and `aria-expanded="true"`, close gives all three back. **Clean, and
+verified rather than assumed.**
+
+**NOT DONE.** No pin move, because there is no tag. The Drivers button is still
+text. Everything the entries below leave open stays open, Edit trip's 405px
+overflow included.
+
 **2026-09-08 (second pass) - the two flanks made one width, and two
 corrections to the entry below.** rux asked for three things: both companions
 at a stock 320, the roster's day cells 24x24, and whatever that frees given to

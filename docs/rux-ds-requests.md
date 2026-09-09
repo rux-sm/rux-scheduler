@@ -13,6 +13,19 @@ with the tag that carried it.
 ## Open — `ui-shell.js` calls a shell state invented that the CSS ships three
 rules for, 2026-09-08
 
+**ANSWERED ON rux-ds `main` AT `a545cc1` ("docs(shell): Name both shells the CSS
+supports"), IN NO TAG, told to us 2026-09-08 and verified in the clone.**
+`js/ui-shell.js` now names both configurations and says the collapsible desktop
+one is legitimate; the three compiled readings below are the documented doctrine
+rather than a consumer's complaint. Their measurement, which ours did not make:
+at 1440 with transitions off, `--ux` plus `--hidden` is 0, adding `--expanded`
+gives 256 and removing it gives 0 -- so the nav does open at desktop, and the
+old claim that `--expanded` changes nothing above the breakpoint holds only for
+a nav without `--hidden`. **The capture half of this request is DECLINED, and
+that is the useful half of the answer:** see `docs/gate-coverage.md`, where it
+makes our 8px adjudication permanent rather than provisional. Stays open here
+until a tag carries it and the pin moves.
+
 **Asked for:** correct or qualify the comment in `js/ui-shell.js:7-11` — "A
 template showing the button at desktop invents a state IBM's design does not
 have" — or, if the state really is out of bounds, say what a consumer using the
@@ -70,6 +83,17 @@ whole argument is horizontal room for a week. See `docs/log.md` 2026-09-08: at
 
 ## Open — `check-behaviour` cannot see a consumer app, 2026-09-08
 
+**ANSWERED ON rux-ds `main` AT `0527a30` ("feat(gates): Scope check-behaviour to
+the document"), IN NO TAG, verified in the clone.** Each case scopes to its sink
+section where one exists and to the document where it does not; an absent
+component is SKIPPED rather than failed, and a present root with a broken
+contract still FAILS, so it retires no contract. It found a real defect on their
+side before it was applied -- eleven templates carried an invented
+`aria-label="Toggle navigation"` that silently disabled the name swap, fixed at
+`2677d7d`. **Checked here: we are clean.** `index.html:219` carries
+`aria-label="Open menu"`, the recognised pair, and driven live the label, the
+glyph and `aria-expanded` all move together. Stays open until a tag carries it.
+
 **Asked for:** scope the fixtures in `tools/check-behaviour.js` to the document
 rather than to kitchen-sink section ids, or let the section id be optional.
 
@@ -100,6 +124,27 @@ selector change.
 
 
 ## Open — two group icons for the sprite, 2026-09-07
+
+**HALF LANDED, HALF DECLINED, on `main` at `c869d7f`, in no tag.**
+`#i-user--multiple` is in `assets/icons.svg`; `#i-events` is not and will not be.
+Verified in the clone: `user--multiple` 1, `events` 0.
+
+**THE DECLINE IS REASONED AND WE ARE NOT RE-ASKING.** Judged from a
+nearest-neighbour magnification of each glyph rasterised at its real device size
+rather than from a screenshot -- a browser pane downscaling a 1280 viewport by
+0.625 destroys exactly the detail in question, and at that scale both look fine.
+At 16 device px `events` merges the front figure's head and shoulders into one
+smear while the two behind stay rings. At 32 all three are legible, so a
+2x-display-only reading would have admitted it; it was declined on the 1x
+reading. `events--alt` was tried unasked and is worse than either. Written up in
+rux-ds's `docs/log.md` ("the scheduler's sprite ask, answered by rasterising
+rather than by reasoning"), in the comment above `user--multiple` in
+`tools/icons.mjs`, and in `c869d7f` itself.
+
+**WHAT IT LEAVES US.** This request asked for a pair because a toolbar button
+renders its icon at 16px. With one glyph the `Drivers` toggle either goes
+icon-only on `user--multiple` alone or stays text. That is a decision here and
+not a request there -- rux-ds has agreed it is ours.
 
 **Asked for:** `events` and `user--multiple`, added to
 `assets/icons.svg` as `#i-events` and `#i-user--multiple`.
@@ -142,6 +187,13 @@ here would be inventing markup, which `AGENTS.md` forbids in both repositories.
 ---
 
 ## Open — a date picker whose trigger is not its own input, 2026-09-07
+
+**ANSWERED ON rux-ds `main` AT `89e14fd` ("feat(date-picker): Let a page own the
+trigger"), IN NO TAG, verified in the clone.** This unblocks
+`screen-inventory.md` §7 -- jumping to a date is the week LABEL's job -- which
+has been undecidable rather than merely unbuilt. Nothing is built here yet: the
+pin is on v0.1.11 and the work sits 42 commits past it on `main`. Stays open
+until a tag carries it and the pin moves.
 
 **Asked for:** a `--next` date picker that can be opened from an element the
 consuming page supplies, or a variant with no visible input -- an icon-only
