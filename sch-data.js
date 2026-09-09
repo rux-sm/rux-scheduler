@@ -1431,24 +1431,26 @@
     head.appendChild(el('div', 'sch-avail__day sch-avail__day--head', 'Driver'));
     for (let i = 0; i < 7; i++) {
       const d = new Date(weekStart.getTime() + i * DAY);
-      /* THREE LETTERS, NOT ONE, 2026-09-07. It was `weekday: 'narrow'` -- M T W
-         T F S S -- on the reasoning that "the day number is directly above in
-         the schedule's own header". That was true while this grid was docked
-         UNDER the schedule sharing its day columns. It has been left of the
-         board since 2026-09-06 with its own column widths, so nothing is above
-         anything, and one letter cannot tell Tuesday from Thursday or Saturday
-         from Sunday -- four of the seven columns unreadable in the pane whose
-         job is answering "who is free THEN".
+      /* TWO LETTERS, 2026-09-08, AND IT IS WHAT LETS THE COLUMN BE 24px. This
+         has been one letter (`narrow`, until 2026-09-07) and three (`short`,
+         after), and the case for three was never about three: it was that one
+         letter cannot tell Tuesday from Thursday or Saturday from Sunday --
+         four of the seven columns unreadable in the pane whose job is answering
+         "who is free THEN". Two letters answer that in full. The 2026-09-07
+         entry ruled single letters out and did not weigh the middle.
 
-         CRAMPED AT THE HEADER'S OWN TYPE, which rux saw: "Wed" at 14px/600 is
-         about 30px in a 32px square and the seven of them touch. The fix is the
-         TYPE, not the words -- the day cells drop to label-01 where "Driver"
-         beside them keeps the table header's 14px. A day letter labels a column
-         of marks; the name labels a column of names, and Carbon's own table has
-         header cells of different weights for exactly that reason. Single
-         letters would have solved the cramping by reintroducing the ambiguity
-         this comment exists to describe. */
-      const cell = el('div', 'sch-avail__day', d.toLocaleDateString(undefined, { weekday: 'short' }));
+         MEASURED AT label-01, 12px/600 with 0.32px of tracking: "Wed" is 26.0
+         and will not fit a 24px cell, which is why `--sch-day-track` held at sm
+         and the cells were 32x24 rather than square. "We" is 18.4, the widest
+         of the seven, and clears 24 with 5.6 to spare. The type is unchanged --
+         the day cells stay label-01 where "Driver" beside them keeps the table
+         header's 14px, for the reason the entry above this one gives.
+
+         SLICED FROM `short`, NOT A HAND-WRITTEN TABLE, so a locale that
+         abbreviates its own way gets its own first two characters rather than
+         English ones. Spread and not `.slice(2)`: the unit is a code point. */
+      const short = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const cell = el('div', 'sch-avail__day', [...short].slice(0, 2).join(''));
       cell.dataset.day = String(i);
       head.appendChild(cell);
     }

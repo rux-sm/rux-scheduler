@@ -4,6 +4,98 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-08 (second pass) - the two flanks made one width, and two
+corrections to the entry below.** rux asked for three things: both companions
+at a stock 320, the roster's day cells 24x24, and whatever that frees given to
+the driver name. All three are in. The interesting part is that the entry
+directly below this one argued against the second, and its argument was sound
+on a premise nobody had checked.
+
+**THE ROSTER WAS NEVER A CARBON PANEL, WHICH IS WHY IT DID NOT MATCH.** The
+trip editor is `rux--side-panel--sm` and measures Carbon's compiled 20rem. The
+roster is `.sch-aside`, this app's own box, and was `inline-size: max-content`
+capped at 22rem: **331.195px, a width set by the longest driver name.** So the
+two things flanking the board disagreed by 11px for a reason nobody chose, and
+the roster moved whenever its data did. It is `flex: 0 0 20rem` now. Carbon
+ships six panel sizes -- xs 16rem, sm 20rem, md 30rem, lg 40rem, xl 65rem, 2xl
+80rem, each `clamp(16rem, var(--rux-side-panel-modified-size, N), 100%)` -- so
+20rem is its number, reached the same way, not a local invention.
+`--rux-side-panel-modified-size` is the sanctioned hook for a custom width and
+this app still uses none.
+
+**"WED IS 26px" WAS RIGHT AND WAS NOT THE WHOLE QUESTION.** The entry below
+held `--sch-day-track` at sm because the head must carry three letters and
+"Wed" is 26px at label-01 -- re-measured today at 25.0 of glyphs plus 0.32 of
+tracking three times, so 26.0, and it genuinely will not fit 24. What it did
+not weigh is the middle: the case for three letters was only ever that ONE
+cannot tell Tuesday from Thursday or Saturday from Sunday. **Two can.** "We" is
+18.4px, the widest of the seven, and clears a 24px cell with 5.6 to spare. The
+labels are sliced from `weekday: 'short'` rather than hand-written, so a
+non-English locale gets its own first two characters.
+
+**THE CELL IS SQUARE AGAIN AND THE NAME TOOK THE DIFFERENCE.** `--sch-day-track`
+rejoins `--sch-avail-h` at xs after one day apart, so the cells are 24x24 rather
+than 32x24, and `--sch-head-w` is `minmax(0, 1fr)` -- which is what its own
+comment had claimed since the aside became `max-content` and made the head the
+thing sizing the box. **The name column goes 107 to 152**, and all 40 drivers
+now fit it without ellipsing, in all five themes. The 32px head band is
+untouched, so the two grids' top edges still line up.
+
+**WHAT IT DID NOT BUY, AND THIS IS THE POINT.** The board gained 11px, not 56:
+the days gave up 56 but the aside gave up its `max-content` 331 for 320, and
+the rest went inward to the name. At 1440x950 with both companions open the
+week is still short and still scrolls -- `crowded` is still true, the roster
+still yields on the editor opening, and the overrule still costs Saturday and
+Sunday. Nothing here was ever going to close 323px, which the entry below is
+right about.
+
+**AND A SECOND CORRECTION, TO THE FIELD-VARIANT DECISION.** That entry rejected
+`size-sm` partly on "the panel's content is 729px inside a 729px box: it does
+not overflow." That reads `scrollHeight`, which is floored at `clientHeight`
+and so cannot report slack -- 729 was the box describing itself. Measured
+properly: New trip's content is ~656 and fits at 1440x950 with 73 to spare, but
+overflows by 87 at 790 tall; **Edit trip is 1134 in the same box -- 405 over at
+950, 565 at 790** -- because it carries `This leg` (146) and `Itinerary` (284),
+which New trip does not. The conclusion holds and the reason changes: `size-sm`
+saves 8px on each of four fields, 32 against 405, so it is rejected for buying
+8% of a real gap rather than for buying nothing. Edit trip's overflow is
+structural and is NOT addressed here -- same shape as the 323px finding, and
+open.
+
+**AND A THIRD CORRECTION, TO A CARBON PRECEDENT THAT WAS NEVER THERE.** The
+entry below defends 24px rows under a 32px band with "Carbon's own row-height
+control offers exactly this shape: five row heights under an unchanged header."
+Read from the compiled stylesheet rather than from memory, it does not: `thead
+tr` sits in EVERY size selector beside `tbody tr` -- `--xs` 1.5rem (rux.css
+:12127), `--sm` 2rem (:12157), `--md` 2.5rem (:12182), `--xl` 4rem (:12207),
+with lg the unclassed default. **Carbon moves the head and the body together
+and ships no variant where they differ.** 24-under-32 is this app's own shape,
+which an `sch-` component is entitled to; what it is not entitled to is the
+claim that Carbon ships it. The decision itself stands on the half that was
+load-bearing -- there is no 32px body row on this page to be consistent with,
+and 32 of 40 drivers is a measurement, not a precedent. Struck in place below.
+
+**WHERE THAT CAME UP: rux asked whether each table should choose its own
+header and toolbar size variant.** Answered no, and the first reason is that
+the premise is not the page's: **there is no `rux--data-table` and no
+`rux--table-toolbar` in this app at all** -- audited live, the only
+`rux--layout--size-*` carriers are eight buttons, a tabs strip and a select.
+The board, the roster and `.sch-toolbar` are all this app's own, so a size
+variant has nothing to switch. The other two reasons: the header band was never
+the constraint in the 24/32/24/32 flip-flop, which was always a body-row
+question; and the two grids' top edges line up BECAUSE both bands are pinned at
+32, so a per-table header size is precisely what would break the one alignment
+invariant here. The density control that would pay is the one already built --
+the view menu's four bar-row toggles move a 95px bus row, where a band can move
+8.
+
+**NOT DONE.** Everything the entry below leaves open stays open: the bars, no
+undo, no weekend tint. Edit trip's overflow is now named and unfixed. The gates
+were not re-run; this was measured by hand at 1440x950 and 1440x790, and the
+clipping check was run in all five themes. `node tools/check.mjs` passes, token
+count 79 -- one lower because the roster no longer reads
+`--rux-layout-size-height-sm`.
+
 **2026-09-08 - the layout review, and the arithmetic that settled three
 open questions at once.** rux was finalising the layout with both companions
 under review and asked three things: whether the driver grid has to match the
@@ -53,8 +145,12 @@ kept turning. What broke the tie: the consistency the last turn protected was
 not there. It traded eight drivers for "one module on the page" and the page
 does not have one -- a bus row is 95px. The 32px module lives in the toolbar
 and the two header BANDS, never in a body row, so what the rows were matched to
-was a band. The band is still 32px and still explicit. Carbon's own row-height
-control offers exactly this shape: five row heights under an unchanged header.
+was a band. The band is still 32px and still explicit. ~~Carbon's own
+row-height control offers exactly this shape: five row heights under an
+unchanged header.~~ **That sentence is wrong and is corrected in the entry
+above, 2026-09-08 second pass: Carbon moves the head with the body at every
+size and ships no such variant.** The rest of the paragraph stands, and so does
+the decision -- the appeal to precedent was never the load-bearing half.
 Measured at 1440x950: **32 of 40 drivers, up from 24**.
 
 **THE DAY COLUMNS STOPPED FOLLOWING THE ROW, WHICH FORFEITS THE 56px ON
