@@ -4,6 +4,73 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-09 - the Billing tab, built against counted columns rather than a
+mockup.** Third tab in the editor, between Details and Fleet.
+
+**EVERY FIELD WAS COUNTED BEFORE IT WAS BUILT**, which is the habit the
+Schedule section earned by getting it wrong. Over all 751 rows: `quoted_price`
+99, `deposit_amount` 31, `invoice_number` 43, `po_ref` 42, `po_amount` 47,
+`contract_status` 336, `invoice_status` 336, `balance_paid` 751, `date_paid`
+24. All nine are real, so all nine are fetched and eight are editable.
+`contract_status` holds exactly "Pending" and "Signed"; `invoice_status`
+exactly "Pending" and "Invoiced" -- two values each, which is why they are
+toggles and not selects.
+
+**THREE THINGS IN THE MOCKUP ARE NOT BUILT, AND THE REASONS ARE DIFFERENT.**
+`Service type` (Charter/Ticketed) has no column: `trips.service_type` does not
+exist -- asked for it and read the error -- and exactly ONE trip of 751 has any
+`trip_ticket_options`, so there is nothing to switch between and the column
+would be rux's to add. `Est. miles`/`Actual miles` are not trip columns either;
+`trip_stops.miles` carries them per stop with `miles_source` saying estimated
+or manual, so a total is the itinerary's arithmetic. And `Balance` is drawn as
+money in the mockup while `balance_paid` is a **boolean**, true on 751 of 751 --
+the column is "is it settled", not "how much is left". It is a toggle, and the
+amount outstanding is shown beside it as quoted less payments, from the same
+rows the Payments list shows so the two cannot disagree.
+
+**TWO FAULTS FOUND BY DRIVING IT, NOT BY READING IT.** Save never armed for any
+Billing field: `input` and `change` were bound to `panelDetails` alone, so
+typing a quoted price left the button grey and the edit was lost. And the
+toggle read `false` after an odd number of presses, because `toggleField` bound
+its own click handler to a control `js/form-controls.js` already owns --
+`setToggle` sets `aria-checked`, swaps `__switch--checked` and fires
+`rux:toggle`. Ours is gone; the panel listens for `rux:toggle` instead, which
+is the third event, a <button> firing neither `input` nor `change`.
+
+**THE TOGGLE'S WORDS ARE CARBON'S AND CANNOT BE OURS.** `setToggle` hard-codes
+On/Off, so "Signed"/"Pending" was overwritten on the first press. The label
+carries the meaning instead -- "Contract signed" -- which reads correctly and
+needs no override. Filed as a fifth request: rux-ds's own file header already
+calls that hard-coding "worth a decision rather than a silent default", so this
+is that decision arriving with a consumer attached.
+
+**MARKUP CAME FROM rux-ds's TEMPLATES, NOT FROM THE COMPILED SELECTORS.** The
+toggle is `templates/form-page.html`'s shape, copied. That is the correction to
+how `timeField` was built yesterday -- reading class names out of `rux.css` and
+assembling something plausible produced a `rux--time-picker` wrapped round
+markup that was not that component. One grep of `templates/` is the cost of not
+doing that again. Money is a `rux--text-input` with `inputmode="decimal"` and
+deliberately NOT `rux--number-input`: Carbon's ships stepper buttons, and a
+quoted price is not stepped by one. `calendarBody()` was extracted so the range
+picker and Billing's single `Date paid` build the same calendar.
+
+**BLANK IS NULL AND NOT ZERO.** 652 of 751 trips have no quoted price; a form
+turning every empty box into 0 would claim 652 free charters.
+
+**VERIFIED: reads, arming, toggles. NOT VERIFIED: the write.** Trip 218 shows
+quoted 45500, invoice 15659, PO ref "MT CONV DALLAS S26-ESCAMILLA", PO amount
+22750, Contract Pending, Invoice Invoiced -- all matching the table. Save is
+dead at open, arms on a money edit or a toggle, and dies again on the way back,
+driven on both. **The `trips` update was not sent**: same standing limit as
+everything else that writes here.
+
+**NOT DONE.** Payments are read-only -- `backend-inventory.md` records that the
+old app rewrites every row of a trip on save, so editing means owning insert,
+update, delete and position, which is an editor rather than a panel field.
+Deposit is stored but does not feed the balance, because what it means against
+`trip_payments` was not established. No Service type, no miles, per above.
+`node tools/check.mjs` passes.
+
 **2026-09-09 - the Details tab restructured, and a correction that inverted
 where it writes.** rux asked to strip the itinerary down to a pickup location
 and three times, after a five-tab mockup from rux-ui. The structure was the

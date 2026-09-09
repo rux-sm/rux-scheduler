@@ -10,6 +10,37 @@ with the tag that carried it.
 
 ---
 
+## Open — a toggle's words cannot be the product's, 2026-09-09
+
+**Asked for:** let a consumer supply the two words `setToggle` writes, or say
+that On/Off is deliberate and a product wanting other words should not use the
+toggle.
+
+**Why:** `js/form-controls.js` owns the toggle -- correctly, and this app hands
+it the whole behaviour -- and `setToggle` hard-codes `text.textContent = on ?
+'On' : 'Off'`. The Billing tab has three of them over columns whose values are
+words already: `contract_status` is "Pending"/"Signed", `invoice_status` is
+"Pending"/"Invoiced", both across all 751 rows. Rendering "Contract: On" says
+less than the data does.
+
+**THE FILE ALREADY RAISED THIS AGAINST ITSELF.** Its header calls the
+hard-coding "worth a decision rather than a silent default", and objects in the
+same breath to depending on a TRANSLATED STRING when reading `aria-label` --
+"writing one is the same problem facing the other way". This is that decision
+arriving with a consumer attached, not a new argument.
+
+**What this app did in the meantime, and it is not a workaround to keep.** The
+LABEL carries the meaning instead: "Contract signed", not "Contract", so On and
+Off read correctly against it. That is honest and needs no override, but it
+spends a word of the label on every toggle and cannot express a pair like
+Invoiced/Pending where neither side is the absence of the other.
+
+**What it is not:** not a request to change the markup, the event or who owns
+the click -- all three are right and this app depends on them. Only the two
+strings.
+
+---
+
 ## Open — nothing compiles a size for header action icons, 2026-09-08
 
 **Asked for:** a compiled size for the icon inside `.rux--header__action`, at

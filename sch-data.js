@@ -176,6 +176,17 @@
     // arrival in `arrive`. That is rux-ui's own rule (extractTripTimes), with
     // one correction: it read a trip's stops without regard to leg, and a bar
     // here IS a leg, so the return leg of a drop-off must read its own.
+    // BILLING'S OWN COLUMNS, added 2026-09-09. Counted over all 751 rows before
+    // a field was built, because the Schedule section had just been designed
+    // against three columns that turned out null on every row: quoted_price 99,
+    // deposit_amount 31, invoice_number 43, po_ref 42, po_amount 47,
+    // contract_status 336, invoice_status 336, balance_paid 751, date_paid 24.
+    // All nine are real and in use, so all nine are fetched.
+    'quoted_price,deposit_amount,invoice_number,po_ref,po_amount',
+    'contract_status,invoice_status,balance_paid,date_paid',
+    // 34 rows across the table today. Read-only here: the old app REWRITES every
+    // row of a trip on save, which is an editor of its own, not a panel field.
+    'trip_payments(id,position,amount,method,date,ref)',
     'trip_stops(id,position,leg,type,name,address,depart_prev,arrive,spot)',
   ].join(',');
 
@@ -820,6 +831,7 @@
   let panelOpener = null;
   const panelDetails = document.getElementById('sch-panel-details');
   const panelFleet = document.getElementById('sch-panel-fleet');
+  const panelBilling = document.getElementById('sch-panel-billing');
   const panelSave = document.getElementById('sch-panel-save');
 
   const panelEl = document.getElementById('sch-panel');
@@ -950,6 +962,72 @@
     return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
   }
 
+  /* THE TOGGLE'S MARKUP IS rux-ds's OWN, taken from templates/form-page.html
+     rather than reconstructed from the compiled selectors. `timeField` in the
+     entry before this one was built by reading class names out of `rux.css` and
+     came out wearing `rux--time-picker` around markup that was not that
+     component; the templates are the authoritative shape and cost one grep.
+
+     AND THE BEHAVIOUR IS rux-ds's TOO -- THIS BINDS NOTHING. The first version
+     added a click listener that flipped `aria-checked` and rewrote the word
+     beside it. `js/form-controls.js` already does exactly that: `setToggle`
+     owns the click, sets `aria-checked`, toggles `__switch--checked` and fires
+     `rux:toggle`. Two handlers on one control left it reading `false` after an
+     odd number of presses, which is what driving it showed. Ours is gone.
+
+     THE WORDS ARE "On" AND "Off" AND CANNOT BE OURS. `setToggle` hard-codes
+     them, so a label of "Signed"/"Pending" was overwritten the moment the
+     control was pressed. Rather than fight the module for the text, the LABEL
+     carries the meaning -- "Contract signed", not "Contract" -- so On and Off
+     read correctly against it. rux-ds's own file header already calls that
+     hard-coding "worth a decision rather than a silent default"; this app is
+     now a consumer that hit it, and it is filed as such.
+
+     TWO VALUES, WHICH IS WHY A TOGGLE AND NOT A SELECT. `contract_status` is
+     "Pending" or "Signed" and `invoice_status` is "Pending" or "Invoiced"
+     across all 751 rows -- checked, not assumed -- so the control has exactly
+     the two positions the data has. */
+  function toggleField(id, label, on) {
+    const box = el('div', 'rux--toggle');
+    const btn = el('button', 'rux--toggle__button');
+    btn.type = 'button';
+    btn.id = id;
+    btn.setAttribute('role', 'switch');
+    btn.setAttribute('aria-checked', String(!!on));
+    btn.setAttribute('aria-labelledby', `${id}-l`);
+    const lab = el('label', 'rux--toggle__label');
+    lab.id = `${id}-l`;
+    lab.setAttribute('for', id);
+    const appearance = el('div', 'rux--toggle__appearance');
+    const sw = el('div', 'rux--toggle__switch');
+    if (on) sw.classList.add('rux--toggle__switch--checked');
+    const text = el('span', 'rux--toggle__text', on ? 'On' : 'Off');
+    text.setAttribute('aria-hidden', 'true');
+    appearance.append(sw, text);
+    lab.append(el('span', 'rux--toggle__label-text', label), appearance);
+    box.append(btn, lab);
+    return box;
+  }
+
+  /* MONEY IS A TEXT INPUT WITH A DECIMAL KEYBOARD, not `rux--number-input`.
+     Carbon's number input ships stepper buttons -- `rux--number__controls` and
+     two `__control-btn`s -- and a quoted price is not a thing anyone steps by
+     one. Building that markup to then hide the steppers would be inventing a
+     variant; `inputmode="decimal"` gives a phone the right keypad and the
+     control stays the component it looks like. */
+  function moneyField(id, label, value) {
+    const outer = el('div', 'rux--text-input__field-outer-wrapper');
+    const wrap = el('div', 'rux--text-input__field-wrapper');
+    const input = el('input', 'rux--text-input');
+    input.type = 'text';
+    input.inputMode = 'decimal';
+    input.id = id;
+    input.value = (value === null || value === undefined) ? '' : String(value);
+    wrap.appendChild(input);
+    outer.appendChild(wrap);
+    return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
+  }
+
   function selectField(id, label, value, options) {
     const box = el('div', 'rux--select rux--layout--size-md');
     const lab = el('label', 'rux--label', label);
@@ -1053,12 +1131,13 @@
     return c;
   };
 
-  function dateRange(fromId, toId, fromLabel, toLabel, fromVal, toVal) {
-    const root = el('div', 'rux--date-picker rux--date-picker--next rux--date-picker--range');
-    root.append(
-      dpContainer('from', fromId, fromLabel, fromVal),
-      dpContainer('to', toId, toLabel, toVal),
-    );
+  /* THE CALENDAR BODY, BUILT ONCE FOR BOTH VARIANTS. `date-picker.js` claims
+     any `--next` root containing a `__calendar-container` and fills the days
+     itself, so range and single differ only by their variant class and how many
+     inputs they carry -- the body is identical, and two copies of it would be
+     two things to keep in step for no gain. Extracted 2026-09-09 when Billing's
+     `Date paid` needed the second one. */
+  function calendarBody() {
     const cc = el('div', 'rux--date-picker__calendar-container');
     cc.hidden = true;
     const cal = el('div', 'rux--date-picker__calendar');
@@ -1077,7 +1156,30 @@
     for (let i = 0; i < 7; i++) weekdays.appendChild(el('div', 'rux--date-picker__weekday'));
     cal.append(month, weekdays, el('div', 'rux--date-picker__days'));
     cc.appendChild(cal);
-    root.appendChild(cc);
+    return cc;
+  }
+
+  /* ONE DATE, ON CARBON'S OWN `--single` VARIANT. `rux--date-picker--single`
+     is compiled beside `--range`, so this is the shipped shape rather than a
+     range with one half hidden. It reuses `dpContainer` and the calendar body
+     the range already builds, because those are the same parts -- the variant
+     class is the whole difference, which is how Carbon means it. */
+  function dateOne(id, label, value) {
+    const root = el('div', 'rux--date-picker rux--date-picker--next rux--date-picker--single');
+    root.appendChild(dpContainer('from', id, label, value));
+    root.appendChild(calendarBody());
+    const item = el('div', 'rux--form-item');
+    item.appendChild(root);
+    return item;
+  }
+
+  function dateRange(fromId, toId, fromLabel, toLabel, fromVal, toVal) {
+    const root = el('div', 'rux--date-picker rux--date-picker--next rux--date-picker--range');
+    root.append(
+      dpContainer('from', fromId, fromLabel, fromVal),
+      dpContainer('to', toId, toLabel, toVal),
+    );
+    root.appendChild(calendarBody());
     const item = el('div', 'rux--form-item');
     item.appendChild(root);
     return item;
@@ -1108,15 +1210,47 @@
     { key: 'req_ada', get: f => f['sch-f-ada'].checked },
     { key: 'req_56pax', get: f => f['sch-f-56pax'].checked },
     { key: 'notes', get: f => f['sch-f-notes'].value.trim() || null },
-    { key: 'notes', get: f => f['sch-f-notes'].value.trim() || null },
+    /* BILLING. Money comes back from the form as text and goes to the column as
+       a number or a null -- `money()` refuses anything that is not a number
+       rather than sending NaN, which Postgres rejects with a message about
+       syntax that says nothing about the field that caused it.
+
+       THE TWO STATUSES ARE THE DATA'S OWN WORDS, not booleans. The column is
+       text and holds "Pending"/"Signed" and "Pending"/"Invoiced"; storing true
+       would be a third value nothing else in the system reads. */
+    { key: 'quoted_price', get: f => money(f['sch-f-quoted'].value) },
+    { key: 'deposit_amount', get: f => money(f['sch-f-deposit'].value) },
+    { key: 'po_ref', get: f => f['sch-f-poref'].value.trim() || null },
+    { key: 'po_amount', get: f => money(f['sch-f-poamount'].value) },
+    { key: 'invoice_number', get: f => f['sch-f-invnum'].value.trim() || null },
+    { key: 'contract_status', get: f => on(f['sch-f-contract']) ? 'Signed' : 'Pending' },
+    { key: 'invoice_status', get: f => on(f['sch-f-invoice']) ? 'Invoiced' : 'Pending' },
+    { key: 'balance_paid', get: f => on(f['sch-f-paid']) },
+    { key: 'date_paid', get: f => isoOrNull(f['sch-f-datepaid'].value) },
   ];
+
+  // A toggle's state lives on `aria-checked`, which is what Carbon's own
+  // markup carries -- there is no `.checked` to read.
+  const on = e => e?.getAttribute('aria-checked') === 'true';
+
+  /* BLANK IS NULL, NOT ZERO. 652 of 751 trips have no quoted price, and a form
+     that turned every empty box into 0 would quietly claim 652 free charters.
+     A value that is not a number is also null rather than NaN. */
+  const money = v => {
+    const t = String(v ?? '').replace(/[$,\s]/g, '');
+    if (!t) return null;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  };
 
   let editing = null;   // { id, before: {...} }
 
   function readForm() {
     const f = {};
     for (const id of ['destination', 'customer', 'type', 'confirmed', 'sleeper', 'ada', '56pax', 'notes',
-                      'start', 'end', 'rstart', 'rend']) {
+                      'start', 'end', 'rstart', 'rend',
+                      'quoted', 'deposit', 'poref', 'poamount', 'invnum',
+                      'contract', 'invoice', 'paid', 'datepaid']) {
       f[`sch-f-${id}`] = document.getElementById(`sch-f-${id}`);
     }
     if (Object.values(f).some(v => !v)) return null;
@@ -1129,6 +1263,10 @@
   // shapes would mark an untouched field dirty on every open, so both sides are
   // cut to HH:MM before anything is compared or sent.
   const hhmmOrNull = t => (t ? String(t).slice(0, 5) : null);
+
+  // Whole dollars: every amount in the table is a round number -- 2800, 1108,
+  // 600 -- so cents would be two characters of noise on every row.
+  const usd = n => `$${Math.round(n).toLocaleString('en-US')}`;
 
   /* WHAT THE SCHEDULE SECTION WOULD WRITE, as one update per row and only for
      rows that changed. Returns [] when nothing moved, which is what lets Save
@@ -1301,6 +1439,17 @@
       end_date: trip.end_date ?? trip.start_date ?? null,
       return_start_date: trip.return_start_date ?? null,
       return_end_date: trip.return_end_date ?? trip.return_start_date ?? null,
+      quoted_price: trip.quoted_price ?? null,
+      deposit_amount: trip.deposit_amount ?? null,
+      po_ref: trip.po_ref ?? null,
+      po_amount: trip.po_amount ?? null,
+      invoice_number: trip.invoice_number ?? null,
+      // The column is nullable and 415 rows are null; a trip nobody has filed a
+      // contract for reads as Pending, which is what the old app shows too.
+      contract_status: trip.contract_status === 'Signed' ? 'Signed' : 'Pending',
+      invoice_status: trip.invoice_status === 'Invoiced' ? 'Invoiced' : 'Pending',
+      balance_paid: !!trip.balance_paid,
+      date_paid: trip.date_paid ?? null,
     } };
 
     /* THE SCHEDULE'S BEFORE IS KEPT APART FROM THE TRIP'S, because it is a
@@ -1421,6 +1570,76 @@
       }
       panelDetails.appendChild(section(
         legName === 'return' ? 'Schedule — return leg' : 'Schedule', sched));
+    }
+
+    /* ── BILLING ────────────────────────────────────────────────────────────
+       Every field here was checked against all 751 rows before it was built,
+       which is the habit the Schedule section earned the hard way: quoted_price
+       99, deposit_amount 31, invoice_number 43, po_ref 42, po_amount 47,
+       contract_status 336, invoice_status 336, balance_paid 751, date_paid 24.
+
+       THREE THINGS IN THE MOCKUP ARE NOT BUILT, AND NONE OF THEM IS AN
+       OVERSIGHT. `Service type` (Charter/Ticketed) has no column --
+       `trips.service_type` does not exist, confirmed by asking for it -- and
+       only ONE trip of 751 has any `trip_ticket_options`, so there is nothing
+       here to switch between and a column would be rux's to add, not this
+       panel's to assume. `Est. miles` and `Actual miles` are not trip columns
+       either: `trip_stops.miles` carries them per stop with `miles_source`
+       saying estimated or manual, so a total is the itinerary's arithmetic and
+       belongs with the itinerary editor. And `Balance` is drawn in the mockup
+       as money, but `balance_paid` is a BOOLEAN -- true on 751 of 751 rows, so
+       the column is "is it settled", not "how much is left". It is a toggle
+       here, and the amount outstanding is shown beside it as arithmetic rather
+       than stored twice. */
+    panelBilling.replaceChildren();
+    if (creating) {
+      panelBilling.appendChild(el('p', 'sch-panel-hint',
+        'Billing opens once the trip exists. Save it first.'));
+    } else {
+      const pricing = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      pricing.append(
+        moneyField('sch-f-quoted', 'Quoted price', trip.quoted_price),
+        moneyField('sch-f-deposit', 'Deposit', trip.deposit_amount),
+      );
+      panelBilling.appendChild(section('Pricing', pricing));
+
+      /* THE BALANCE IS ARITHMETIC, NOT A FIELD. Quoted less what has been paid,
+         from `trip_payments` -- the same rows the list below shows, so the sum
+         and its workings cannot disagree. With no quoted price there is no
+         balance to state and it says so rather than showing the deposit as if
+         it were the whole debt. */
+      const paidSum = (trip.trip_payments || []).reduce((n, p) => n + (Number(p.amount) || 0), 0);
+      const owed = trip.quoted_price === null || trip.quoted_price === undefined
+        ? null : Number(trip.quoted_price) - paidSum;
+      const status = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      status.append(
+        def([
+          ['Paid', paidSum ? usd(paidSum) : 'Nothing recorded'],
+          ['Balance', owed === null ? 'No quoted price' : usd(owed)],
+        ]),
+        toggleField('sch-f-contract', 'Contract signed', trip.contract_status === 'Signed'),
+        toggleField('sch-f-invoice', 'Invoice sent', trip.invoice_status === 'Invoiced'),
+        toggleField('sch-f-paid', 'Balance paid', !!trip.balance_paid),
+        textField('sch-f-invnum', 'Invoice number', trip.invoice_number),
+        textField('sch-f-poref', 'PO reference', trip.po_ref),
+        moneyField('sch-f-poamount', 'PO amount', trip.po_amount),
+        dateOne('sch-f-datepaid', 'Date paid', trip.date_paid),
+      );
+      panelBilling.appendChild(section('Billing status', status));
+
+      /* PAYMENTS ARE READ ONLY, deliberately. `backend-inventory.md` records
+         that the old app REWRITES every row of a trip on save, so editing here
+         means owning insert, update, delete and position for a list -- an
+         editor, not a panel field, and one nobody has asked for yet. Showing
+         them is what makes the balance above checkable. */
+      const pays = (trip.trip_payments || [])
+        .slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      panelBilling.appendChild(section('Payments', pays.length
+        ? def(pays.map(p => [
+            [p.date || 'No date', p.method].filter(Boolean).join(' · '),
+            [usd(Number(p.amount) || 0), p.ref].filter(Boolean).join(' — '),
+          ]))
+        : el('p', 'sch-panel-hint', 'No payments recorded.')));
     }
 
     // FLEET IS THE BUS AND WHO IS ON IT, and nothing else -- the leg's own
@@ -1759,6 +1978,17 @@
   // and typing it back out again disables Save rather than leaving it armed.
   panelDetails?.addEventListener('input', refreshDirty);
   panelDetails?.addEventListener('change', refreshDirty);
+  /* BILLING IS A SECOND TAB AND NEEDED SAYING SO. These were on `panelDetails`
+     alone, so every Billing field was dead to Save: typing a quoted price left
+     the button grey and the edit was simply lost. Found by driving it.
+
+     `rux:toggle` IS THE THIRD EVENT, and it is not optional. A toggle is a
+     <button>, so it fires neither `input` nor `change` -- `form-controls.js`
+     announces itself with a custom event instead, and that is the only signal
+     that a status moved. */
+  panelBilling?.addEventListener('input', refreshDirty);
+  panelBilling?.addEventListener('change', refreshDirty);
+  panelBilling?.addEventListener('rux:toggle', refreshDirty);
 
   panelSave?.addEventListener('click', async () => {
     if (!editing) return;
