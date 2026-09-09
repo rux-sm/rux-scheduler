@@ -4,6 +4,90 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-09 - the date labels, and a mono question answered by measuring.**
+`From`/`To` are `Start date`/`End date`, matching Carbon's own story. The
+`Pick-up` return pair took the same words rather than keeping the old ones: two
+date ranges in one form labelled two ways would have made the conditional
+section the odd one out, and the `Pick-up` heading above them already says
+which outing they belong to.
+
+**AND THE TYPE IS MONO, WHICH TOOK FOUR TRIES TO ESTABLISH.** rux asked whether
+the date text is the mono version. Carbon compiles
+`.rux--date-picker__input { font-family: var(--rux-code-02-font-family, 'IBM
+Plex Mono', ...) }`, this app's input computes the same stack, and it resolves
+to the real face: `09/08/2026` measures 84px against 77.16 for system-ui and
+77.93 for Plex Sans, 84 being the true monospace advance. Nothing to change.
+
+**THE MEASUREMENT WENT WRONG TWICE FIRST, AND THE REASON IS WORTH KEEPING.**
+The first probes said it was NOT rendering mono -- `"IBM Plex Mono"` measured
+identically to `serif`, which is what an unavailable face looks like. `plex.css`
+sets `font-display: optional` on every face, and optional means the browser
+uses the fallback if the file is not ready almost at once and then **never
+swaps it in for that page load**, cached or not. So the face was present,
+`document.fonts` reported it loaded, and the page was still drawing system-ui.
+Only an explicit `document.fonts.load()` before measuring showed the real
+advance. A warm reload did NOT fix it, and reading that as "optional is not the
+cause" was wrong -- it is the cause, and the warm-load test simply had not
+warmed the face.
+
+**WHAT THAT MEANS IN USE.** On a cold load the date field can render in
+system-ui rather than IBM Plex Mono, for the whole of that load. It is rux-ds's
+deliberate choice -- reasoned in `plex.css`'s own header, which lists the
+date-picker and time-picker inputs among the things that are code-02 -- and it
+is not a divergence from Carbon, which this app matches either way. Recorded
+rather than filed.
+
+**2026-09-09 - the dates moved to the first row of Details.** rux's reasoning,
+and it is the right one: the range is the first decision anyone makes about a
+trip and the one field that arrives already answered. A trip created from a
+cell carries the day that cell was, so the panel now opens with row one filled
+and the rest blank, which is the order the form should read in.
+
+**IT ALSO FIXED AN ADJACENCY BY ACCIDENT.** `Pick-up`, the return pair, is
+appended after the main block and only shown for a drop-off and pick-up trip.
+Type used to sit two fields above it; Type is now directly above, so choosing
+that type makes a field appear immediately beneath the select that asked for
+it. Driven: switching the type reveals `Pick-up` in place.
+
+**AND IT COSTS THE CALENDAR NOTHING**, which was the thing worth checking
+rather than assuming. `__calendar-container` is `position: absolute;
+inset-block-start: 100%` against its own root, so it opens downward over what
+follows -- from the top of the panel it has MORE room, not less. Measured: the
+calendar opens at 260 and ends at 608 against a panel body ending at 869, so it
+now falls entirely inside the panel where before it ran past the fold. Overflow
+is unchanged at 191 for a round trip; nothing moved but the order.
+
+**2026-09-09 - the calendar was painting the panel's own colour.** rux
+compared it against Carbon's `range-with-calendar` story at g100 and said the
+surface looked wrong. It was, and the token was right -- what was missing was
+the context it reads.
+
+**THE MEASUREMENT.** `.rux--date-picker--next .rux--date-picker__calendar` is
+`background-color: var(--rux-layer)`, and `--rux-layer` is CONTEXTUAL: Carbon
+expects an ancestor to have raised it. Nothing on Carbon's story page has, so
+the calendar takes layer-01 and steps above the page background, which is why
+it reads correctly there. Here it opens inside a side panel that IS a layer-01
+surface: measured in g90, panel `#393939` and calendar `#393939` -- the same
+value, no step, the boundary invisible. Not a wrong colour, a missing one.
+
+**THE FIX IS CARBON'S OWN LAYER COMPONENT.** `.rux--layer-one/two/three` are
+compiled in the pin and set `--rux-layer` for their subtree; a surface floating
+over another surface is exactly what layer-two is for. It goes on
+`__calendar-container` and not on the panel, so every field in the form keeps
+the layer it had and only the floating thing is raised. It survives
+`date-picker.js` detaching and re-inserting the container, the class travelling
+with the element.
+
+**STEPPED IN ALL FIVE THEMES, checked rather than assumed.** white 255/244,
+g10 244/255, g90 82/57, g100 57/38, rux 255/244. **g10 inverts** -- the calendar
+is DARKER than the panel there, because Carbon's g10 puts layer-01 at #ffffff
+and layer-02 at #f4f4f4. That is the system's own ordering, not a fault, and it
+is worth knowing before someone reads it as one.
+
+**NOT A REQUEST.** The markup was already right: `date-picker.js` claims
+`__calendar-container` inside the root and does not portal it, which is what
+this app builds. Only the layer context was missing, and the class for it ships.
+
 **2026-09-09 - the Billing tab, built against counted columns rather than a
 mockup.** Third tab in the editor, between Details and Fleet.
 

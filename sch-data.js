@@ -1138,7 +1138,29 @@
      two things to keep in step for no gain. Extracted 2026-09-09 when Billing's
      `Date paid` needed the second one. */
   function calendarBody() {
-    const cc = el('div', 'rux--date-picker__calendar-container');
+    /* `rux--layer-two` IS WHY THE CALENDAR IS VISIBLE AT ALL, added 2026-09-09
+       after rux compared it against Carbon's own story and said the surface
+       looked wrong. It was.
+
+       `.rux--date-picker--next .rux--date-picker__calendar` paints
+       `var(--rux-layer)`, which is a CONTEXTUAL token: Carbon expects an
+       ancestor to have raised it. On Carbon's story page nothing has, so the
+       calendar takes layer-01 and steps above the page background, and it
+       reads correctly. Here the calendar opens inside a side panel that IS a
+       layer-01 surface, so both resolved to the same value -- measured in g90,
+       panel #393939 and calendar #393939, no step, the boundary invisible.
+
+       THE FIX IS CARBON'S OWN LAYER COMPONENT, not a colour of ours.
+       `.rux--layer-two` is compiled in the pin and sets `--rux-layer` to
+       layer-02 for its subtree, which is exactly what a surface floating over
+       another surface is for. Putting it on the container rather than on the
+       panel keeps every field in the form on the layer it already had -- only
+       the thing that floats is raised.
+
+       It survives the module: `date-picker.js` DETACHES this container on
+       claim and re-inserts the same element on open, so the class travels
+       with it. */
+    const cc = el('div', 'rux--date-picker__calendar-container rux--layer-two');
     cc.hidden = true;
     const cal = el('div', 'rux--date-picker__calendar');
     cal.setAttribute('role', 'grid');
@@ -1469,7 +1491,24 @@
 
     panelDetails.replaceChildren();
     const form = el('div', 'rux--stack-vertical rux--stack-scale-5');
+    /* THE DATES COME FIRST, on rux's call 2026-09-09: they are the first
+       decision anyone makes about a trip and the one thing that arrives
+       already filled. A trip created from a cell carries the day that cell
+       was, so the panel opens with this row answered and the rest blank --
+       which is the order the form should read in.
+
+       IT ALSO PUTS `Pick-up` UNDER THE CONTROL THAT REVEALS IT. The return
+       pair is appended after this block and Type used to sit two fields above
+       it; Type is now directly above, so choosing drop-off and pick-up makes
+       a field appear immediately beneath the select that asked for it rather
+       than further down the form.
+
+       AND IT COSTS THE CALENDAR NOTHING. `__calendar-container` is
+       `position: absolute; inset-block-start: 100%` against its own root, so
+       it opens downward over whatever follows -- from the top of the panel it
+       has more room below it, not less. */
     form.append(
+      dateRange('sch-f-start', 'sch-f-end', 'Start date', 'End date', trip.start_date, trip.end_date || trip.start_date),
       textField('sch-f-destination', 'Destination', trip.destination),
       textField('sch-f-customer', 'Customer', trip.customer),
       selectField('sch-f-type', 'Type', trip.trip_type, [
@@ -1478,7 +1517,6 @@
         ['one_way', 'One way'],
         [SPLIT, 'Drop-off and pick-up'],
       ]),
-      dateRange('sch-f-start', 'sch-f-end', 'From', 'To', trip.start_date, trip.end_date || trip.start_date),
     );
 
     /* THE RETURN PAIR IS A SECOND OUTING, NOT THE END OF THE FIRST. Measured
@@ -1493,8 +1531,14 @@
        pair only appears for a split. And one way is NOT a single date: 25 of
        26 run a day, but one runs three, so it keeps the range too. */
     const returnDates = el('div', 'sch-panel-return-dates');
+    /* THE RETURN PAIR TAKES THE SAME WORDS, 2026-09-09. rux renamed the
+       outbound range's `From`/`To` to `Start date`/`End date`, matching
+       Carbon's own story, and leaving this pair on the old words would have
+       made the one conditional section the odd one out -- two date ranges in
+       one form labelled two ways. `Pick-up` above them already says which
+       outing they belong to. */
     returnDates.appendChild(section('Pick-up', dateRange(
-      'sch-f-rstart', 'sch-f-rend', 'From', 'To',
+      'sch-f-rstart', 'sch-f-rend', 'Start date', 'End date',
       trip.return_start_date, trip.return_end_date || trip.return_start_date)));
     returnDates.hidden = trip.trip_type !== SPLIT;
     form.appendChild(returnDates);
