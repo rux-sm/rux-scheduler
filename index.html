@@ -14,6 +14,16 @@
 <link rel="stylesheet" href="rux-theme.css">
 <link rel="stylesheet" href="rux-overrides.css">
 <link rel="stylesheet" href="sch.css">
+<!-- BEFORE theme.js, AND THE ORDER IS LOAD-BEARING. `theme.js:73` resolves a
+     stored id through `window.Rux?.customThemes?.get(t)` at load, so the module
+     has to exist by then; after it, a custom theme would resolve to undefined
+     on the first paint. Added 2026-09-08: this page was scaffolded before
+     rux-ds Phase 16 put the tag in `templates/app-shell.html`, and a pin move
+     refreshes `vendor/` without rewriting a page, so the file has been vendored
+     and unlinked since the v0.1.9 pin. Every read of it is optionally chained
+     -- `profile.js:79` falls back to `[]` -- so the failure was SILENT: the
+     account panel simply showed the compiled themes and nothing said why. -->
+<script src="vendor/rux-ds/js/custom-themes.js"></script>
 <script src="vendor/rux-ds/js/theme.js"></script>
 <style>
 /* NO OFFSET FOR THE NAV, BECAUSE THE NAV IS NOT THERE UNTIL IT IS ASKED FOR.

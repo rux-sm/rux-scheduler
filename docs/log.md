@@ -4,6 +4,49 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-08 - custom themes were vendored, unlinked and failing in silence.**
+rux-ds noticed it and sent the one line; every claim in it was checked here
+before the line went in, and the round trip was driven live afterwards.
+
+**THE FAULT.** `vendor/rux-ds/js/custom-themes.js` has shipped since the v0.1.9
+pin and neither page ever linked it -- this app was scaffolded before rux-ds
+Phase 16 put the tag in `templates/app-shell.html`, and a pin move refreshes
+`vendor/` without rewriting a page. **Nothing failed loudly, because every read
+of the module is optionally chained:** `profile.js:79` is
+`window.Rux?.customThemes?.list() ?? []`, so the panel had no radio to clone and
+said nothing; `theme.js:73` is `window.Rux?.customThemes?.get(t)`, so a stored
+custom id resolved to `undefined` and fell back. A theme saved in rux-ds's
+creator simply never appeared, with no error to search for.
+
+**VERIFIED BEFORE THE FIX, NOT ASSUMED.** `window.Rux.customThemes` was
+`undefined` on the live page and the account panel offered 5 radios -- the four
+compiled themes and rux. The vendored file is byte-identical to rux-ds v0.1.11
+(sha256 `a04c6e76…` both sides), so this needed no pin move and no tag.
+
+**ORDER IS LOAD-BEARING AND IS WRITTEN DOWN.** `custom-themes.js` goes BEFORE
+`theme.js`, because `theme.js` resolves a stored id through the module at load;
+after it, a custom theme would resolve to undefined on the first paint.
+rux-ds's own template has the same order at lines 14 and 15. A comment above
+the tag says so, since the next person to tidy the head is the one at risk.
+
+**DRIVEN LIVE, WHOLE.** Saved `{id:'probe-teal', kind:'accent', tokens:
+{interactive:'#0f7d6b'}}`; the panel went from 5 radios to 6; applying it moved
+`--rux-interactive` from #4589ff to #0f7d6b and set
+`data-rux-custom-theme="probe-teal"`; removing it released the token back to
+#4589ff, cleared the attribute and emptied the store. The probe was cleaned up
+-- the page is back on g90 with 5 radios and `{"v":1,"themes":[]}` stored. Both
+pages carry the module; `specimen.html` was checked too, not inferred from
+`index.html`.
+
+**ONE LIMIT, AND IT IS NOT MINE TO CLAIM AS TESTED.** rux-ds points out that
+`localStorage` is per browser profile per origin, so a custom theme does not
+follow a user to another device: the hub syncs the theme PREFERENCE to Supabase
+but never the DEFINITION, so a custom id opened on a second device resolves to
+nothing, falls back to white, and `account.js` would then push that white back
+up. **Neither of us has tested it** -- it follows from two behaviours rather
+than from a run -- and it needs a second device and the production sign-in this
+browser pane has no session for. Recorded so it is not discovered as a surprise.
+
 **2026-09-08 - button icons put under Carbon's rule rather than under our
 attributes.** rux asked for button icons to follow Carbon design-system-wide at
 16px. **Nothing in rux-ds needed changing: Carbon already enforces it.**
