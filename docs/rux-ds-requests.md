@@ -10,6 +10,43 @@ with the tag that carried it.
 
 ---
 
+## Open — nothing compiles a size for header action icons, 2026-09-08
+
+**Asked for:** a compiled size for the icon inside `.rux--header__action`, at
+whatever value rux-ds judges correct. Not a change to what it looks like -- a
+rule that holds it.
+
+**Why:** rux asked for button icons to follow Carbon design-system-wide, and
+every other button on this page could be made to. `.rux--btn .rux--btn__icon` is
+1rem square unconditionally (`rux.css:3461`) and does not follow the button
+size, so four toolbar buttons here just moved from carrying 16px in `width`/
+`height` attributes to carrying `rux--btn__icon` and being governed. **The two
+header actions are the one place that could not be done**, and the reason is a
+gap rather than a disagreement.
+
+**PARSED RULE BY RULE, CARBON SETS NO SIZE THERE.** Every rule in `rux.css`
+whose selector names `header__action` together with `svg` or `icon` --
+`:27249`, `:27254`, `:27270`, `:27284`, `:27288`, `:27292`, `:27299` -- sets
+`fill`, `display` or `transform`. **Zero of them set `block-size`,
+`inline-size`, `width` or `height`.** So an app's header action icon is whatever
+size its own markup asserts, and two consumers following the same guidance can
+disagree without either being wrong.
+
+**WHY WE ARE NOT SOLVING IT LOCALLY, EITHER WAY.** Adding `rux--btn__icon` to
+these two would take them to 16, and that is not obviously right: a header
+action is a different component from a toolbar button, Carbon's own React ships
+20px icons in `HeaderGlobalAction`, and its markup passes the icon as a bare
+child with no `btn__icon` class -- which is exactly the shape here. So this app
+keeps 20 and matches Carbon React. Writing a rule in `rux-overrides.css` to pin
+it would be a local rule standing in for a missing rux-ds one, which `AGENTS.md`
+forbids in as many words. Hence a request.
+
+**What it is not:** not a claim that 20 is right and 16 wrong. If rux-ds
+compiles 16 we will drop the attributes and follow; the ask is only that
+something other than a consumer's markup decides.
+
+---
+
 ## Open — `ui-shell.js` calls a shell state invented that the CSS ships three
 rules for, 2026-09-08
 

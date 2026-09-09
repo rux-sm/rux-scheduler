@@ -98,6 +98,18 @@
     return n;
   };
 
+  /* `box` IS THE WHOLE viewBox STRING, NOT ITS LAST NUMBER, and four callers
+     read it the other way until 2026-09-08: `svgUse('#i-checkmark', 16, 32)`
+     wrote `viewBox="32"`, which is invalid, so the browser dropped the
+     attribute and logged one error per icon -- 78 in a session, drowning the
+     console this app is meant to be debugged in.
+
+     IT NEVER LOOKED WRONG, WHICH IS WHY IT SURVIVED. Every symbol in the sprite
+     carries its own viewBox and scales into whatever viewport it is used in, so
+     the icons rendered correctly with no outer viewBox at all. The fault was
+     only ever visible in the console -- and the sizes were not even guessable
+     from the call: `#i-checkmark` is a 20-unit drawing, the chevrons are 16 and
+     `#i-calendar` is 32, where all four calls said 32. */
   const svgUse = (href, size, box) => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', size); svg.setAttribute('height', size);
@@ -972,7 +984,7 @@
     b.type = 'button';
     b.setAttribute('aria-label', 'Open calendar');
     b.tabIndex = -1;
-    b.appendChild(svgUse('#i-calendar', 16, 32));
+    b.appendChild(svgUse('#i-calendar', '16', '0 0 32 32'));
     return b;
   };
 
@@ -1016,10 +1028,10 @@
     const month = el('div', 'rux--date-picker__month');
     const prev = el('button', 'rux--date-picker__month-nav');
     prev.type = 'button'; prev.setAttribute('aria-label', 'Previous month');
-    prev.appendChild(svgUse('#i-chevron--left', 16, 32));
+    prev.appendChild(svgUse('#i-chevron--left', '16', '0 0 16 16'));
     const next = el('button', 'rux--date-picker__month-nav');
     next.type = 'button'; next.setAttribute('aria-label', 'Next month');
-    next.appendChild(svgUse('#i-chevron--right', 16, 32));
+    next.appendChild(svgUse('#i-chevron--right', '16', '0 0 16 16'));
     month.append(prev, el('div', 'rux--date-picker__current-month'), next);
     const weekdays = el('div', 'rux--date-picker__weekdays');
     for (let i = 0; i < 7; i++) weekdays.appendChild(el('div', 'rux--date-picker__weekday'));
@@ -1573,7 +1585,7 @@
       const on = !!view[key];
       item.setAttribute('aria-checked', String(on));
       const slot = item.querySelector('.rux--menu-item__selection-icon');
-      if (slot) { if (on) slot.replaceChildren(svgUse('#i-checkmark', 16, 32)); else slot.replaceChildren(); }
+      if (slot) { if (on) slot.replaceChildren(svgUse('#i-checkmark', '16', '0 0 20 20')); else slot.replaceChildren(); }
     }
     try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch { /* nothing to do */ }
     window.Rux?.schedule?.fit?.();

@@ -349,7 +349,7 @@
            so each returns when its page does. -->
 <li class="rux--side-nav__item rux--side-nav__item--active">
         <a class="rux--side-nav__link rux--side-nav__link--current" href="./" aria-current="page">
-          <div class="rux--side-nav__icon"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-calendar"/></svg></div>
+          <div class="rux--side-nav__icon"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-calendar"/></svg></div>
           <span class="rux--side-nav__link-text">Schedule</span>
         </a>
       </li>
@@ -429,8 +429,8 @@
                  week changes, moving the very buttons being clicked. New trip is
                  pushed right, which is Carbon's own place for a primary action and
                  keeps creating a trip clear of the paging controls. -->
-            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-prev" aria-label="Previous week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
-            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-next" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
+            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-prev" aria-label="Previous week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
+            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-next" aria-label="Next week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
             <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-today">Today</button>
             <h2 class="sch-toolbar__range rux--type-heading-compact-02" id="sch-range">&nbsp;</h2>
             <!-- New trip sits after the spacer, below. It was absent rather than
@@ -443,7 +443,7 @@
                DRAWS rather than what it holds, which is a menu's job and not a
                toolbar's. Only the two that exist are here -- a control for a
                mode this grid cannot draw would be a lie. -->
-          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-view-trigger" aria-label="View options" aria-haspopup="menu" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg></button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-view-trigger" aria-label="View options" aria-haspopup="menu" aria-expanded="false"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg></button>
             <!-- BACK, AND NOT DISABLED THIS TIME. The comment above promised it
                  for the day the editor could make a trip, which is today: dates
                  were the only thing standing in the way, and a trip with a start
@@ -473,7 +473,7 @@
             <div class="sch-aside__head">
               <span class="sch-aside__title">Driver availability</span>
               <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-avail-close" aria-label="Hide driver availability">
-                <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
+                <svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
               </button>
             </div>
           </div>

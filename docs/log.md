@@ -4,6 +4,84 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-08 - button icons put under Carbon's rule rather than under our
+attributes.** rux asked for button icons to follow Carbon design-system-wide at
+16px. **Nothing in rux-ds needed changing: Carbon already enforces it.**
+`.rux--btn .rux--btn__icon` is `1rem` square unconditionally (rux.css:3461) and
+does NOT follow the button size -- xs through xl all draw 16. Across all 33
+`.rux--btn__icon` rules there are two departures: `--expressive` at 20
+(:3814) and `unstable-pagination` at `initial` (:22604). Carbon's own toolbar row
+agrees, `.rux--toolbar-action__icon` being 1rem with a 1rem cap (:13390).
+
+**WHAT WAS ACTUALLY WRONG WAS HERE, AND IT WAS GOVERNANCE RATHER THAN SIZE.**
+Four `rux--btn` buttons -- `sch-prev`, `sch-next`, `sch-view-trigger`,
+`sch-avail-close` -- drew their icons at 16 from `width`/`height` ATTRIBUTES
+with no `rux--btn__icon` class, so Carbon's rule was not reaching them. They
+looked right and were held right by nothing: an edit to either attribute would
+have moved them with no rule objecting. The class is on all four now. **No
+visual change, by design** -- measured 16x16 before and after, which is the
+point of the change rather than a disappointment in it.
+
+**AND ONE SET OF DEAD ATTRIBUTES REMOVED.** The side-nav icon carried
+`width="20" height="20"` while `.rux--side-nav__icon > svg` (:28017) sets 1rem,
+and CSS beats presentational attributes -- so it has always rendered 16 and the
+markup has always said 20. Corrected to 16. Nothing moves; the file stops lying.
+
+**THE TWO HEADER ACTIONS STAY AT 20, ON RUX'S CALL, AND THE GAP IS FILED.** Account and the app
+switcher are `rux--btn--icon-only` carrying 20px icons by attribute, and putting
+`rux--btn__icon` on them WOULD take them to 16 -- a visible change, and not
+clearly the right one. `rux.css` compiles no size for header action icons at
+all: `.rux--btn--icon-only.rux--header__action svg` sets `fill` and nothing else
+(:27288), and Carbon's own React header actions ship 20. So this is the one
+place where "follow Carbon" does not resolve itself, and it is rux's call rather
+than a mechanical sweep's. The menu toggle is not a `rux--btn` at all, so the
+rule would never have reached it either way.
+
+**AND THE ARGUMENT FOR 20 IS STRONGER THAN "LEAVE IT".** Carbon's React ships
+20px icons in `HeaderGlobalAction` and passes the icon as a bare child with no
+`btn__icon` class -- which is exactly the markup shape here. So adding the class
+would have moved this app AWAY from Carbon rather than towards it, which is the
+opposite of what the sweep was for. Re-parsed rule by rule to be sure: of the
+seven `rux.css` rules naming `header__action` with `svg` or `icon`, **zero set a
+size** -- they set `fill`, `display` and `transform` only.
+
+**A FIFTH REQUEST RATHER THAN A LOCAL RULE.** Pinning 20 in `rux-overrides.css`
+would be a local rule standing in for a missing rux-ds one, which `AGENTS.md`
+forbids in as many words, so `docs/rux-ds-requests.md` now asks rux-ds to
+compile a size at whatever value it judges right. The ask is explicitly not
+"20 is correct" -- if they compile 16, the attributes come off and this app
+follows.
+
+**AND OPENING THE CONSOLE TO CHECK THE SWEEP FOUND A DEFECT OLDER THAN IT.**
+`svgUse(href, size, box)` takes the WHOLE viewBox string, and four callers were
+passing its last number: `svgUse('#i-checkmark', 16, 32)` wrote
+`viewBox="32"`, which is invalid, so the browser dropped the attribute and
+logged one error per icon -- **78 in a session**, in the console this app is
+meant to be debugged in. Fixed at the date-picker calendar, both mini-calendar
+chevrons and the view menu's checkmarks.
+
+**IT NEVER LOOKED WRONG, WHICH IS WHY IT LASTED.** Every symbol in the sprite
+carries its own viewBox and scales into whatever viewport it is used in, so the
+icons rendered correctly with no outer viewBox at all -- verified before
+touching it, the view menu's checkmarks were the right size and shape. The
+fault was only ever in the console. The numbers were not even guessable from the
+call site: `#i-checkmark` is a 20-unit drawing, the chevrons are 16, and
+`#i-calendar` is 32, where all four calls said 32. The helper now says so above
+its own definition.
+
+**VERIFIED BY MARKER, NOT BY A CLEAN BUFFER.** The pane's console accumulates
+across reloads, so "the errors are gone" could not be read off it. Bracketed
+between two deliberate `console.error` markers, with the view menu opened twice
+and a bar clicked to rebuild every icon those four calls produce: **zero new
+viewBox errors, and 0 malformed of 23 SVGs in the DOM.** The two remaining 404s
+are `/switcher.js` and `/account.js`, root-absolute by design -- the same seven
+`check.mjs` declines to check, and they resolve on the deployed root.
+
+**NOT DONE.** Nothing pins the header action icons until that request lands;
+they are 20 by this app's own markup, as they were. The `svgUse` fault was
+found by hand and nothing gates against its return -- `check.mjs` cannot see a
+malformed attribute built at runtime. `node tools/check.mjs` passes.
+
 **2026-09-08 - rux-ds answered all four requests in one afternoon, and three
 of the four answers are unreachable.** The rux-ds session reported back and
 every claim below was checked in the clone rather than relayed.
