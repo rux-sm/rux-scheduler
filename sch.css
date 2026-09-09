@@ -1196,3 +1196,45 @@ button.sch-row-head__num {
    trip's date and it is worth keeping in both layouts. */
 .sch-avail__cell--on-day { box-shadow: inset 0 0 0 1px var(--rux-border-interactive); }
 .sch-avail__day--on-day { color: var(--rux-text-primary); box-shadow: inset 0 -2px 0 var(--rux-border-interactive); }
+
+
+/* ── THE SCHEDULE'S THREE TIMES, ON ONE ROW ─────────────────────────────────
+   Carbon pairs two DATES with `rux--date-picker--range`, which is a compiled
+   flex row, and ships nothing for three times -- so this is an `sch-` rule at
+   its own specificity rather than a Carbon class bent to fit.
+
+   WHY A ROW AT ALL: stacked, the three cost 192px in a panel that was already
+   279px over after the two readouts came out. On one row they cost 64, which
+   is most of the rest of the gap. They also belong together -- depart, spot
+   and return are one leg's clock, and reading them down a column made three
+   unrelated-looking fields out of one fact.
+
+   TWO COLUMNS AND NOT THREE, WHICH THE BROWSER DECIDED. Three fit the row
+   arithmetically -- 288 across, 91 each -- and rendered "07:5", "03:4", "07:C":
+   a `type="time"` control draws "07:50 AM" plus a clock affordance and needs
+   about 130px to do it, measured from its own intrinsic width. The clipping is
+   inside the control's shadow DOM, so `scrollWidth` on the input reports
+   nothing wrong and only looking at it does. Two columns give 140 each, which
+   clears 130.
+
+   IT ALSO GROUPS THEM RIGHT. Yard depart and Spot are both the `pickup` stop;
+   Return is the `return` stop, and it falls to the second row on its own.
+
+   `1fr` AND NOT `auto`: a time control's intrinsic width differs by browser and
+   by locale, so equal fractions keep the boxes the same size as each other
+   rather than each the size of its own content. */
+.sch-times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--rux-spacing-03);
+}
+/* AND THE INPUT HAS TO BE TOLD, because `minmax(0, 1fr)` sizes the TRACK and
+   an `<input>` ignores it: a form control carries an intrinsic width from its
+   own default `size`, which measured 129.695px against a 91px cell -- three of
+   them scrolling 327 inside 288. Every box between the cell and the control
+   gets a zero minimum for the same reason a grid item needs one, and the
+   control itself is told to fill rather than to be its natural size. */
+.sch-times > .rux--form-item,
+.sch-times .rux--text-input__field-outer-wrapper,
+.sch-times .rux--text-input__field-wrapper { min-inline-size: 0; inline-size: 100%; }
+.sch-times .rux--text-input { inline-size: 100%; min-inline-size: 0; }

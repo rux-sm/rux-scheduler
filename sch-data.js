@@ -176,7 +176,7 @@
     // arrival in `arrive`. That is rux-ui's own rule (extractTripTimes), with
     // one correction: it read a trip's stops without regard to leg, and a bar
     // here IS a leg, so the return leg of a drop-off must read its own.
-    'trip_stops(position,leg,type,depart_prev,arrive,spot)',
+    'trip_stops(id,position,leg,type,name,address,depart_prev,arrive,spot)',
   ].join(',');
 
   // A STALLED REQUEST HAS TO END SOMEWHERE. A rejected fetch surfaces at once,
@@ -241,12 +241,24 @@
   // -- placing --------------------------------------------------------------
   // A leg's clock, from its own stops. The trip columns stay as the fallback
   // they were written to be, though every one of them is null today.
-  const timesOf = (trip, leg) => {
+  /* ONE PLACE PICKS THE TWO ROWS THAT MATTER, so the board and the editor
+     cannot choose differently. This was inline in `timesOf` until the Schedule
+     section needed the same pair to edit; a second copy of "which stop is the
+     pickup" is exactly the kind of thing that drifts and then draws a bar that
+     disagrees with the panel describing it. */
+  const stopsOfLeg = (trip, leg) => {
     const stops = (trip.trip_stops || [])
       .filter(s => (s.leg || 'outbound') === leg)
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    const pickup = stops.find(s => s.type === 'pickup') ?? stops[0];
-    const back = [...stops].reverse().find(s => s.type === 'return');
+    return {
+      stops,
+      pickup: stops.find(s => s.type === 'pickup') ?? stops[0],
+      back: [...stops].reverse().find(s => s.type === 'return'),
+    };
+  };
+
+  const timesOf = (trip, leg) => {
+    const { pickup, back } = stopsOfLeg(trip, leg);
     return {
       depart: pickup?.depart_prev || (leg === 'outbound' ? trip.departure_time : trip.return_time) || null,
       back: back?.arrive || null,
@@ -910,6 +922,34 @@
     return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
   }
 
+  /* A CARBON TEXT INPUT IN TIME MODE, AND DELIBERATELY NOT `rux--time-picker`.
+     The first attempt wrapped this markup in that class. Carbon's time picker
+     is a different component -- a `__input-field` beside a `rux--select-input`
+     for AM/PM, which is why `.rux--time-picker .rux--select-input` is compiled
+     and nothing there styles a `rux--text-input` -- so the class was a Carbon
+     name hung on markup that is not that component. `docs/rux-ds-requests.md`
+     already refuses exactly this move for `rux--date-picker__icon`, and it
+     would have been the same fault: a page inventing a component's insides.
+
+     WHAT THIS IS INSTEAD: `rux--text-input` with `type="time"`, which is the
+     component it really is. The browser draws the clock affordance and gives a
+     keyboard the platform's own entry; Carbon draws the box. If a real time
+     picker is wanted later, that is a request, not a local wrapper.
+
+     The value round-trips as `HH:MM`, which is what `trip_stops` stores. */
+  function timeField(id, label, value) {
+    const outer = el('div', 'rux--text-input__field-outer-wrapper');
+    const wrap = el('div', 'rux--text-input__field-wrapper');
+    const input = el('input', 'rux--text-input');
+    input.type = 'time';
+    input.id = id;
+    // `trip_stops` times come back as HH:MM:SS; the control wants HH:MM.
+    input.value = value ? String(value).slice(0, 5) : '';
+    wrap.appendChild(input);
+    outer.appendChild(wrap);
+    return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
+  }
+
   function selectField(id, label, value, options) {
     const box = el('div', 'rux--select rux--layout--size-md');
     const lab = el('label', 'rux--label', label);
@@ -1068,6 +1108,7 @@
     { key: 'req_ada', get: f => f['sch-f-ada'].checked },
     { key: 'req_56pax', get: f => f['sch-f-56pax'].checked },
     { key: 'notes', get: f => f['sch-f-notes'].value.trim() || null },
+    { key: 'notes', get: f => f['sch-f-notes'].value.trim() || null },
   ];
 
   let editing = null;   // { id, before: {...} }
@@ -1081,6 +1122,47 @@
     if (Object.values(f).some(v => !v)) return null;
     const out = {};
     for (const e of EDITS) out[e.key] = e.get(f);
+    return out;
+  }
+
+  // `trip_stops` stores HH:MM:SS; the control speaks HH:MM. Comparing the two
+  // shapes would mark an untouched field dirty on every open, so both sides are
+  // cut to HH:MM before anything is compared or sent.
+  const hhmmOrNull = t => (t ? String(t).slice(0, 5) : null);
+
+  /* WHAT THE SCHEDULE SECTION WOULD WRITE, as one update per row and only for
+     rows that changed. Returns [] when nothing moved, which is what lets Save
+     stay dead on a panel where only a time was typed and typed back.
+
+     A MISSING ROW IS NOT AN ERROR AND NOT AN INSERT. A leg with no `pickup`
+     stop has nowhere to put a departure, and inventing the row here would be
+     writing an itinerary from a form that does not describe one -- position,
+     type and the rows around it are the itinerary editor's business, and that
+     is `screen-inventory.md`'s "later". The controls render empty and disabled
+     in that case -- see the disable loop where they are built. */
+  function stopsPatch() {
+    if (!editing?.stops) return [];
+    const val = id => document.getElementById(id)?.value.trim() ?? '';
+    const out = [];
+    const p = editing.stops.pickup;
+    if (p) {
+      const patch = {};
+      const where = val('sch-f-pickup') || null;
+      const depart = val('sch-f-depart') || null;
+      const spot = val('sch-f-spot') || null;
+      // The two name parts are shown joined and are edited as one string, so
+      // the whole of it goes back to `name` and `address` is left alone rather
+      // than guessed at from a separator the person may have typed themselves.
+      if (!same(where, p.where)) patch.name = where;
+      if (!same(depart, p.depart_prev)) patch.depart_prev = depart;
+      if (!same(spot, p.spot)) patch.spot = spot;
+      if (Object.keys(patch).length) out.push({ id: p.id, patch });
+    }
+    const b = editing.stops.back;
+    if (b) {
+      const arrive = val('sch-f-return') || null;
+      if (!same(arrive, b.arrive)) out.push({ id: b.id, patch: { arrive } });
+    }
     return out;
   }
 
@@ -1120,7 +1202,12 @@
     startEl?.setAttribute('aria-invalid', String(!startOk));
     // A NEW TRIP IS SAVEABLE WITH NOTHING CHANGED, because its defaults are
     // already a real trip -- the dirty test is for edits, not for creation.
-    const nothingToDo = !editing?.creating && (!patch || Object.keys(patch).length === 0);
+    // A SCHEDULE EDIT IS A REAL EDIT. Save is armed by the trip patch OR by a
+    // stop patch; asking only the first left a panel where changing the spot
+    // time did nothing and Save stayed grey.
+    const stopWork = stopsPatch().length > 0;
+    const nothingToDo = !editing?.creating && !stopWork
+      && (!patch || Object.keys(patch).length === 0);
     panelSave.disabled = !startOk || !destOk || nothingToDo;
   }
 
@@ -1216,6 +1303,21 @@
       return_end_date: trip.return_end_date ?? trip.return_start_date ?? null,
     } };
 
+    /* THE SCHEDULE'S BEFORE IS KEPT APART FROM THE TRIP'S, because it is a
+       different table. `EDITS`/`patchOf` build a patch for `trips`; these four
+       fields are rows in `trip_stops`, so they diff separately and write
+       separately. Folding them into one patch object would have `trips.update`
+       sent columns it does not have. */
+    editing.stops = creating ? null : (() => {
+      const { pickup, back } = stopsOfLeg(trip, legName);
+      return {
+        pickup: pickup ? { id: pickup.id,
+          where: [pickup.name, pickup.address].filter(Boolean).join(' — ') || null,
+          depart_prev: hhmmOrNull(pickup.depart_prev), spot: hhmmOrNull(pickup.spot) } : null,
+        back: back ? { id: back.id, arrive: hhmmOrNull(back.arrive) } : null,
+      };
+    })();
+
     panelDetails.replaceChildren();
     const form = el('div', 'rux--stack-vertical rux--stack-scale-5');
     form.append(
@@ -1266,15 +1368,60 @@
     // NO LEG YET, SO NOTHING TO SAY ABOUT ONE. The section describes the bar
     // that was clicked, and in create mode there is no bar; showing it with
     // blanks would read as data that failed to load.
-    if (!creating) panelDetails.appendChild(section('This leg', def([
-      ['Leg', legName === 'return' ? 'Return' : 'Outbound'],
-      ['When', when],
-      // THE SPOT TIME HAS A HOME HERE. The bar's one line of times could hold
-      // departure and return and no more; be-at-the-yard is read in the panel.
-      ['Departs', hhmm(leg.depart)],
-      ['Spot', hhmm(leg.spot)],
-      ['Returns', hhmm(leg.back)],
-    ])));
+    /* SCHEDULE REPLACED A READOUT WITH THE THING ITSELF, 2026-09-09 on rux's
+       call. This was `This leg`: a `sch-def` list showing Leg, When, Departs,
+       Spot and Returns, 146px of text nobody could act on, sitting above a
+       284px `Itinerary` structured list nobody could act on either. Between
+       them they were 430px of a 729px panel -- more than the 405px the panel
+       overflowed by -- so the editor scrolled to show two things it would not
+       let you change. Both are gone; these four controls are what most trips
+       actually need set.
+
+       THE STOPS ARE THE STORE, NOT THE TRIP COLUMNS, and that is not a
+       preference. `trips.departure_time`, `spot_time` and `return_time` are
+       null on all 743 rows -- counted 2026-09-06, see the select above -- and
+       `timesOf` reads the stops, using those columns only as a fallback that
+       has never once been taken. `spot` has no column fallback at all. So a
+       Schedule that wrote the trip would save values the BOARD DOES NOT READ:
+       the field would change, Save would succeed, and the bar would not move.
+
+       LEG-SCOPED, because a drop-off and pick-up trip has two of these and the
+       panel is opened from one bar, which IS one leg. `stopsOfLeg` picks the
+       same pickup and return rows `timesOf` places the bar from, so what is
+       edited here and what is drawn there cannot disagree.
+
+       NOT IN CREATE MODE. A trip being made has no stops to edit and no leg to
+       scope them to; the section appears once the trip exists, which is the
+       rule `This leg` already followed and for the same reason. */
+    if (!creating) {
+      const { pickup, back } = stopsOfLeg(trip, legName);
+      const sched = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      const times = el('div', 'sch-times');
+      times.append(
+        timeField('sch-f-depart', 'Yard depart', pickup?.depart_prev),
+        timeField('sch-f-spot', 'Spot', pickup?.spot),
+        timeField('sch-f-return', 'Return', back?.arrive),
+      );
+      sched.append(
+        textField('sch-f-pickup', 'Pickup location',
+          [pickup?.name, pickup?.address].filter(Boolean).join(' — ')),
+        times,
+      );
+      /* A CONTROL WITH NO ROW BEHIND IT IS DISABLED, NOT MERELY EMPTY. Three of
+         these write the leg's `pickup` stop and one writes its `return` stop,
+         and `stopsPatch` refuses to invent either -- making the row is the
+         itinerary editor's job, not this form's. An enabled input that silently
+         cannot save is the fault this whole section exists to remove, so the
+         missing case says so instead. */
+      for (const [id, row] of [['sch-f-pickup', pickup], ['sch-f-depart', pickup],
+                               ['sch-f-spot', pickup], ['sch-f-return', back]]) {
+        if (row) continue;
+        const input = sched.querySelector(`#${id}`);
+        if (input) { input.disabled = true; input.title = 'This leg has no stop to hold it yet.'; }
+      }
+      panelDetails.appendChild(section(
+        legName === 'return' ? 'Schedule — return leg' : 'Schedule', sched));
+    }
 
     // FLEET IS THE BUS AND WHO IS ON IT, and nothing else -- the leg's own
     // dates and times are in Details, above the editor they belong to. Both
@@ -1292,28 +1439,6 @@
       ['Drivers', names.join(', ') || (assign ? 'None assigned' : null)],
       ['Needs', reqs],
     ]));
-
-    const stops = creating ? [] : (trip.trip_stops || [])
-      .filter(st => (st.leg || 'outbound') === legName)
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    if (stops.length) {
-      const list = el('div', 'rux--structured-list rux--structured-list--condensed');
-      list.setAttribute('role', 'table');
-      const body = el('div', 'rux--structured-list-tbody');
-      body.setAttribute('role', 'rowgroup');
-      for (const st of stops) {
-        const row = el('div', 'rux--structured-list-row');
-        row.setAttribute('role', 'row');
-        const when = el('div', 'rux--structured-list-td rux--structured-list-content--nowrap', hhmm(st.depart_prev) || hhmm(st.arrive) || '');
-        when.setAttribute('role', 'cell');
-        const what = el('div', 'rux--structured-list-td', [st.label, st.name, st.address].filter(Boolean).join(' — ') || st.type || 'Stop');
-        what.setAttribute('role', 'cell');
-        row.append(when, what);
-        body.appendChild(row);
-      }
-      list.appendChild(body);
-      panelDetails.appendChild(section('Itinerary', list));
-    }
 
     // The module claims a picker on load; these were built just now, so it is
     // asked again for this subtree.
@@ -1658,11 +1783,34 @@
          exists, it simply has no bus, so it appears in the Unassigned row
          where it can be dragged onto one. The message says exactly that
          instead of claiming the whole thing failed. */
-      const { data: made, error } = await withTimeout(
-        (creating
-          ? client.from('trips').insert(row).select('id').single()
-          : client.from('trips').update(row).eq('id', id)).then(r => r));
+      /* THE TRIP PATCH CAN BE EMPTY WHILE THERE IS STILL WORK. Editing only a
+         time leaves `patch` with no keys, and `trips.update({})` is a request
+         that changes nothing and may error on an empty body, so it is skipped
+         rather than sent. */
+      const stopWork = creating ? [] : stopsPatch();
+      const tripWork = creating || Object.keys(row || {}).length > 0;
+      const { data: made, error } = tripWork
+        ? await withTimeout((creating
+            ? client.from('trips').insert(row).select('id').single()
+            : client.from('trips').update(row).eq('id', id)).then(r => r))
+        : { data: null, error: null };
       if (error) throw new Error(error.message);
+
+      /* THE STOPS GO SECOND AND ONE ROW AT A TIME. There are at most two, they
+         are separate rows with separate ids, and Supabase has no multi-row
+         update by differing values -- an upsert would need every column of
+         both rows, which would write back stale copies of the itinerary
+         columns this form never showed.
+
+         IF A STOP WRITE FAILS THE TRIP WRITE STANDS, the same honest outcome
+         the assignment write below already takes: the trip is saved, the time
+         is not, and the message says which rather than claiming everything
+         failed. */
+      for (const w of stopWork) {
+        const { error: sErr } = await withTimeout(
+          client.from('trip_stops').update(w.patch).eq('id', w.id).then(r => r));
+        if (sErr) throw new Error(`The trip saved, but the schedule did not: ${sErr.message}`);
+      }
       if (wantBus && made?.id) {
         const { error: aErr } = await withTimeout(client.from('trip_assignments')
           .insert({ trip_id: made.id, bus_id: wantBus, leg: 'outbound', position: 0 }).then(r => r));

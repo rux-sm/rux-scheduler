@@ -4,6 +4,63 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-09 - the Details tab restructured, and a correction that inverted
+where it writes.** rux asked to strip the itinerary down to a pickup location
+and three times, after a five-tab mockup from rux-ui. The structure was the
+easy half; the store was not.
+
+**I TOLD RUX THREE OF THE FOUR FIELDS WERE ALREADY COLUMNS AND THAT WAS WRONG
+WHERE IT MATTERED.** `trips.departure_time`, `spot_time` and `return_time` do
+exist -- and are **null on all 743 rows**, counted 2026-09-06 and recorded in
+the comment above the select this app has been reading all along. `timesOf`
+takes them only as a fallback that has never been taken; `spot` has no column
+fallback at all. Writing them would have saved values **the board does not
+read**: the field would change, Save would report success, and the bar would
+not move. The Schedule section writes `trip_stops`.
+
+**WHICH TURNS OUT TO BE THE HAPPY VERSION.** All four fields are two rows -- the
+leg's `pickup` stop carries the location, `depart_prev` and `spot`; its `return`
+stop carries `arrive`. Stripping the itinerary is editing those two rows, and
+`stopsOfLeg` is now the ONE place that picks them, extracted from `timesOf` so
+the bar and the panel describing it cannot choose different stops.
+
+**WHAT WENT AND WHAT CAME.** Out: `This leg`, a 146px `sch-def` readout, and
+`Itinerary`, a 284px structured list -- 430px of a 729px panel that could not be
+acted on. In: Pickup location and a two-up row of Yard depart, Spot, Return.
+**Overflow 405 to 191 at 1440x950**, and what remains is a form that scrolls
+rather than a readout that forced it.
+
+**TWO FAULTS CAUGHT BY LOOKING, BOTH MINE, BOTH IN THIS PASS.** First the row
+was three columns: 288 across, 91 each, arithmetically fine and rendered
+"07:5", "03:4", "07:C" -- a `type="time"` control draws "07:50 AM" plus a clock
+and wants about 130. The clipping is in the control's shadow DOM, so
+`scrollWidth` on the input reported nothing and only the screenshot showed it.
+Two columns give 140. Second, and worse, `timeField` first wrapped a
+`rux--text-input` in `rux--time-picker` -- a Carbon name on markup that is not
+that component, since Carbon's time picker is a `__input-field` beside a
+`select` for AM/PM. That is precisely the move `docs/rux-ds-requests.md` refuses
+for `rux--date-picker__icon`. It is a plain Carbon text input in time mode now,
+and `.sch-times` is an `sch-` rule for the row, which Carbon does ship nothing
+for.
+
+**VERIFIED: reads and arming. NOT VERIFIED: the write.** Every bar tested filled
+all four from real stops -- 07:50 AM, 03:45 PM, 07:00 PM on trip 218, matching
+both the bar and the readout that was removed. Save is dead at open, arms on a
+time or a location edit, and dies again when the value is typed back, checked
+on both. **The `trip_stops` update itself was not driven**: the grid needs the
+production sign-in this browser pane has no session for, the same standing limit
+under which `moveToBus` shipped. Two branches are also untested because this
+week's data has neither: a **return-leg** panel, and the **disabled** state for a
+leg missing a `pickup` or `return` row.
+
+**NOT DONE.** Pickup location is a text input, not a select of the saved
+locations -- `settings` holds them and this app does not fetch it. A leg with no
+stop row gets disabled controls rather than an inserted row, deliberately:
+making stops is the itinerary editor's job, which `screen-inventory.md` puts
+later. Billing, Trip Contact, Requirements chips, Files and Grid from the mockup
+are all untouched; Files is blocked upstream, `rux--file-uploader` not being in
+the pin. `node tools/check.mjs` passes.
+
 **2026-09-08 - custom themes were vendored, unlinked and failing in silence.**
 rux-ds noticed it and sent the one line; every claim in it was checked here
 before the line went in, and the round trip was driven live afterwards.
