@@ -10,6 +10,225 @@ with the tag that carried it.
 
 ---
 
+## Open — a contained-list row action never centres, 2026-09-10
+
+**Asked for:** `inset-block: 0` and `align-items: center` on
+`.rux--contained-list-item__action`, so the row's control sits in the middle
+of the row rather than at one end of it.
+
+**Why:** the rule is `position: absolute` with `inset-block-start: 0`, no
+`inset-block-end` and no `align-items` (`css/rux.css:10752-10760`). The
+action box is therefore as tall as its own content and pinned to the top, so
+the row's height never reaches it. Any list whose rows are taller than its
+action control shows the control off-centre.
+
+**IT IS INVISIBLE AT `size-sm` AND ONLY THERE.** A 32px row holding a 32px
+button has nowhere to be off-centre, which is why this survives: `size-sm` is
+the common case. It appears the moment a list is sized up.
+
+**MEASURED ON BOTH SERVED PAGES, including rux-ds's own sink:**
+
+| page | list size | row | control | above | below |
+|---|---|---|---|---|---|
+| `/rux-scheduler/` Billing, payments | `md` | 44px | 32px icon button | **0** | 12 |
+| `/rux-ds/sink/contained-list.html` | `lg` | 40px | 22px text button | **19** | 0 |
+
+The sink's own `--on-page` list shows it too, at the opposite end of the row —
+so the component's demo does not display the alignment the component implies,
+and the direction of the error is not even stable between the two.
+
+**What this app did meanwhile:** the two declarations above, in
+`rux-overrides.css`, on the same one-class selector Carbon uses, so the
+cascade settles it and no `!important` is involved. It should be deleted once
+the component centres its own action. The header's action is left alone —
+that band is 32px around a 32px button, so there is nothing to centre.
+
+**Not asked for:** any change to `justify-content: flex-end` or to the
+`pointer-events` pairing, both of which are correct as they stand.
+
+---
+
+## Open — `contained-list__label` has no typography, 2026-09-10
+
+**Asked for:** a `font` declaration on `.rux--contained-list__label` — most
+simply `font: inherit`, so the label takes the `__header` typography the
+variant rules already set. Alternatively, change the sink's markup and say in
+the docs which element the label must be.
+
+**Why:** `.rux--contained-list__label` sets `inline-size: 100%` and nothing
+else (`css/rux.css:10566`). The font is set one level up, on the header —
+`--on-page` gives it `heading-compact-01` (`:10616`), `--disclosed` gives it
+`label-01` (`:10635`). Neither reaches the text, because the label element's
+own rule beats the inherited value. rux-ds ships a bare
+`h3 { font-size: var(--rux-heading-04-font-size, 1.75rem) }`, so an `<h3>`
+label renders at **28px** — and `sink/contained-list.html:26` uses exactly
+that markup, so the component's own demo does not show the typography the
+component defines.
+
+**MEASURED ON BOTH SERVED PAGES.** Computed values, workspace server:
+
+| page | element | computed | what the variant asks for |
+|---|---|---|---|
+| `/rux-scheduler/` Billing tab | `h3.rux--contained-list__label` | 28px / 400 | 14px / 600 |
+| same, its `__header` | `.rux--contained-list__header` | 14px / 600 | 14px / 600 |
+| `/rux-ds/sink/contained-list.html` | `h3` label, `--on-page` | 18.72px / 700 | 14px / 600 |
+| same, its `__header` | `.rux--contained-list__header` | 16px / 400 | 14px / 600 |
+
+The sink's own header at 16px/400 rather than 14px/600 is a second finding
+inside the first, and not one this app can explain from outside.
+
+**What this app did meanwhile:** used a `<div class="rux--contained-list__label"
+role="heading" aria-level="3">` instead of an `<h3>`, which inherits correctly
+and keeps the heading in the accessibility tree. That is a change of element in
+app markup, not a rule on a `rux--*` class, so it stays inside `AGENTS.md`. It
+should be reverted to an `<h3>` once the label carries its own font. At 28px
+the heading matched the `big-number` value beside it and was 2.3x every other
+section title on the tab, which is how it was noticed.
+
+---
+
+## Open — four dark themes wearing white's tag colours, 2026-09-10
+
+**ANSWERED ON rux-ds `main` AT `4814f15` ("feat(theme): Add dark tag tokens
+to four themes"), IN NO TAG, and VERIFIED FROM THIS APP'S OWN PAGE rather
+than from theirs.** All 62 values are in each of the four blocks. Carbon
+ships only two sets for these families — white and g10 identical for all 62,
+g90 and g100 for 58 — so the ask was transcription, as this entry guessed,
+and the four values that are not copied are the notification surfaces, which
+take each theme's own `layer-01`: geist #0a0a0a, linear #141419, ant-dark
+#141414, spotify #181818.
+
+**MEASURED ON `/rux-scheduler/` ON THE WORKSPACE SERVER, ON THE TWO GRIDS
+THIS ENTRY WAS FILED FOR.** A `.sch-bar--blue` computes `#0043ce` with
+`#d0e2ff` text under geist, linear, ant-dark and spotify — byte-identical to
+g90 and g100, where before all four read white's `#d0e2ff` on `#0043ce`. The
+availability grid follows: 51 `--busy` cells blue and 5 `--off` cells
+`#a2191f`, all dark in all four. White is unmoved, still light on both grids.
+
+**ONE CLAIM ABOVE IS WRONG AND IS LEFT STANDING BELOW RATHER THAN EDITED.**
+This entry counted `status-*` at 7. It is 9, so the per-block total is 62 and
+not 60. Nothing else in the report was off, and the `syntax-*`/`ai-*`
+exclusion was read correctly — rux-ds left both deferred.
+
+**WHAT IS NOT COVERED, said there and repeated here.** The three
+`content-switcher-*` values are transcribed but exercised by nothing: they
+only reach the `--low-contrast` variant, and no such switcher exists on
+rux-ds's sink or on any page here. Nobody has looked at one.
+
+**NO PIN TO MOVE** (`AGENTS.md`, "Which rux-ds this app is on"), so this
+reaches the site on its next deploy rather than waiting for a tag. Stays open
+until that deploy is out and the board has been looked at in all four themes.
+
+**Asked for:** `tag-*`, `notification-*`, `status-*` and `content-switcher-*`
+values inside the four theme blocks `css/rux-theme.css` added on 2026-09-10 —
+`[data-theme="geist"]`, `[data-theme="linear"]`, `[data-theme="ant-dark"]`
+and `[data-theme="spotify"]`. Or a statement that these families are deferred
+in those themes the way `syntax-*` and `ai-*` already are, so a consumer knows
+the light values are a decision and not an omission.
+
+**Why:** every trip bar on the board takes its fill from Carbon's tag palette
+(`sch.css:546`, ten hue classes from `:590`), and so do the busy and off cells
+of the driver-availability grid (`:1234`, `:1238`) — deliberately, so the two
+grids read as one system. All four of the new themes are dark. All four render
+those bars pale-blue-on-black.
+
+**MEASURED ON THE SERVED PAGE, NOT REASONED FROM THE SOURCE.** Computed values
+of `<html>` under each theme, at `/rux-scheduler/` on the workspace server:
+
+| theme | `--rux-tag-background-blue` | `--rux-tag-color-blue` |
+|---|---|---|
+| white | `#d0e2ff` | `#0043ce` |
+| g100 | `#0043ce` | `#d0e2ff` |
+| geist, linear, ant-dark, spotify | `#d0e2ff` | `#0043ce` |
+
+The four are byte-identical to white. Each block defines 141 tokens and not one
+of them is a `tag-*`; custom properties inherit, so all 40 fall through to
+white's compiled `:root`.
+
+**IT IS CARBON'S OWN TAG THAT IS WRONG, NOT THIS APP'S BAR.** Worth stating
+because the first guess was that `sch-` components are the problem — an app
+element that themes were never built to account for. They are not. A bare
+`<div class="rux--tag rux--tag--blue">` injected into the page computes to the
+same `rgb(208, 226, 255)` on `rgb(0, 0, 0)` under geist and spotify. `sch.css`
+is reading the token it is supposed to read; the token behind it is light.
+
+**FOUR FAMILIES, 60 TOKENS, AND NONE OF IT IS THIS APP'S TO INVENT.** Diffing
+g100's values against `:root` for names the four blocks never mention: `tag-`
+40, `notification-` 10, `status-` 7, `content-switcher-` 3. `syntax-` 88 and
+`ai-` 19 are in the same position but are **not** part of this request —
+`css/rux-theme.css`'s own header already records those two as deliberately
+deferred, and a request that swept them in would be asking to reopen a decision
+rux-ds made on purpose.
+
+**THE VALUES LOOK DETERMINED RATHER THAN CHOSEN, which is why this is worth
+asking for rather than living with.** Carbon appears to ship only two sets:
+g90 and g100 are identical for all 40 `tag-*`, all 7 `status-*` and all 3
+`content-switcher-*`, and white and g10 are identical to each other. Six of the
+ten `notification-*` match across g90/g100 too; the four that differ are each
+theme's own `layer-01`, which all four blocks already define. So the ask is
+mostly transcription, not a palette design — measured here, and stated as what
+it looked like from this side rather than as a finding rux-ds has to accept.
+
+**WHAT THIS APP IS DOING MEANWHILE: nothing, and that is the point.** A
+`[data-theme="geist"]` block in this repository's own `rux-theme.css` would
+mean inventing ten hue ramps for a theme this app does not own, for four
+themes, and it would still leave Carbon's own tags, notifications and
+indicators light-on-black everywhere else on the shared origin. `AGENTS.md`:
+everything under `/rux-ds/` is rux-ds's, and a missing rule is a request with
+invented content, never a local rule. The bars stay wrong in those four themes
+until this lands; g90, g100, white and g10 are unaffected, and the app opens in
+g90.
+
+**What it is not:** not a request to change `rux--tag`, `rux--notification` or
+either indicator — no component rule is wanted, only token values. Not a
+request for `syntax-*` or `ai-*`. Not a request for a fifth theme, or for
+anything about the four palettes' own core tokens, which are complete.
+
+---
+
+## Open — no icon in the sprite says "money", 2026-09-10
+
+**Asked for:** four glyphs in `assets/icons.svg`, enough to tell payment
+methods apart at 16px — a card, a bank, a note or coin, and a cheque. Carbon
+ships `credit-card`, `bank`, `money`, `currency--dollar` and `receipt`; any
+four of those would do. Or a ruling that payment methods are text-only, so
+this app stops asking.
+
+**Why:** the trip editor's Billing tab now records payments, each with a
+method — Cash, Check, Card, ACH, Zelle, Other, the six rux-ui writes into
+`trip_payments.method`. Carbon's `contained-list` has a `--with-icon`
+variant built for exactly this shape, and rux asked for it by name after
+seeing Carbon's own live demo of it.
+
+**THE SPRITE HAS 63 SYMBOLS AND NONE OF THEM IS MONEY.** Counted, not
+guessed: `grep -c '<symbol' assets/icons.svg` is 63, and a search across
+their ids for `money|card|cash|bank|currency|wallet|receipt|payment|dollar`
+returns nothing. The nearest things in it are `i-document`, `i-copy` and
+`i-checkmark`, none of which mean a payment method — pressing one of those
+into service would be a glyph that lies, which is worse than no glyph.
+
+**WHAT THIS APP IS DOING MEANWHILE — updated 2026-09-10.** First the method
+was a WORD in a coloured `rux--tag`: `Check · 09/10/2026 · $200 · deposit`.
+That wrapped onto a second line in a 288px panel, which is the measurement
+that moved it on. It is now a THREE-LETTER CODE in that tag — CSH, CHK, CRD,
+ACH, ZLE, OTH — at rux's suggestion, sized like the glyph that will replace
+it, with the full method name on the tag's `title` and in the row's
+`aria-label` so the abbreviation is never the only name. Rows are a single
+32px line at every method and reference length.
+
+**THAT MAKES THE REQUEST STRONGER, NOT WEAKER,** and this entry said the
+opposite before it was tested. It argued the word "needs no learning" where
+an icon set does — true, but the word did not fit, and what fits is `CHK`,
+which needs exactly as much learning as a cheque glyph and carries less
+meaning at a glance. The panel width is fixed at 320px, measured from an
+800px viewport to a 1500px one, so this does not come back at a larger
+window. Weigh it as a legibility request now rather than a polish one.
+
+**What it is not:** not a request for a status or badge icon, and not a
+request to change `contained-list`. Only sprite entries.
+
+---
+
 ## Open — no combo box that filters, 2026-09-09
 
 **Asked for:** the filtering half of `rux--combo-box` in `js/list-box.js` -- a
@@ -58,11 +277,34 @@ fields cannot follow.
 
 **THE FORMAT IS HARD-CODED IN TWO DIRECTIONS.** `js/date-picker.js` reads with
 `parse()`, whose regex is `^(\d{4})-(\d{2})-(\d{2})$` and which returns null
-for anything else (`:126`). It writes with `pick()`, which assigns the ISO
-`dateStr` straight into the field at four places (`:257`, `:266`, `:271`,
-`:272`). So a field showing mm/dd/yyyy is a field the module cannot read: no
+for anything else (`:184`). It writes with `pick()`, which assigns the ISO
+`dateStr` straight into the field at four places (`:329`, `:338`, `:343`,
+`:344`). So a field showing mm/dd/yyyy is a field the module cannot read: no
 calendar position, no range arithmetic, and the first pick overwrites the
 display anyway.
+
+**LINE NUMBERS CORRECTED 2026-09-10, and the reason is a trap worth naming.**
+This section first cited `:126` and `:257`–`:272`. Those are real lines with
+exactly that code -- in `m/guided/vendor/rux-ds/js/date-picker.js`, the
+VENDORED copy. The module a consumer actually loads is `js/date-picker.js` at
+the repository root, where the same code sits at the numbers above; `:126`
+there is a sentence in the header comment. Anyone opening the cited line in
+the live file finds prose and concludes the report is stale. The claims were
+never wrong, only the addresses.
+
+**RE-VERIFIED 2026-09-10 against `js/date-picker.js`, and the read is wider
+than "range arithmetic" made it sound.** The field's value is the module's
+whole state, and it is parsed back in three more places than the pick path:
+
+    :226   var view   = parse(inputs[0].value) || today
+    :228   var cursor = parse(inputs[0].value) || today
+    :232   inputs.map(function (i) { return parse(i.value); })
+
+Which month the calendar OPENS on, where the keyboard cursor starts, and which
+days draw as selected or in-range are all decided by re-reading the input. A
+mm/dd/yyyy field does not degrade to "the display is right and the internals
+lag" -- it opens on today's month with nothing highlighted, on a trip in
+September.
 
 **THERE IS NO HOOK TO USE INSTEAD.** No `data-rux-*` is consulted for a format
 -- the only dataset read in the module is `ruxDate` on the day buttons.
@@ -76,6 +318,21 @@ the dates this app renders itself -- the Billing tab's payments list today --
 and the picker's inputs are left in ISO rather than fought with. Writing a
 display layer over a module that owns the field is the shape of workaround
 `AGENTS.md` forbids.
+
+**THE SURFACE GREW, 2026-09-10.** When this was filed the trip editor showed
+two ISO fields. It shows four: `Drop-off start`/`end` and `Pick-up start`/`end`
+on Details -- the return pair moved up beside the outbound one the same day --
+plus `Date paid` on Billing. Every date a person can EDIT in this product is
+now one the module owns and prints in ISO, while every date the product prints
+itself is American. rux asked again on 2026-09-10 and was told no local fix
+would be honest; this entry is what that answer rests on.
+
+**THE LOCAL VERSION WAS COSTED, so the trade is on the record rather than
+re-derived.** It is a hidden ISO input per picker for the module to own, a
+visible mm/dd/yyyy text input for the person, two-way sync between them, and
+`FIELDS` getters pointed at the hidden twin -- four fields' worth. That is two
+places that must agree about one number, which `docs/log.md` records an
+afternoon of under `fitPanelRoom`. Declined on that basis, not on effort.
 
 **What it is not:** not a request to change the internal value, the calendar,
 or who owns the input. Only what the person reads.
