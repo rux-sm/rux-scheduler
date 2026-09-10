@@ -1641,15 +1641,27 @@
     const p = index === null ? { date: iso(new Date()) } : payPending[index];
     document.getElementById('sch-payment-h').textContent =
       index === null ? 'Add payment' : 'Edit payment';
-    const stack = el('div', 'rux--stack-vertical rux--stack-scale-5');
-    stack.append(
+    /* TWO COLUMNS, BECAUSE THE DIALOG IS 623px WIDE FOR FOUR SHORT FIELDS.
+       Stacked, it was a column of full-width boxes down the middle of a modal
+       three times wider than any value in it, and `Done` sat a long way below
+       `Method`.
+
+       THE PAIRING IS BY ROLE, NOT BY THE ROW'S ORDER. Method and Amount are
+       what MAKE a payment -- they are the two `Done` tests before deciding a
+       dialog was left empty, and the two the list row leads with. Date and
+       Reference qualify it: the date is prefilled to today and the reference
+       is optional, so neither should lead. rux suggested Date and Amount
+       first; that puts a prefilled field in the position the eye starts at,
+       and separates the two fields that belong together. */
+    const grid = el('div', 'sch-dialog-grid');
+    grid.append(
       selectField('sch-f-pmethod', 'Method', p.method ?? '',
         [['', '—'], ...PAYMENT_METHODS.map(m => [m, m])]),
       moneyField('sch-f-pamount', 'Amount', p.amount),
       dateOne('sch-f-pdate', 'Date', p.date),
       textField('sch-f-pref', 'Reference', p.ref),
     );
-    host.replaceChildren(stack);
+    host.replaceChildren(grid);
     window.Rux?.datePicker?.init?.(host);
     window.Rux?.modal?.open?.('sch-payment-modal');
   }

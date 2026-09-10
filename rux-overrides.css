@@ -419,3 +419,37 @@
   inset-block: 0;
   align-items: center;
 }
+
+/* A FIELD INSIDE A MODAL HAS ALMOST NO SURFACE, 2026-09-10. `.rux--text-input`
+   paints `var(--rux-field)`, which a modal leaves at `field-01` because the
+   modal is `rux--layer-one`. rux-ds already judged that pairing too weak in
+   one place and fixed it there -- `css/rux.css` carries an explicit
+   `.rux--side-panel .rux--text-input { background-color: var(--rux-field-02) }`
+   across nine field types -- but a modal gets no such rule.
+
+   MEASURED AS THE MEAN RGB DISTANCE between the field and the surface behind
+   it, for the payment dialog against the trip panel two inches away:
+
+     theme     dialog   side panel
+     white       71        62
+     g10         12        16
+     g90         64        78
+     g100         5        24
+     geist       14        27
+     spotify      6        14
+
+   Five, in g100. The field and the modal are the same colour to a reader,
+   which is what rux saw. The dialog is weaker than the panel in every theme
+   but white, and the two sit on screen together.
+
+   THE SAME REMEDY AND THE SAME SPECIFICITY as rux-ds's own side-panel rule --
+   two classes, no `!important`, a different ancestor -- so this applies only
+   where theirs does not and neither has to win. Filed; delete when modals
+   carry it upstream. Stepping the modal to `rux--layer-two` was tried first
+   and is worse: it moves the container too, leaving a 6-unit step. */
+.rux--modal .rux--text-input,
+.rux--modal .rux--text-area,
+.rux--modal .rux--select-input,
+.rux--modal .rux--date-picker__input {
+  background-color: var(--rux-field-02);
+}

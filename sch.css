@@ -951,6 +951,17 @@ button.sch-row-head__num {
 .sch-po-coverage { margin-block-start: calc(-1 * var(--rux-spacing-03)); }
 .sch-po-coverage--short { color: var(--rux-text-error); }
 
+/* The payment dialog's fields, two to a row. `minmax` rather than `1fr 1fr`
+   so the pair collapses to one column if the modal is ever narrower than the
+   two fields plus their gap — and unlike the auto-fit grid this file tried on
+   the billing figures, this one fires in both directions at widths the modal
+   actually reaches: two columns at its 623px, one below about 400px. */
+.sch-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--rux-spacing-05);
+}
+
 /* A milestone's fields, shown only while its switch is on. The rule is needed
    because the block is also a `rux--stack-vertical`, which is `display: grid`
    — that beats the user agent's own `[hidden] { display: none }`, so the bare
