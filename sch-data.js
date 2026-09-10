@@ -201,6 +201,10 @@
     'c5:trip_contact_5_id(id,name,phone)',
     'quoted_price,deposit_amount,invoice_number,po_ref,po_amount',
     'contract_status,invoice_status,balance_paid,date_paid',
+    // The three the billing switches gate, added 2026-09-10 with them.
+    // `po_received` and `invoiced` are booleans, never null on any of the 779
+    // rows; `contract_note` is free text and non-null on 18, all of them signed.
+    'contract_note,po_received,invoiced',
     // 34 rows across the table today. Read-only here: the old app REWRITES every
     // row of a trip on save, which is an editor of its own, not a panel field.
     'trip_payments(id,position,amount,method,date,ref)',
@@ -855,12 +859,14 @@
   const panelDetails = document.getElementById('sch-panel-details');
   const panelFleet = document.getElementById('sch-panel-fleet');
   const panelBilling = document.getElementById('sch-panel-billing');
+  const panelSchedule = document.getElementById('sch-panel-schedule');
   const panelSave = document.getElementById('sch-panel-save');
+  const panelReset = document.getElementById('sch-panel-reset');
+  const panelCancel = document.getElementById('sch-panel-cancel');
 
   const panelEl = document.getElementById('sch-panel');
   const tripEl = document.getElementById('sch-trip');
   const panelBody = document.getElementById('sch-panel-body');
-  void panelBody;   // kept as the scroll container's handle; content goes in the tabs
   const panelTitle = document.getElementById('sch-panel-title');
   const panelTitleCollapsed = document.getElementById('sch-panel-title-collapsed');
   const pageEl = document.querySelector('.sch-page');
@@ -869,14 +875,40 @@
     const dl = el('dl', 'sch-def');
     for (const [k, v] of rows) {
       if (!v) continue;
-      dl.append(el('dt', null, k), el('dd', null, v));
+      // A value may be a node, so a row can carry a tag rather than a word.
+      const dd = el('dd');
+      if (v instanceof Node) dd.appendChild(v); else dd.textContent = v;
+      dl.append(el('dt', null, k), dd);
     }
     return dl;
   };
 
-  const section = (title, node) => {
+  /* A SECTION CAN CARRY AN INLINE ACTION, 2026-09-10. The billing milestones
+     put their switch on the heading line rather than under it, which is what
+     rux drew and what saves the panel three stacked `label + switch + "On"`
+     blocks.
+
+     WHY NOT A `contained-list` HEADER, which is the component that already
+     does exactly this two pixels above on the same tab: because its body is a
+     `<ul>` of `contained-list-item`s, and Contract, PO and Invoice hold FORM
+     FIELDS, not rows. Putting a text input in a list item would be borrowing
+     a component's shell for content it was not built for -- the same fault
+     `docs/rux-ds-requests.md` records for `rux--date-picker__icon` and for
+     `rux--time-picker`. Payments stays a real contained-list because it
+     genuinely has rows; these three get app chrome that MATCHES it, at the
+     same 12px/400 and the same `size-sm` height, so the tab still reads as
+     one system. */
+  const section = (title, node, action) => {
     const wrap = el('div', 'sch-panel-section');
-    wrap.append(el('div', 'sch-panel-section__title', title), node);
+    // A titleless section is still a section: it keeps the `spacing-06` above
+    // it. Billing's summary opens the tab, so a "Summary" heading over the
+    // first thing on screen names what is already obvious.
+    if (!title) { wrap.appendChild(node); return wrap; }
+    const head = el('div', 'sch-panel-section__title', title);
+    if (!action) { wrap.append(head, node); return wrap; }
+    const bar = el('div', 'sch-panel-section__head');
+    bar.append(head, action);
+    wrap.append(bar, node);
     return wrap;
   };
 
@@ -945,7 +977,29 @@
     return item;
   };
 
-  function textField(id, label, value) {
+  /* A FIELD WHOSE SECTION HEADING ALREADY NAMES IT drops the visible label and
+     keeps the name, 2026-09-10. "Contract" over "Contract note" over an empty
+     box is the label said twice; rux asked for the second one to become a
+     placeholder.
+
+     THE PLACEHOLDER IS NOT THE LABEL, and this is the part that had to be got
+     right rather than done the quick way. A placeholder is not exposed as an
+     accessible name by every screen reader, it is not read at all by some
+     once the field has content, and it disappears the moment anyone types --
+     WCAG 3.3.2 is about exactly this. So the label survives as `aria-label`
+     on the input and only its rendered `<label>` element goes. The
+     accessibility tree is unchanged; the pixels are not.
+
+     WHY NOT `aria-labelledby` POINTING AT THE HEADING: because the heading
+     says "Purchase order" while the two fields under it are the reference and
+     the amount, so it names neither. The full name is written out instead. */
+  const BARE = (control, cls = 'rux--form-item') => {
+    const item = el('div', cls);
+    item.appendChild(control);
+    return item;
+  };
+
+  function textField(id, label, value, placeholder) {
     const outer = el('div', 'rux--text-input__field-outer-wrapper');
     const wrap = el('div', 'rux--text-input__field-wrapper');
     const input = el('input', 'rux--text-input');
@@ -954,7 +1008,10 @@
     input.value = value ?? '';
     wrap.appendChild(input);
     outer.appendChild(wrap);
-    return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
+    if (!placeholder) return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
+    input.placeholder = placeholder;
+    input.setAttribute('aria-label', label);
+    return BARE(outer, 'rux--form-item rux--text-input-wrapper');
   }
 
   /* A CARBON TEXT INPUT IN TIME MODE, AND DELIBERATELY NOT `rux--time-picker`.
@@ -1032,13 +1089,45 @@
     return box;
   }
 
+  /* THE SAME TOGGLE WITH ITS LABEL TAKEN OFF, for a section heading that
+     already says what the switch is for. `setToggle` needs the `.rux--toggle`
+     root, the `__button`, the `__switch` and the `__text` -- all still here;
+     only the `__label-text` span is gone, so nothing about rux-ds's behaviour
+     changes. The name moves to `aria-label` on the button, because an empty
+     `<label>` would leave the control unnamed for a screen reader, and the
+     heading beside it is not programmatically associated.
+
+     "On"/"Off" STAYS VISIBLE. It is hard-coded in `setToggle` and cannot be
+     ours (see `toggleField`), and beside a heading that reads "Contract" it
+     is the only thing saying which way the switch is thrown. */
+  function toggleAction(id, label, on) {
+    const box = el('div', 'rux--toggle');
+    const btn = el('button', 'rux--toggle__button');
+    btn.type = 'button';
+    btn.id = id;
+    btn.setAttribute('role', 'switch');
+    btn.setAttribute('aria-checked', String(!!on));
+    btn.setAttribute('aria-label', label);
+    const lab = el('label', 'rux--toggle__label');
+    lab.setAttribute('for', id);
+    const appearance = el('div', 'rux--toggle__appearance');
+    const sw = el('div', 'rux--toggle__switch');
+    if (on) sw.classList.add('rux--toggle__switch--checked');
+    const text = el('span', 'rux--toggle__text', on ? 'On' : 'Off');
+    text.setAttribute('aria-hidden', 'true');
+    appearance.append(sw, text);
+    lab.appendChild(appearance);
+    box.append(btn, lab);
+    return box;
+  }
+
   /* MONEY IS A TEXT INPUT WITH A DECIMAL KEYBOARD, not `rux--number-input`.
      Carbon's number input ships stepper buttons -- `rux--number__controls` and
      two `__control-btn`s -- and a quoted price is not a thing anyone steps by
      one. Building that markup to then hide the steppers would be inventing a
      variant; `inputmode="decimal"` gives a phone the right keypad and the
      control stays the component it looks like. */
-  function moneyField(id, label, value) {
+  function moneyField(id, label, value, placeholder) {
     const outer = el('div', 'rux--text-input__field-outer-wrapper');
     const wrap = el('div', 'rux--text-input__field-wrapper');
     const input = el('input', 'rux--text-input');
@@ -1048,7 +1137,10 @@
     input.value = (value === null || value === undefined) ? '' : String(value);
     wrap.appendChild(input);
     outer.appendChild(wrap);
-    return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
+    if (!placeholder) return FIELD(id, label, outer, 'rux--form-item rux--text-input-wrapper');
+    input.placeholder = placeholder;
+    input.setAttribute('aria-label', label);
+    return BARE(outer, 'rux--form-item rux--text-input-wrapper');
   }
 
   /* A SEARCH OVER THE CONTACTS, ON THE PLATFORM'S OWN CONTROL, 2026-09-09.
@@ -1097,7 +1189,7 @@
   const contactLabel = c => [c.name, c.client, c.phone].filter(Boolean).join(' - ');
 
   function selectField(id, label, value, options) {
-    const box = el('div', 'rux--select rux--layout--size-md');
+    const box = el('div', 'rux--select');
     const lab = el('label', 'rux--label', label);
     lab.setAttribute('for', id);
     const wrap = el('div', 'rux--select-input__wrapper');
@@ -1295,7 +1387,31 @@
         : (isoOrNull(f['sch-f-rend'].value) ?? isoOrNull(f['sch-f-rstart'].value)) },
     { key: 'customer', get: f => f['sch-f-customer'].value.trim() || null },
     { key: 'trip_type', get: f => f['sch-f-type'].value || null },
-    { key: 'confirmed', get: f => f['sch-f-confirmed'].checked },
+    /* `confirmed`, `balance_paid` AND `date_paid` ARE NOT WRITTEN HERE ANY
+       MORE, 2026-09-10. All three were fields on this form -- a Confirmed
+       toggle, a Balance paid toggle and a Date paid picker -- and all three
+       are columns the rux-ui app DERIVES and overwrites on every save. Two
+       writers, one column, and this one loses.
+
+       VERIFIED AGAINST THE LIVE DATABASE rather than argued: the `settings`
+       row `billing-workflow-v1` reads
+
+           confirmWhen: ["contract_signed","po_received",
+                         "deposit_received","paid_full"]
+
+       so `confirmed` means "a contract is signed, or a PO is in, or a
+       deposit landed, or it is paid in full" -- computed from four other
+       facts, not typed. rux-ui recomputes it in `collectTrip()` on every
+       save; `balance_paid` is `price > 0 && balance <= 0` and `date_paid`
+       is the latest payment's date, both recomputed the same way. Anything
+       a dispatcher set here was going to be silently reverted the next time
+       that trip was opened over there.
+
+       THEY ARE STILL SHOWN, as readouts in the Billing status list, because
+       the values are worth reading; they are simply no longer ours to
+       write. What would let this app own them honestly is editable
+       payments -- the number every one of them derives from -- which is the
+       next piece of work rather than this one. */
     { key: 'req_sleeper', get: f => f['sch-f-sleeper'].checked },
     { key: 'req_ada', get: f => f['sch-f-ada'].checked },
     { key: 'req_56pax', get: f => f['sch-f-56pax'].checked },
@@ -1308,15 +1424,32 @@
        THE TWO STATUSES ARE THE DATA'S OWN WORDS, not booleans. The column is
        text and holds "Pending"/"Signed" and "Pending"/"Invoiced"; storing true
        would be a third value nothing else in the system reads. */
+    /* EACH GATED FIELD IS NULLED BY ITS OWN SWITCH, 2026-09-10, which is what
+       holds the invariant the live table has never broken -- 0 of 779 rows
+       carry a `po_ref` without `po_received`, an `invoice_number` while not
+       Invoiced, or a `contract_note` on an unsigned contract. rux-ui does the
+       same in `collectTrip` (`js/data/trip-db.js:377-379`); this app wrote
+       these four ungated and could therefore have been the first.
+
+       `po_received` AND `invoiced` ARE NEW HERE. `po_received` was never
+       written at all, so a PO typed in this app left the column false and
+       `confirmWhen` never saw it -- the trip stayed unconfirmed with its PO
+       in hand. `invoiced` is the boolean twin of `invoice_status`; the two
+       agree on all 43 Invoiced rows and this app was writing only the text
+       one, which would have split them on the first save. */
     { key: 'quoted_price', get: f => money(f['sch-f-quoted'].value) },
-    { key: 'deposit_amount', get: f => money(f['sch-f-deposit'].value) },
-    { key: 'po_ref', get: f => f['sch-f-poref'].value.trim() || null },
-    { key: 'po_amount', get: f => money(f['sch-f-poamount'].value) },
-    { key: 'invoice_number', get: f => f['sch-f-invnum'].value.trim() || null },
     { key: 'contract_status', get: f => on(f['sch-f-contract']) ? 'Signed' : 'Pending' },
+    { key: 'contract_note',
+      get: f => on(f['sch-f-contract']) ? (f['sch-f-contractnote'].value.trim() || null) : null },
+    { key: 'po_received', get: f => on(f['sch-f-poreceived']) },
+    { key: 'po_ref',
+      get: f => on(f['sch-f-poreceived']) ? (f['sch-f-poref'].value.trim() || null) : null },
+    { key: 'po_amount',
+      get: f => on(f['sch-f-poreceived']) ? money(f['sch-f-poamount'].value) : null },
     { key: 'invoice_status', get: f => on(f['sch-f-invoice']) ? 'Invoiced' : 'Pending' },
-    { key: 'balance_paid', get: f => on(f['sch-f-paid']) },
-    { key: 'date_paid', get: f => isoOrNull(f['sch-f-datepaid'].value) },
+    { key: 'invoiced', get: f => on(f['sch-f-invoice']) },
+    { key: 'invoice_number',
+      get: f => on(f['sch-f-invoice']) ? (f['sch-f-invnum'].value.trim() || null) : null },
     /* THE CONTACT LINKS ARE TRIP COLUMNS, so they diff here rather than with
        the contact's own fields. Read straight from the DOM and not through
        `f`: these controls exist only when a trip is open, and `readForm`
@@ -1340,14 +1473,22 @@
     return e.value.trim() ? (e.dataset.contactId || null) : null;
   };
 
-  /* SAME AS BOOKING POINTS ROW ONE AT THE BOOKING CONTACT and empties the
-     rest. That is what the box means, and writing it here rather than copying
-     values into hidden inputs keeps one answer in one place: the rows are
-     hidden precisely because they are not the thing being answered. */
+  /* EACH ROW ANSWERS FOR ITSELF, since `Same as booking contact` went on
+     2026-09-10. That box used to be the first thing read here -- checked, it
+     pointed row one at the booking contact and emptied the rest -- so its
+     removal had to be paired with this or the five links would have gone
+     silently unwritten.
+
+     THE `!box` GUARD IS THE PART THAT MATTERED, and it is kept on a
+     different element rather than dropped. Returning `undefined` means "the
+     control is not on screen", which is how a getter says DO NOT WRITE; the
+     alternative, `null`, means "on screen and empty" and CLEARS the column.
+     With the checkbox gone the guard hangs on row one's own name field,
+     which exists whenever this block is built and is absent whenever it is
+     not. Without it, opening a trip on a tab that never rendered these rows
+     would read five nulls and wipe every day-of contact the trip had. */
   const dayLink = n => {
-    const box = document.getElementById('sch-f-samecontact');
-    if (!box) return undefined;
-    if (box.checked) return n === 1 ? (linkId('sch-f-cfind') ?? null) : null;
+    if (!document.getElementById('sch-f-d1')) return undefined;
     return linkId(`sch-f-d${n}`) ?? null;
   };
 
@@ -1369,10 +1510,26 @@
 
   function readForm() {
     const f = {};
-    for (const id of ['destination', 'customer', 'type', 'confirmed', 'sleeper', 'ada', '56pax', 'notes',
+    for (const id of ['destination', 'customer', 'type', 'sleeper', 'ada', '56pax', 'notes',
+                      // `confirmed`, `paid` and `datepaid` left this list with
+                      // their controls on 2026-09-10, and had to: a missing id
+                      // makes readForm return null, which on create becomes an
+                      // insert of `{ bus_count: 1 }` -- a trip with no
+                      // destination and no start date that nothing can draw.
+                      // The guard below is what turns that into a loud failure.
+                      // AND A KEY ADDED TO `EDITS` MUST BE ADDED HERE TOO,
+                      // 2026-09-10. The billing switches went into `EDITS`
+                      // first and not into this list, so `f['sch-f-poreceived']`
+                      // was `undefined`, `on(undefined)` returned false, and
+                      // every trip with a PO opened with a phantom patch of
+                      // `{po_received: false, po_ref: null, po_amount: null}`
+                      // -- Save armed on an untouched panel, and pressing it
+                      // would have erased a real PO. The guard below could not
+                      // catch it: an id that is not in this list never becomes
+                      // a key of `f`, so `some(v => !v)` has nothing to test.
                       'start', 'end', 'rstart', 'rend',
-                      'quoted', 'deposit', 'poref', 'poamount', 'invnum',
-                      'contract', 'invoice', 'paid', 'datepaid']) {
+                      'quoted', 'poref', 'poamount', 'invnum',
+                      'contract', 'contractnote', 'poreceived', 'invoice']) {
       f[`sch-f-${id}`] = document.getElementById(`sch-f-${id}`);
     }
     if (Object.values(f).some(v => !v)) return null;
@@ -1419,6 +1576,144 @@
      `backend-inventory.md`, which lists `contacts` as written by both the
      customer editor and the trip editor. The section says so on screen rather
      than letting it be discovered. */
+  /* THE SIX rux-ui OFFERS, in its order. Not a guess and not this app's
+     choice to make: `trip_payments.method` is free text, both apps write it,
+     and a seventh spelling here would be a value the other app's menu cannot
+     round-trip. */
+  const PAYMENT_METHODS = ['Cash', 'Check', 'Card', 'ACH', 'Zelle', 'Other'];
+
+  /* A COLOURED TAG WHERE rux ASKED FOR AN ICON, and the substitution is
+     deliberate rather than a shortfall quietly dressed up. rux-ds's sprite is
+     63 symbols and not one of them means money -- counted 2026-09-10 and filed
+     in docs/rux-ds-requests.md -- so `Check` would have to borrow `i-document`
+     and `Card` `i-copy`, glyphs that say something else. A tag says the true
+     thing in a word AND carries the colour that makes the column scannable,
+     which is what the icons were wanted for. The moment the sprite grows a
+     card, a bank and a cheque, this becomes `--with-icon` and the words stay.
+
+     THE COLOURS ARE NOT A RANKING. Six methods, six of Carbon's tag hues, no
+     order implied -- green is not "better" than red here, and none of these is
+     an error state, so `--red` stays out of it entirely. */
+  /* THREE LETTERS, NOT THE WORD, and this is rux's placeholder for the icons
+     until the sprite has them. A code the width of a glyph buys the row back:
+     `Check · 09/10/2026 · $200 · test payment` wrapped to two lines in a
+     288px panel, and `CHK 09/10/2026 $200` does not.
+
+     THE CODE IS NEVER THE ONLY NAME. `CHK` means nothing to a first-time
+     reader and nothing at all to a screen reader, so the row button carries
+     the full method in its `aria-label` and the tag carries it in `title` --
+     the abbreviation is a visual shorthand over a label that stays spelled
+     out. When the sprite grows a card, a bank and a cheque these become
+     icons and the same two labels keep doing that job. */
+  const PAYMENT_TAG = {
+    Cash:  { code: 'CSH', tone: 'rux--tag--green' },
+    Check: { code: 'CHK', tone: 'rux--tag--blue' },
+    Card:  { code: 'CRD', tone: 'rux--tag--purple' },
+    ACH:   { code: 'ACH', tone: 'rux--tag--teal' },
+    Zelle: { code: 'ZLE', tone: 'rux--tag--magenta' },
+    Other: { code: 'OTH', tone: 'rux--tag--cool-gray' },
+  };
+
+  /* WHAT THE PAYMENT ROWS WANT DONE, as three lists rather than a rewrite.
+     A row with a `data-pay-id` existed when the panel opened; without one it
+     is new. Anything that had an id and is no longer on screen was removed.
+
+     AN EMPTY ROW IS NOT A PAYMENT. `Add payment` draws a row with today's
+     date and nothing else, and somebody who clicks it and then thinks better
+     of it should not have a $0 receipt saved. A row counts only once it has
+     an amount or a method; an untouched one is dropped, and an EXISTING row
+     emptied to nothing is a delete rather than a write of nulls. */
+  /* THE PANEL'S PENDING PAYMENTS, and the handle that redraws them. Module
+     scope because the dialog lives outside the panel's build closure and has
+     to reach both. */
+  let payPending = [];
+  let redrawPayments = () => {};
+  let payEditing = null;   // index being edited, or null for a new row
+
+  /* THE DIALOG BUILDS ITS FIELDS EACH TIME rather than reusing four kept
+     inputs. `dateOne` mints a Carbon date picker with a calendar the module
+     has to claim, and claiming the same one twice leaves two; building fresh
+     and initialising once is the shape every other picker here uses. */
+  function openPaymentDialog(index) {
+    const host = document.getElementById('sch-payment-fields');
+    if (!host) return;
+    payEditing = index;
+    const p = index === null ? { date: iso(new Date()) } : payPending[index];
+    document.getElementById('sch-payment-h').textContent =
+      index === null ? 'Add payment' : 'Edit payment';
+    const stack = el('div', 'rux--stack-vertical rux--stack-scale-5');
+    stack.append(
+      selectField('sch-f-pmethod', 'Method', p.method ?? '',
+        [['', '—'], ...PAYMENT_METHODS.map(m => [m, m])]),
+      moneyField('sch-f-pamount', 'Amount', p.amount),
+      dateOne('sch-f-pdate', 'Date', p.date),
+      textField('sch-f-pref', 'Reference', p.ref),
+    );
+    host.replaceChildren(stack);
+    window.Rux?.datePicker?.init?.(host);
+    window.Rux?.modal?.open?.('sch-payment-modal');
+  }
+
+  document.getElementById('sch-payment-done')?.addEventListener('click', () => {
+    const val = id => document.getElementById(id)?.value.trim() ?? '';
+    const row = {
+      method: val('sch-f-pmethod') || null,
+      amount: money(val('sch-f-pamount')),
+      date: isoOrNull(val('sch-f-pdate')),
+      ref: val('sch-f-pref') || null,
+    };
+    /* AN EMPTY DIALOG ADDS NOTHING. `Done` on a blank form is the same
+       intention as `Cancel`, and a $0 receipt with no method is not a
+       payment anyone meant to record. An EXISTING row emptied this way is
+       left alone rather than blanked -- removing it is what the X is for. */
+    if (row.amount === null && !row.method) {
+      window.Rux?.modal?.close?.('sch-payment-modal');
+      return;
+    }
+    if (payEditing === null) payPending.push(row);
+    else Object.assign(payPending[payEditing], row);
+    window.Rux?.modal?.close?.('sch-payment-modal');
+    redrawPayments();
+    refreshDirty();
+  });
+
+  /* IT RUNS ON A NEW TRIP TOO, fixed 2026-09-10 after rux asked. This used to
+     bail on `editing.creating`, so a deposit typed while booking was drawn in
+     the list, counted in the summary, and then silently dropped on save --
+     the worst of the three possible behaviours, because the screen said it
+     had been recorded.
+
+     NOTHING SPECIAL IS NEEDED FOR IT. A creating panel has no
+     `editing.payments`, so every pending row lacks an `id` and falls into
+     `inserts` by the rule already written; `deletes` is empty because there
+     was nothing to delete. The only real difference is the trip id, which
+     does not exist until the INSERT returns -- so the caller passes it in
+     rather than this function reading `editing.id`. */
+  function paymentsPatch() {
+    if (!editing) return null;
+    const was = editing.payments || [];
+    const seen = new Set();
+    const inserts = [];
+    const updates = [];
+    payPending.forEach((p, i) => {
+      const row = { method: p.method ?? null, amount: money(String(p.amount ?? '')),
+                    date: p.date ?? null, ref: p.ref ?? null, position: i };
+      if (!p.id) { inserts.push(row); return; }
+      seen.add(String(p.id));
+      const before = was.find(w => String(w.id) === String(p.id));
+      const changed = !before || ['method', 'amount', 'date', 'ref', 'position'].some(k => {
+        const b = k === 'amount' ? money(String(before.amount ?? '')) : (before[k] ?? null);
+        return !same(row[k], k === 'position' ? (before.position ?? null) : b);
+      });
+      if (changed) updates.push({ id: String(p.id), patch: row });
+    });
+    const deletes = was.filter(w => !seen.has(String(w.id))).map(w => String(w.id));
+    const paid = payPending.reduce((n, p) => n + (Number(p.amount) || 0), 0);
+    return { inserts, updates, deletes, paid,
+             work: !!(inserts.length || updates.length || deletes.length) };
+  }
+
+
   function contactPatch() {
     if (!editing?.contact) return null;
     const val = id => document.getElementById(id)?.value.trim() || null;
@@ -1513,9 +1808,28 @@
     // time did nothing and Save stayed grey.
     const stopWork = stopsPatch().length > 0;
     const contactWork = !!contactPatch();
-    const nothingToDo = !editing?.creating && !stopWork && !contactWork
+    const payWork = !!paymentsPatch()?.work;
+    /* NOTHING TOUCHED is the honest question, and it is not the same one Save
+       asks. `patchOf` diffs the form against `editing.before`, which is filled
+       from the DRAFT on a new trip just as it is from the row on an existing
+       one, so this is true of an untouched panel either way. */
+    const nothingChanged = !stopWork && !contactWork && !payWork
       && (!patch || Object.keys(patch).length === 0);
+    const nothingToDo = !editing?.creating && nothingChanged;
     panelSave.disabled = !startOk || !destOk || nothingToDo;
+    /* RESET ANSWERS TO `nothingChanged`, NOT `nothingToDo`, corrected
+       2026-09-10. `nothingToDo` carries `!editing?.creating` because a NEW
+       trip is saveable with nothing changed -- its defaults are already a
+       real trip -- and that guard makes the expression permanently false
+       while creating. Reset inherited it and was therefore live on a blank
+       new trip, offering to discard nothing, and doing it in the heaviest
+       button on a bar whose Save was correctly grey. rux saw it.
+
+       IT STILL IGNORES THE REQUIRED FIELDS, which Save does not. A form held
+       invalid by a blank destination is exactly when someone wants to back
+       out, and a Reset greyed for Save's reason would strand them with a trip
+       they can neither save nor restore. */
+    if (panelReset) panelReset.disabled = nothingChanged;
   }
 
   /* NEW TRIP OPENS THE SAME PANEL WITH NOTHING IN IT. A trip needs one thing
@@ -1541,16 +1855,38 @@
     createBusId = opts.busId || null;
     openPanel(null, {
       id: null,
-      destination: '', customer: '',
+      /* NULL AND NOT `''`, corrected 2026-09-10. `same` is
+         `(a ?? null) === (b ?? null)`, which leaves an empty string alone --
+         so a draft seeded with `''` put `''` into `editing.before`, while
+         every getter normalises a blank field back to `null`. A brand-new
+         trip therefore reported a patch of `{destination: null, customer:
+         null, notes: null}` before anyone typed anything: three fields
+         claiming to have changed from "" to null.
+
+         IT WAS INVISIBLE UNTIL RESET EXISTED. Save reads `nothingToDo`,
+         which ignores the patch while creating, so nothing acted on the
+         phantom diff. Reset asks the honest question -- has anything
+         changed -- and answered yes on an untouched form. The fields render
+         the same either way: `input.value = value ?? ''`. */
+      destination: null, customer: null,
       trip_type: 'round_trip', confirmed: false,
       start_date: start, end_date: start,
       return_start_date: null, return_end_date: null,
       req_sleeper: false, req_ada: false, req_56pax: false,
-      notes: '', trip_assignments: [], trip_stops: [],
+      notes: null, trip_assignments: [], trip_stops: [],
     });
   }
 
+  /* WHAT BUILT THE PANEL, so Reset can build it again. `openPanel` already
+     reads every field out of `trip`, and in edit mode `trip` comes from
+     `panelIndex.trips` -- the SAVED row, not anything the form has touched.
+     So replaying the same call IS the reset, and there is no second copy of
+     the before-state to drift from `editing.before`. In create mode the same
+     replay hands back the untouched draft. */
+  let panelArgs = null;
+
   function openPanel(bar, draft) {
+    panelArgs = { bar, draft };
     const creating = !!draft;
     const trip = draft ?? panelIndex.trips.get(bar.dataset.tripId);
     if (!trip) return;
@@ -1599,7 +1935,6 @@
       destination: trip.destination ?? null,
       customer: trip.customer ?? null,
       trip_type: trip.trip_type ?? null,
-      confirmed: trip.confirmed !== false,
       req_sleeper: !!trip.req_sleeper,
       req_ada: !!trip.req_ada,
       req_56pax: !!trip.req_56pax,
@@ -1617,8 +1952,12 @@
       // contract for reads as Pending, which is what the old app shows too.
       contract_status: trip.contract_status === 'Signed' ? 'Signed' : 'Pending',
       invoice_status: trip.invoice_status === 'Invoiced' ? 'Invoiced' : 'Pending',
-      balance_paid: !!trip.balance_paid,
-      date_paid: trip.date_paid ?? null,
+      // Booleans, so `!!` rather than `?? null` -- the column is never null on
+      // any of the 779 rows and `same(false, null)` would report a phantom
+      // change on every trip that has neither.
+      contract_note: trip.contract_note ?? null,
+      po_received: !!trip.po_received,
+      invoiced: !!trip.invoiced,
       booking_contact_id: trip.booking_contact_id ?? null,
       trip_contact_1_id: trip.trip_contact_1_id ?? null,
       trip_contact_2_id: trip.trip_contact_2_id ?? null,
@@ -1644,6 +1983,12 @@
       client: trip.contacts.client ?? null,
     };
 
+    /* THE ROWS AS THEY WERE, so `paymentsPatch` has something to diff
+       against. Same shape as `editing.stops` and for the same reason: the
+       form knows what is on screen, not what was there when it opened. */
+    editing.payments = creating ? [] : ((trip.trip_payments || [])
+      .slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0)));
+
     editing.stops = creating ? null : (() => {
       const { pickup, back } = stopsOfLeg(trip, legName);
       return {
@@ -1656,24 +2001,94 @@
 
     panelDetails.replaceChildren();
     const form = el('div', 'rux--stack-vertical rux--stack-scale-5');
-    /* THE DATES COME FIRST, on rux's call 2026-09-09: they are the first
-       decision anyone makes about a trip and the one thing that arrives
-       already filled. A trip created from a cell carries the day that cell
-       was, so the panel opens with this row answered and the rest blank --
-       which is the order the form should read in.
+    /* TYPE COMES FIRST AND THE DATES SECOND, on rux's call 2026-09-09,
+       superseding the ordering recorded below it the same day. Type is the
+       question that decides what the rest of the form even asks: a drop-off
+       and pick-up trip wants two date ranges and every other type wants
+       one, so answering it first means the form settles its own shape
+       before anyone fills a field in it. The dates keep second place for
+       the reason they had first -- they are the one thing that arrives
+       already filled, a trip created from a cell carrying that cell's day.
 
-       IT ALSO PUTS `Pick-up` UNDER THE CONTROL THAT REVEALS IT. The return
-       pair is appended after this block and Type used to sit two fields above
-       it; Type is now directly above, so choosing drop-off and pick-up makes
-       a field appear immediately beneath the select that asked for it rather
-       than further down the form.
+       WHAT THIS GIVES UP, PLAINLY, BECAUSE THE ENTRY IT REPLACES CLAIMED
+       IT AS A WIN: `Pick-up` no longer sits under the control that reveals
+       it. The return pair is still appended after this whole block, so with
+       Type at the top there are now three fields between the select and the
+       range it summons instead of none. Moving `Pick-up` up to chase it
+       would put the RETURN leg's dates above the outbound leg's, which is
+       worse than the distance. Left as distance, knowingly.
 
        AND IT COSTS THE CALENDAR NOTHING. `__calendar-container` is
        `position: absolute; inset-block-start: 100%` against its own root, so
        it opens downward over whatever follows -- from the top of the panel it
        has more room below it, not less. */
-    form.append(
-      dateRange('sch-f-start', 'sch-f-end', 'Start date', 'End date', trip.start_date, trip.end_date || trip.start_date),
+    /* FLUSH, 2026-09-09: `rux--stack-scale-5` puts a 1rem row-gap between
+       EVERY child, fluid or not -- right for spacing one titled block from
+       the next, wrong within one: Carbon's own fluid forms butt adjacent
+       fields against each other with no gap at all, each field's own border
+       standing in for the seam. `.sch-fluid-group` zeroes `--rux-stack-gap`
+       for a run with no title between its members; the run itself is still
+       one item in `form`'s own stack, so the 1rem gap before Pick-up /
+       Booking contact / etc. is untouched. */
+    /* THE RETURN PAIR IS A SECOND OUTING, NOT THE END OF THE FIRST. Measured
+       across all 743 trips on 2026-09-06: every one of the 12 drop-off and
+       pick-up trips drops off on a SINGLE day, and the bus comes back 1 to 4
+       days later -- Sandia TX drops 19 July and collects 22 July. A single
+       From/To range would say the bus is committed for those four days when
+       the point of the type is that it is free in between, and the board
+       already knows better: `legsOf` makes two legs and draws two bars.
+
+       Round trip and one way never carry return dates -- 0 of 731 -- so the
+       pair only appears for a split. And one way is NOT a single date: 25 of
+       26 run a day, but one runs three, so it keeps the range too. */
+    const returnDates = el('div', 'sch-panel-return-dates');
+    returnDates.appendChild(dateRange(
+      'sch-f-rstart', 'sch-f-rend', 'Pick-up start', 'Pick-up end',
+      trip.return_start_date, trip.return_end_date || trip.return_start_date));
+    returnDates.hidden = trip.trip_type !== SPLIT;
+
+    /* THE TWO RANGES NAME THEIR OWN LEGS, 2026-09-10 on rux's call, and the
+       `Pick-up` heading that used to do it is gone. The pair sits directly
+       under the outbound range now, inside the same flush run, so the two
+       ranges read as one block of dates rather than a block and a titled
+       section four fields apart.
+
+       WHY THE OUTBOUND LABELS MOVE AND THE RETURN'S DO NOT: the return pair
+       is only ever on screen for a split, so `Pick-up start`/`Pick-up end`
+       is true whenever it is readable and can be written once. The outbound
+       range is shown for EVERY type, so it cannot be called `Drop-off`
+       statically -- that word is a lie on a round trip. It takes the split's
+       words only while the split is selected, which is also why the form
+       echoes back the option just chosen: pick `Drop-off and pick-up` and
+       the dates rename themselves to drop-off and pick-up.
+
+       `Drop-off`/`Pick-up` RATHER THAN `Outbound`/`Inbound`, which rux also
+       offered: the select immediately above says "Drop-off and pick-up", so
+       those are the words already in the reader's head one field earlier.
+       `Inbound` would also be a third name for a thing the code calls the
+       `return` leg and the Schedule section titles "return leg" -- two
+       vocabularies is one too many already. */
+    const outLabels = split =>
+      split ? ['Drop-off start', 'Drop-off end'] : ['Start date', 'End date'];
+    const setOutLabels = split => {
+      const [a, b] = outLabels(split);
+      const la = panelDetails.querySelector('label[for="sch-f-start"]');
+      const lb = panelDetails.querySelector('label[for="sch-f-end"]');
+      if (la) la.textContent = a;
+      if (lb) lb.textContent = b;
+    };
+    const [outFrom, outTo] = outLabels(trip.trip_type === SPLIT);
+
+    const topFields = el('div', 'rux--stack-vertical rux--stack-scale-5');
+    topFields.append(
+      selectField('sch-f-type', 'Type', trip.trip_type, [
+        ['', '—'],
+        ['round_trip', 'Round trip'],
+        ['one_way', 'One way'],
+        [SPLIT, 'Drop-off and pick-up'],
+      ]),
+      dateRange('sch-f-start', 'sch-f-end', outFrom, outTo, trip.start_date, trip.end_date || trip.start_date),
+      returnDates,
       textField('sch-f-destination', 'Destination', trip.destination),
       /* ORGANIZATION, AND THERE IS ONLY ONE OF THEM NOW, 2026-09-09 on rux's
          call. This field and the booking block's `Organization or group` read
@@ -1693,37 +2108,16 @@
          now one. `contacts.client` still holds the other and the Customers
          view still edits it; this panel simply stops showing it. */
       textField('sch-f-customer', 'Organization', trip.customer),
-      selectField('sch-f-type', 'Type', trip.trip_type, [
-        ['', '—'],
-        ['round_trip', 'Round trip'],
-        ['one_way', 'One way'],
-        [SPLIT, 'Drop-off and pick-up'],
-      ]),
+      /* NOTES JOINS THE TOP RUN, 2026-09-10 on rux's call, from the foot of
+         the tab where it sat beside the checkboxes. It is a fact about the
+         trip like the five above it and not a thing anyone hunts for, so it
+         belongs in the same flush card rather than after two contact
+         sections. It is the only field here that grows: the textarea keeps
+         its resize grip, and the card simply gets taller with it. */
+      notesField('sch-f-notes', 'Notes', trip.notes),
     );
+    form.appendChild(topFields);
 
-    /* THE RETURN PAIR IS A SECOND OUTING, NOT THE END OF THE FIRST. Measured
-       across all 743 trips on 2026-09-06: every one of the 12 drop-off and
-       pick-up trips drops off on a SINGLE day, and the bus comes back 1 to 4
-       days later -- Sandia TX drops 19 July and collects 22 July. A single
-       From/To range would say the bus is committed for those four days when
-       the point of the type is that it is free in between, and the board
-       already knows better: `legsOf` makes two legs and draws two bars.
-
-       Round trip and one way never carry return dates -- 0 of 731 -- so the
-       pair only appears for a split. And one way is NOT a single date: 25 of
-       26 run a day, but one runs three, so it keeps the range too. */
-    const returnDates = el('div', 'sch-panel-return-dates');
-    /* THE RETURN PAIR TAKES THE SAME WORDS, 2026-09-09. rux renamed the
-       outbound range's `From`/`To` to `Start date`/`End date`, matching
-       Carbon's own story, and leaving this pair on the old words would have
-       made the one conditional section the odd one out -- two date ranges in
-       one form labelled two ways. `Pick-up` above them already says which
-       outing they belong to. */
-    returnDates.appendChild(section('Pick-up', dateRange(
-      'sch-f-rstart', 'sch-f-rend', 'Start date', 'End date',
-      trip.return_start_date, trip.return_end_date || trip.return_start_date)));
-    returnDates.hidden = trip.trip_type !== SPLIT;
-    form.appendChild(returnDates);
     /* ── BOOKING CONTACT ────────────────────────────────────────────────────
        Rebuilt 2026-09-09 against three orderings rux collected. The structure
        is the third's and two behaviours are the first's; the reasoning is in
@@ -1749,20 +2143,50 @@
          columns that join the insert like any other. A booking contact is
          often the FIRST thing known about a trip -- someone rang -- so hiding
          it until after a save had the order backwards. */
-      const book = el('div', 'rux--stack-vertical rux--stack-scale-5');
-      book.appendChild(
-        contactSearch('sch-f-cfind', 'Find or add booking contact', 'sch-contacts', allContacts, contact));
-      const pair = el('div', 'sch-two-up');
-      pair.append(
-        textField('sch-f-cphone', 'Phone', contact?.phone),
-        textField('sch-f-cemail', 'Email', contact?.email),
+      /* THREE FULL-WIDTH ROWS, 2026-09-09 on rux's call, where Phone and
+         Email were a `sch-two-up` pair on one row. Fluid is why: a fluid
+         field is a 64px box carrying a floating label over its value, and
+         two of them in a 288px column leave each about 140px to hold both
+         -- an email address in a 140px box is ellipsis by the third
+         character. Stacked, each gets the full width the panel has.
+
+         THE LABELS CARRY THE PREFIX AGAIN, 2026-09-10, and the heading that
+         used to carry it is gone. This reverses the note two entries down,
+         which said the prefix was dropped because in a 320px panel "Booking
+         contact phone wraps and Phone does not". It no longer does: the
+         fields went full-bleed on 2026-09-10, so the label has 288px of run
+         where it had 256, and at `label-01`'s 12px the longest of them --
+         `Booking contact phone` -- measures 171.6px. Every one of the five
+         fits with over 100px spare, measured rather than guessed.
+
+         WHAT IT BUYS is the section heading's removal, and with it the last
+         of the gaps: `Booking contact` and `Day-of-trip contacts` were two
+         titled blocks costing 40px of break each, in a form whose fields
+         now say which contact they belong to on their own face. A label
+         that reads `Booking contact phone` needs nothing above it. */
+      /* NO WRAPPER, 2026-09-10, and the reason is the bleed. These three used
+         to sit in their own `.sch-fluid-group`; once that group was appended
+         INTO `topFields`, which is also one, the negative margin applied
+         twice and the fields hung 16px off the panel's left edge with their
+         labels at 0. rux saw it as missing padding, and it was -- taken by a
+         rule meant to run once. A run that is already flush and already
+         gapless needs no second one inside it, so the fields go straight in. */
+      topFields.append(
+        contactSearch('sch-f-cfind', 'Booking contact name', 'sch-contacts', allContacts, contact),
+        textField('sch-f-cphone', 'Booking contact phone', contact?.phone),
+        textField('sch-f-cemail', 'Booking contact email', contact?.email),
       );
-      book.appendChild(pair);
-      if (contact) {
-        book.appendChild(el('p', 'sch-panel-hint',
-          'This contact books other trips too. Editing it here changes it on all of them.'));
-      }
-      form.appendChild(section('Booking contact', book));
+      /* THE SHARED-CONTACT NOTE IS GONE, 2026-09-10 on rux's call. It read
+         "This contact books other trips too. Editing it here changes it on
+         all of them." and it was true -- `contacts` rows are shared, so an
+         edit here reaches every trip that books the same person. Only the
+         WARNING went; the behaviour it described is unchanged and still
+         worth knowing when this block is next touched. */
+      /* APPENDED INTO `topFields`, NOT AS ITS OWN BLOCK. Both runs are
+         `.sch-fluid-group`, so nesting one in the other keeps every gap at
+         zero and the whole form reads as one card from Type to the last
+         day-of phone. The stack that used to hold this beside a heading is
+         gone with the heading. */
 
       /* ── DAY-OF-TRIP CONTACTS ─────────────────────────────────────────────
          "Day-of-trip" and not "on-site": the person may be travelling with the
@@ -1780,29 +2204,57 @@
          first day-of contacts ARE the booking contact -- 53% of the ones that
          exist are that person retyped. */
       const dayRows = [1, 2, 3, 4, 5].map(i => trip[`c${i}`]).filter(Boolean);
-      const day = el('div', 'rux--stack-vertical rux--stack-scale-5');
-      const sameWrap = el('div', 'rux--form-item rux--checkbox-wrapper');
-      const same = el('input', 'rux--checkbox');
-      same.type = 'checkbox';
-      same.id = 'sch-f-samecontact';
-      same.checked = !!(contact && dayRows[0] && dayRows[0].id === contact.id);
-      const sameLab = el('label', 'rux--checkbox-label', 'Same as booking contact');
-      sameLab.setAttribute('for', 'sch-f-samecontact');
-      sameWrap.append(same, sameLab);
-      day.appendChild(sameWrap);
-
+      /* THIS CHECKBOX GOES THROUGH `checkField` LIKE THE OTHER FIVE,
+         2026-09-10. It was a hand-rolled copy of that helper's markup and
+         had drifted from it in the one way that shows: the label text sat
+         DIRECTLY in `.rux--checkbox-label`, where `checkField` wraps it in
+         `.rux--checkbox-label-text`. That wrapper is not decoration --
+         it is the only thing carrying `padding-inline-start: 0.625rem` in
+         rux.css, so without it the words butt against the box. The label's
+         own `1.25rem` start padding only reserves room for the `::before`
+         square; the 10px BETWEEN square and text belongs to the span. rux
+         saw it as "no spacing token between checkbox and label", which is
+         exactly what it was. The copy was also missing
+         `__validation-msg`; going through the helper ends both drifts and
+         leaves one place to change. */
+      /* A PLAIN BOX, for the same reason the booking three lost their wrapper:
+         this lives inside `topFields`, which already bleeds and already has
+         no gap. A block div stacks its children edge to edge and adds
+         neither. It stays a named element only because `drawRow` needs
+         somewhere to append to. */
+      /* A STACK AGAIN, 2026-09-10. This was a plain block for one day, while
+         the fields were fluid and a run of them was meant to butt together
+         with no gap at all. Default style wants the opposite and the plain
+         div gave it nothing: `Day of contact phone` sat hard against the
+         name above it at 0px where every other pair in the form had 16.
+         The gap belongs to the container, so the container has to be one. */
       const rowsHost = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      /* NAME OVER PHONE, NOT BESIDE IT, 2026-09-10 -- the same call the
+         booking block took a day earlier and for the same reason: two
+         fluid boxes in a 288px column leave each about 140px, and 140px is
+         not a phone number beside a name. A contact is two stacked rows
+         now, and the run of them stays flush inside `rowsHost`.
+
+         IT ALSO ENDS `.sch-two-up`. Booking contact was its other caller;
+         with both stacked the class has no user left, so its rules come out
+         of sch.css rather than sitting there as a shape nothing makes. */
+      /* THE PREFIX IS ON THESE TOO, 2026-09-10, and for the same reason the
+         booking three took it: the `Day-of-trip contacts` heading came off,
+         so the field is the only thing left to say which contact it means.
+         The row number rides after the noun rather than the phrase --
+         `Day of contact name 2`, not `Day of contact 2 name` -- because the
+         first reads as the second contact's name and the second reads as a
+         field called "contact 2 name". */
       const drawRow = (c, n) => {
-        const row = el('div', 'sch-two-up');
-        row.append(
-          contactSearch(`sch-f-d${n}`, n === 1 ? 'Name' : `Name ${n}`, 'sch-contacts', allContacts, c),
-          textField(`sch-f-dphone${n}`, 'Phone', c?.phone),
+        const suffix = n === 1 ? '' : ` ${n}`;
+        rowsHost.append(
+          contactSearch(`sch-f-d${n}`, `Day of contact name${suffix}`, 'sch-contacts', allContacts, c),
+          textField(`sch-f-dphone${n}`, `Day of contact phone${suffix}`, c?.phone),
         );
-        rowsHost.appendChild(row);
       };
       const shown = dayRows.length ? dayRows : [null];
       shown.forEach((c, i) => drawRow(c, i + 1));
-      day.appendChild(rowsHost);
+      topFields.appendChild(rowsHost);
 
       /* THE BUTTON SAYS WHAT IT ADDS. A bare `+` is ambiguous once a form
          carries two kinds of contact, and this one sits under the second of
@@ -1810,40 +2262,112 @@
       const addBtn = el('button', 'rux--btn rux--btn--ghost rux--layout--size-sm', 'Add another contact');
       addBtn.type = 'button';
       addBtn.id = 'sch-f-dadd';
-      addBtn.prepend(svgUse('#i-add', '16', '0 0 32 32'));
+      /* THE ICON TRAILS AND WEARS THE CLASS, 2026-09-10. It was PREPENDED and
+         carried no class at all, so it got none of Carbon's icon rules and
+         sat hard against the word -- rux saw the gap as wrong, and there was
+         no gap to be wrong: `margin-inline-start` was 0 because nothing
+         selected it.
+
+         PUTTING IT AFTER THE LABEL IS THE FIX, not adding a margin on the
+         left. Carbon spaces a button's icon with
+         `.rux--btn--ghost .rux--btn__icon { margin-inline-start: 0.5rem }`,
+         which is 8px BEFORE the icon -- correct when the icon trails the
+         text and backwards when it leads, where it would push the icon off
+         the button's own padding and still leave nothing between icon and
+         word. Carbon's `Button` renders its icon after the label for the
+         same reason; the base rule even pins it to `inset-inline-end`. */
+      addBtn.append(svgUse('#i-add', '16', '0 0 32 32'));
+      addBtn.lastChild.setAttribute('class', 'rux--btn__icon');
+      /* `Same as booking contact` WAS HERE AND IS GONE, 2026-09-10 on rux's
+         call. It hid these rows and pointed row one at the booking contact
+         on save. Removing it takes the shortcut with it: reusing the booking
+         contact is now typing them into Name like anyone else, which the
+         search makes cheap. The count of five is still the schema's, so
+         `Add another contact` keeps its own limit and simply no longer has
+         a second reason to be disabled. */
       let count = shown.length;
-      const syncAdd = () => { addBtn.disabled = count >= 5 || same.checked; };
+      const syncAdd = () => { addBtn.disabled = count >= 5; };
       addBtn.addEventListener('click', () => {
         if (count >= 5) return;
         count += 1;
         drawRow(null, count);
         syncAdd();
       });
-      /* CHECKING THE BOX HIDES THE ROWS RATHER THAN COPYING INTO THEM. Copying
-         would leave two editable copies of one person and no way to tell which
-         the save meant; hiding says the rows are not the thing being answered. */
-      const syncSame = () => {
-        rowsHost.hidden = same.checked;
-        syncAdd();
-      };
-      same.addEventListener('change', syncSame);
-      syncSame();
-      day.appendChild(addBtn);
-      form.appendChild(section('Day-of-trip contacts', day));
+      syncAdd();
+      /* THE BUTTON IS THE ONE THING HERE THAT DOES NOT BLEED. It goes on
+         `form` rather than into the run, so it keeps the stack's own 16px
+         above it and stays inset like every other control that is not a
+         field. A ghost button flush against the panel edge, directly under
+         a filled field, would read as part of the field. */
+      form.appendChild(addBtn);
     }
 
-    const flags = el('fieldset', 'rux--checkbox-group');
+    /* NEITHER CHECKBOX NOR ITS GROUP HAS A FLUID VARIANT -- confirmed against
+       rux-ds's compiled css, zero `rux--checkbox` selector carries `fluid`.
+       AGENTS.md is explicit that a missing component is a request to rux-ds,
+       never a local rule, so this stays Carbon's DEFAULT checkbox. What is
+       local is giving it its own titled section rather than letting it sit
+       as a bare fieldset between two fluid-boxed neighbours -- the same
+       `sch-panel-section__title` class every sibling section already carries,
+       so "Equipment" reads as its own module rather than a stray row.
+
+       IT IS `Equipment` AND NOT `Status and needs` AS OF 2026-09-10, which
+       is a rename that followed a removal: with `Confirmed` out, the three
+       left are all things a coach either has or has not got, and "status"
+       named a member the group no longer holds. Singular because equipment
+       is uncountable -- rux wrote "Equipments"; the word is the only part
+       of that not taken.
+
+       THE LEGEND CANNOT KEEP `rux--label`, 2026-09-09: `.rux--form--fluid
+       .rux--label` is a bare descendant selector -- it does not check WHICH
+       field the label belongs to, so it caught this legend too and made it
+       `position: absolute`, floating it up behind the sticky header where
+       nothing could see it. `rux--label` here was only ever borrowed for
+       type, never a field's own label, so it drops in favour of the app's
+       own title class, which the fluid rule has no selector for. */
+    /* ONE ROW, NOT TWO COLUMNS, 2026-09-10. rux asked for two; three fit in
+       one. `--horizontal` is Carbon's own compiled variant -- `flex-flow:
+       row wrap` -- and the three items measure 77.4, 76.5 and 71.8 against
+       the group's 288, so they take 226 with 62 to spare and never wrap. The
+       block goes from 99px to 47. A two-column grid would have been a local
+       rule for a layout Carbon does not ship, to fit three things that fit
+       in one row anyway.
+
+       IT WRAPS IF THE WORDS GROW, which is the variant's own behaviour and
+       the reason it is safe to use here: a fourth flag, or a longer one,
+       drops to a second row rather than overflowing. */
+    const flags = el('fieldset', 'rux--checkbox-group rux--checkbox-group--horizontal sch-panel-section');
     flags.setAttribute('aria-disabled', 'false');
-    const legend = el('legend', 'rux--label rux--type-heading-compact-01', 'Status and needs');
+    const legend = el('legend', 'sch-panel-section__title', 'Equipment');
     flags.append(
       legend,
-      checkField('sch-f-confirmed', 'Confirmed', trip.confirmed !== false),
       checkField('sch-f-sleeper', 'Sleeper', trip.req_sleeper),
       checkField('sch-f-ada', 'ADA lift', trip.req_ada),
       checkField('sch-f-56pax', '56 pax', trip.req_56pax),
     );
-    form.append(flags, notesField('sch-f-notes', 'Notes', trip.notes));
+    /* EQUIPMENT SITS BESIDE THE FORM, NOT IN IT, 2026-09-10. rux asked
+       whether the gap above it was standard. It was not, and it was not even
+       consistent with itself: `.sch-panel-section` carries a 24px top margin,
+       and inside `form` -- a `rux--stack-vertical` -- the stack's own 16px
+       row-gap added to it for 40, while the same class on Billing measured 24
+       above all three of its sections because `panelBilling` is a plain tab
+       panel that adds nothing. One class, two spacings, decided by which kind
+       of container it happened to land in.
+
+       APPENDING IT TO THE PANEL rather than to the stack makes Details match
+       Billing structurally, so the 24px is the section's own margin in both
+       and there is no sum to reason about. The alternative was a rule
+       docking the margin whenever a section sits in a stack, which is more
+       CSS to say the same thing and leaves the two tabs built differently. */
     panelDetails.appendChild(form);
+    panelDetails.appendChild(flags);
+
+    /* CANCEL TRIP MOVED TO THE ACTION BAR, 2026-09-10, and is static markup
+       there rather than built here -- index.html carries it and the reason.
+       All that is left for this pass is whether it applies: there is nothing
+       to cancel on a trip that does not exist yet, and `Close` already
+       discards a draft, which is what cancelling one would mean. */
+    panelCancel.hidden = creating || !trip.id;
 
     // THE LEG'S OWN FACTS STAY READ-ONLY. Dates and times are not in this
     // pass; they are shown because the editor above is meaningless without
@@ -1876,6 +2400,7 @@
        NOT IN CREATE MODE. A trip being made has no stops to edit and no leg to
        scope them to; the section appears once the trip exists, which is the
        rule `This leg` already followed and for the same reason. */
+    panelSchedule.replaceChildren();
     {
       /* SCHEDULE RENDERS ON A NEW TRIP TOO, and unlike the blocks above this
          one needed a decision rather than just the guard removed. These four
@@ -1914,8 +2439,16 @@
         const input = sched.querySelector(`#${id}`);
         if (input) { input.disabled = true; input.title = 'This leg has no stop to hold it yet.'; }
       }
-      panelDetails.appendChild(section(
-        legName === 'return' ? 'Schedule — return leg' : 'Schedule', sched));
+      /* THE TAB IS THE HEADING NOW, 2026-09-10. This was `section('Schedule')`
+         at the foot of Details; with a tab of its own that title would be the
+         word `Schedule` printed twice, once in the strip and once under it.
+         The return leg keeps a heading because it says something the tab
+         cannot: which of a split trip's two outings these four times belong
+         to. The panel is opened from one bar and a bar IS one leg, so this is
+         never ambiguous by accident -- it is only ever unlabelled when there
+         is one leg to mean. */
+      panelSchedule.appendChild(
+        legName === 'return' ? section('Return leg', sched) : sched);
     }
 
     /* ── BILLING ────────────────────────────────────────────────────────────
@@ -1952,52 +2485,596 @@
 
          Every column here is on `trips`, so on create they simply join the
          insert. Nothing about them needed the trip to exist first. */
-      const pricing = el('div', 'rux--stack-vertical rux--stack-scale-5');
-      pricing.append(
+      /* THE DERIVED THREE READ, THEY DO NOT EDIT, 2026-09-10. `Confirmed`
+         and `Balance paid` were toggles here and `Date paid` was a picker
+         in Invoice details; all three are columns rux-ui computes on every
+         save, so this app's copies were overwritten as fast as they were
+         set. The values still belong on screen -- a dispatcher needs to
+         know whether a trip is confirmed -- so they join the readout above
+         the toggles rather than leaving with the controls.
+
+         WHAT EACH ONE IS DERIVED FROM, per the live `billing-workflow-v1`
+         settings row: confirmed is contract-signed OR PO-received OR
+         deposit-received OR paid-in-full; balance paid is a quoted price
+         with nothing left owing; date paid is the latest payment's date.
+         All three now MOVE when this panel saves, because the payments they
+         read became editable here on 2026-09-10 -- which is also why they
+         are stated as of the last save rather than recomputed live: the
+         other app owns the arithmetic and this one would only be guessing
+         at its rung. */
+      /* THREE MILESTONES, EACH A SWITCH THAT OWNS ITS FIELDS, 2026-09-10.
+         Before this the four billing fields were always editable and the two
+         switches sat in a section of their own at the foot of the tab, which
+         let this app write three states the database has never held.
+
+         MEASURED ON THE LIVE TABLE, 779 trips, and the invariant is perfect:
+         0 rows carry a `po_ref` or a `po_amount` with `po_received` false,
+         0 carry an `invoice_number` while not Invoiced, 0 carry a
+         `contract_note` on an unsigned contract. `invoiced` and
+         `invoice_status` agree on all 43. rux-ui holds that line by nulling
+         each field in `collectTrip` when its switch is off
+         (`js/data/trip-db.js:377-379`); this app held nothing, so a PO
+         reference typed here became the first such row in 779 -- and, because
+         `confirmWhen` reads `po_received`, a trip whose PO had landed would
+         have gone unconfirmed.
+
+         `po_received` WAS NEVER WRITTEN HERE AT ALL and `invoiced` was
+         written only as its text twin. Both join `readForm` with this change.
+
+         THE FIELDS CLEAR WHEN A SWITCH GOES OFF, and that is a deliberate
+         difference from rux-ui rather than an oversight. Over there the typed
+         value stays in the greyed input and is discarded at save
+         (`js/panels/trip-panel.js:497-502` sets only `disabled` and the
+         placeholder), so the screen shows a PO number that Save is about to
+         delete. Nothing is written here until Save and `Reset` restores the
+         panel, so clearing costs a keystroke and buys a screen that always
+         states what will be saved. */
+      /* THE SWITCH IS THE SECTION'S HEADING ACTION, not the first control in
+         its stack. Three `label + switch + "On"` blocks cost about 120px of a
+         320px panel and put the question ("has the contract been signed?")
+         one line below the answer to a different question (the heading). On
+         the heading line the two are the same line. */
+      /* THE FIELDS ARE HIDDEN UNTIL THE SWITCH IS ON, 2026-09-10, not merely
+         disabled. A trip that has been booked and nothing else showed three
+         greyed boxes nobody could type in -- about 190px of the panel spent
+         saying "not yet" three times, when the three switches already say it.
+
+         THIS IS SAFE HERE AND WOULD NOT BE IN rux-ui. Hiding a field that
+         still holds a value hides data that will be saved; over there the
+         typed value survives in the greyed box until `collectTrip` nulls it
+         (`js/panels/trip-panel.js:497-502`), so hiding would conceal a real
+         difference between what is on screen and what is stored. This app
+         CLEARS on toggle-off, so hidden means empty means exactly what will
+         be written. The clearing is what buys the hiding.
+
+         rux-ui ALREADY DOES BOTH, which is the precedent: it disables the PO
+         number and HIDES the authorised-amount block beside it
+         (`details.hidden = !enabled`, `js/panels/trip-panel.js:488-489`).
+         This just applies the second treatment to all three.
+
+         THE ATTRIBUTE ALONE WOULD NOT HAVE WORKED. `rux--stack-vertical` is
+         `display: grid` (`css/rux.css:24862`), which beats the user agent's
+         `[hidden] { display: none }` -- the fields would have stayed on
+         screen with no error anywhere. Hence the app class and its own rule
+         in `sch.css`, on an element this app owns. */
+      const gate = (fields, help) => {
+        const box = el('div', 'rux--stack-vertical rux--stack-scale-5 sch-milestone-fields');
+        box.append(...fields);
+        if (help) box.appendChild(help);
+        return box;
+      };
+
+      const contract = gate(
+        [textField('sch-f-contractnote', 'Contract note', trip.contract_note, 'Note')]);
+      const contractSwitch = toggleAction('sch-f-contract', 'Contract signed',
+        trip.contract_status === 'Signed');
+
+      /* THE COVERAGE LINE IS THE POINT OF THE PO SWITCH. A PO confirms the
+         trip whatever its amount -- `isStatusConfirmed` maps `po_partial`
+         onto `po_received` on purpose, and rux-ui's own comment says so:
+         "Partial PO is operationally confirmed by the same workflow choice as
+         PO received, while its distinct status remains available for
+         warnings." So the switch never withholds confirmation; it raises a
+         flag beside the amount instead.
+
+         WHAT THE FLAG COUNTS, mirroring `deriveStatus` exactly:
+
+             shortfall = max(0, (quoted - paid) - po_amount)
+
+         PAYMENTS COUNT TOWARD COVERAGE, which is the half of rux's
+         requirement that is easy to miss -- "cover the rest with another PO
+         or payment". A deposit shrinks the shortfall exactly as a larger PO
+         does, because what is uncovered is measured against the REMAINING
+         balance rather than against the quoted price. There is one
+         `po_amount` column and no second PO row, so "another PO" in practice
+         means raising this number. */
+      const poCoverage = el('p', 'rux--form__helper-text sch-po-coverage');
+      /* BOTH PO FIELDS LOSE THEIR LABEL, not just the reference. rux asked
+         for the reference; leaving "PO amount" labelled beside an unlabelled
+         reference would read as one field having lost its label rather than
+         as a pair that does not need them. The placeholders say which is
+         which, and `$` marks the amount as money without a word. */
+      const po = gate(
+        [textField('sch-f-poref', 'PO reference', trip.po_ref, 'Reference'),
+         moneyField('sch-f-poamount', 'PO amount', trip.po_amount, '$ Amount')],
+        poCoverage);
+      const poSwitch = toggleAction('sch-f-poreceived', 'PO received',
+        !!trip.po_received);
+
+      /* NO `+` ON THESE TWO HEADINGS, and that is the schema talking rather
+         than a layout choice. rux asked for an add button so a trip could
+         carry several POs and a split invoice. `trips` holds ONE `po_ref`,
+         ONE `po_amount` and ONE `invoice_number`, and there is no
+         `trip_pos` or `trip_invoices` table -- checked against the live
+         database, all 404. A `+` here would be a control that can never add
+         a second row. The ask is written up in docs/rux-ds-requests.md as a
+         schema proposal instead; if those tables land, the button drops into
+         the heading slot this section now has and the fields become rows. */
+      const invoice = gate(
+        [textField('sch-f-invnum', 'Invoice number', trip.invoice_number, 'Number')]);
+      const invoiceSwitch = toggleAction('sch-f-invoice', 'Invoice sent',
+        trip.invoice_status === 'Invoiced');
+
+      /* PAYMENTS ARE EDITABLE AS OF 2026-09-10, and they are the reason the
+         rest of this tab can be honest. `deposit_amount`, `balance_paid`,
+         `date_paid` and the whole of rux-ui's status ladder are all read off
+         the money that came in; with no way to record a payment this panel
+         could show those numbers and never change them.
+
+         DIFFED BY `id`, NOT REPLACED. rux-ui saves this list by deleting
+         every row for the trip and reinserting -- two calls, no transaction,
+         so a failed insert leaves a trip with no payments at all, and row
+         ids churn on every save. `trip_payments` has a real `id` (confirmed
+         against the live table), and this file already updates `trip_stops`
+         and `contacts` by id, so payments do the same: new rows insert,
+         changed rows update, removed rows delete, and a failure touches only
+         the row it was for.
+
+         `position` STILL GOES OUT, because rux-ui orders by it and a null
+         would sort unpredictably over there. It is the row's place in this
+         list, renumbered on save rather than tracked as state. */
+      /* ONE ROW PER PAYMENT, IN A `contained-list`. Carbon ships this exact
+         shape -- `--with-action` puts a control at the row's end, and the
+         `__header` carries the list's title and its own action, which is
+         where the sink's every story puts one. It replaces four labelled
+         boxes per receipt with a line that reads `Check · Aug 19 · $2,728`.
+
+         THE METHOD IS A WORD AND NOT A GLYPH, for now. rux asked for icons
+         and Carbon's `--with-icon` variant is built for it, but rux-ds's
+         whole sprite is 63 symbols and none of them means money -- counted,
+         and filed in docs/rux-ds-requests.md. Pressing `i-document` or
+         `i-copy` into service would be a glyph that lies. The word costs a
+         reader nothing to learn, which four near-neighbour methods --
+         Check, ACH, Card, Cash are all "money arrived" -- otherwise would.
+
+         THE LIST IS DRAWN FROM `pending`, NOT FROM THE DOM. The old version
+         read its values back out of the inputs it had built; with the
+         fields behind a dialog there are no inputs to read, so the array is
+         the truth and the list is a render of it. That also makes the diff
+         a comparison of two arrays rather than a walk over form controls. */
+      const pending = (trip.trip_payments || [])
+        .slice().sort((x, y) => (x.position ?? 0) - (y.position ?? 0))
+        .map(p => ({ id: String(p.id), method: p.method ?? null, amount: p.amount,
+                     date: p.date ?? null, ref: p.ref ?? null }));
+      payPending = pending;
+
+      /* THE SUMMARY GOES FIRST AND IT MOVES, 2026-09-10. Paid and Balance were
+         two lines of a `dl` in the middle of the tab, computed once from
+         `trip.trip_payments` at open. Both facts were wrong the moment a
+         payment was added: the list below would say $1,500 and the readout
+         above it $2,728, on the same screen, from the same rows.
+
+         SO IT IS A RENDER, NOT A VALUE. `drawSummary` reads the pending array
+         and the quoted-price INPUT rather than `trip`, and both the payment
+         list's `draw` and the quoted field's `input` call it. The two numbers
+         and the rows beneath them cannot disagree because there is one source.
+
+         `big-number` IS THE COMPONENT FOR IT -- Carbon's own figure for a
+         headline figure with a label, and its `__total` slot is exactly the
+         "of the quoted price" half of `Paid`. With no quoted price there is no
+         total to state and no balance to compute; it says so rather than
+         showing a deficit against zero. */
+      const bigNumber = (label, value, total) => {
+        const fig = el('figure', 'rux--big-number');
+        const top = el('span', 'rux--big-number__row');
+        top.appendChild(el('figcaption', 'rux--big-number__label', label));
+        const bottom = el('span', 'rux--big-number__row');
+        bottom.setAttribute('role', 'math');
+        bottom.appendChild(el('span', 'rux--big-number__value', value));
+        if (total) bottom.appendChild(el('span', 'rux--big-number__total', total));
+        fig.append(top, bottom);
+        return fig;
+      };
+      const quotedNow = () => {
+        const raw = document.getElementById('sch-f-quoted')?.value;
+        return raw === undefined || raw === null ? null : money(String(raw));
+      };
+      /* THE STATUS LADDER, MIRRORED FROM rux-ui RATHER THAN INVENTED.
+         `js/core/billing-config.js:94-110`, first match wins, same order:
+
+           overpaid          price > 0 && balance < 0
+           paid_full         price > 0 && paid > 0 && balance <= 0
+           po_partial        poReceived && price > 0 && poAmount < remaining
+           po_received       poReceived
+           deposit_received  paid > 0 && (balance > 0 || price <= 0)
+           contract_signed   contractSigned
+           pending           -- everything else
+
+         THERE IS NO INVOICE RUNG. The invoice switch moves neither the status
+         nor `confirmed`; it is billing paperwork, not a step toward being
+         booked. Worth saying because a tab that shows three switches invites
+         the assumption that all three drive the readout.
+
+         IT IS A PREDICTION AND IT IS LABELLED AS ONE. rux-ui owns `confirmed`
+         and recomputes it on every save over there, so this app shows what
+         the ladder WOULD say and writes nothing -- the same rule the derived
+         three have followed since the column cleanup. `confirmWhen` is the
+         default four, which is byte-for-byte what the live
+         `billing-workflow-v1` settings row holds (read 2026-09-10); this app
+         does not fetch that row, so a change to it over there would make this
+         readout stale until someone looks. Stated rather than hidden. */
+      /* THE TONE ENCODES HOW FAR ALONG, NOT WHICH RUNG. Seven rungs and five
+         hues on purpose: three of them mean the same thing to a dispatcher
+         reading the board -- somebody has committed, the trip is on -- so
+         they share `blue` rather than each taking a colour that would have to
+         be learned. `purple` is the one that wants a second look, `green` is
+         done, `magenta` is wrong in the customer's favour, `cool-gray` is
+         nothing yet.
+
+         RED IS NOT USED. A partial PO is not an error: it confirms the trip.
+         The only red on this tab is the coverage shortfall beside the amount
+         it refers to. */
+      const STATUS_LABEL = {
+        overpaid: ['Overpaid', 'rux--tag--magenta'],
+        paid_full: ['Paid in full', 'rux--tag--green'],
+        po_partial: ['Partial PO', 'rux--tag--purple'],
+        po_received: ['PO received', 'rux--tag--blue'],
+        deposit_received: ['Deposit received', 'rux--tag--blue'],
+        contract_signed: ['Contract signed', 'rux--tag--blue'],
+        pending: ['Pending', 'rux--tag--cool-gray'],
+      };
+      const CONFIRM_WHEN = ['contract_signed', 'po_received', 'deposit_received', 'paid_full'];
+      const deriveStatus = ({ contractSigned, poReceived, poAmount, price, paid }) => {
+        const balance = price - paid;
+        const remaining = Math.max(0, balance);
+        if (price > 0 && balance < 0) return 'overpaid';
+        if (price > 0 && paid > 0 && balance <= 0) return 'paid_full';
+        if (poReceived && price > 0 && poAmount < remaining) return 'po_partial';
+        if (poReceived) return 'po_received';
+        if (paid > 0 && (balance > 0 || price <= 0)) return 'deposit_received';
+        if (contractSigned) return 'contract_signed';
+        return 'pending';
+      };
+
+      const figures = el('div', 'sch-billing-figures');
+      const derived = el('div');
+      const drawSummary = () => {
+        const quoted = quotedNow();
+        const paid = pending.reduce((n, p) => n + (Number(p.amount) || 0), 0);
+        const price = quoted ?? 0;
+        const poOn = on(document.getElementById('sch-f-poreceived'));
+        const poAmount = money(document.getElementById('sch-f-poamount')?.value ?? '') ?? 0;
+        const remaining = Math.max(0, price - paid);
+        const shortfall = Math.max(0, remaining - poAmount);
+        const rung = deriveStatus({
+          contractSigned: on(document.getElementById('sch-f-contract')),
+          poReceived: poOn, poAmount, price, paid,
+        });
+
+        /* THE COVERAGE LINE SAYS THE NUMBER, not just the word. "Partial PO"
+           tells a dispatcher there is a gap; `$12,750 not authorized` tells
+           them how big it is, which is what the next PO or payment has to
+           close. rux-ui shows the same figure beside the same field
+           (`js/panels/trip-panel.js:505-535`). */
+        poCoverage.classList.toggle('sch-po-coverage--short', poOn && shortfall > 0);
+        poCoverage.textContent = !poOn ? ''
+          : price <= 0 ? 'No quoted price to cover'
+          : shortfall <= 0 ? 'Covers the balance'
+          : `${usd(shortfall)} not authorized — needs another PO or a payment`;
+
+        /* TWO ROWS LEFT THIS LIST, 2026-09-10, and neither was merely
+           redundant -- both could contradict the lines above them.
+
+           `Balance paid` SAID THE OPPOSITE OF THE TWO FACTS ABOVE IT. It read
+           `trip.balance_paid`, a column rux-ui computes at ITS last save,
+           while Balance and Status are recomputed here on every keystroke.
+           Entering a payment that cleared the trip put this on screen at
+           once: `Balance $0`, `Status Paid in full`, `Balance paid Not yet`.
+           Measured, not imagined. And it carried nothing new even when it
+           agreed -- "is there anything left owing" is what `Balance` is.
+
+           `Date paid` was the latest payment's date, from the same stale
+           column, sitting four rows above a list that shows every payment
+           WITH its date. The list is live and complete; this was one entry
+           from it, as of whenever the other app last looked.
+
+           WHAT IS LEFT IS NOT REDUNDANT. `Status` is the ladder in one word,
+           `Confirmed` is the one question a dispatcher actually asks, and the
+           mapping between them is not guessable -- see below for the rung
+           where it surprises. */
+        const [rungLabel, rungTone] = STATUS_LABEL[rung];
+        derived.replaceChildren(def([
+          ['Status', el('span', `rux--tag rux--tag--sm ${rungTone}`, rungLabel)],
+          ['Confirmed', CONFIRM_WHEN.includes(rung === 'po_partial' ? 'po_received' : rung)
+            ? 'Yes, once saved' : 'Not yet'],
+        ]));
+
+        figures.replaceChildren(
+          /* THE NO-BREAK SPACE IS LOAD-BEARING. `__row` is `display: flex`, so
+             value and total are flex items sitting flush -- measured at a 0px
+             gap, which read `$0/ $45,500`. A leading ordinary space would be
+             collapsed away at the start of the span's own inline context. The
+             alternative was a margin on `.rux--big-number__total`, and that is
+             a rule on a Carbon class in an app stylesheet, which this project
+             does not do. */
+          bigNumber('Paid', usd(paid), quoted === null ? null : ` / ${usd(quoted)}`),
+          /* THE MINUS GOES BEFORE THE DOLLAR, not inside the number. `usd()`
+             wraps `toLocaleString`, so an overpaid trip rendered `$-500` --
+             the sign stranded between the symbol and the digits. Found by
+             overpaying a trip by $500 while checking what was redundant here.
+             U+2212, the real minus, because a hyphen at `heading-04` beside a
+             `$` reads as a dash. */
+          bigNumber('Balance', quoted === null ? 'No quote'
+            : (quoted - paid < 0 ? `−${usd(paid - quoted)}` : usd(quoted - paid))),
+        );
+      };
+      /* THE READOUT COMES BEFORE THE INPUT THAT DRIVES IT, 2026-09-10. The
+         quoted price led this section until rux moved it; the tab now opens
+         on what a dispatcher came to find out -- paid, balance, status --
+         and the one field that feeds them sits under the answer rather than
+         in front of it.
+
+         IT IS THE SAME RULE THE REST OF THE TAB ALREADY FOLLOWS: summary,
+         then milestones, then receipts; and inside each milestone, the switch
+         on the heading and its fields beneath. Read first, edit second, all
+         the way down. With no quote the balance reads "No quote" and the
+         empty field is directly below it, which is the one case where the
+         order also puts the fix next to the problem. */
+      /* THE READOUT IS A TILE AND THE FIELD IS NOT, 2026-09-10. rux asked
+         whether the summary should sit in one; it should, but only the half
+         of it that is a readout.
+
+         WHY THE QUOTED PRICE COMES OUT OF IT. Everything in the tile is
+         derived -- paid and balance from the payment rows, status and
+         confirmed from the ladder -- and none of it is typed. `Quoted price`
+         is the one thing here a dispatcher SETS, and a box drawn around a
+         mixture of output and input says nothing, which is the opposite of
+         what a container is for. Outside and below, the tile reads "this is
+         what the money looks like" and the field under it reads "this is the
+         number you choose", which is also the order rux asked for.
+
+         IT IS A SURFACE, WHICH THE TAB NEEDED. Contract, PO, Invoice and
+         Payments all have a header band now; the summary was the one block
+         with neither a heading nor a surface, floating above the rest.
+
+         `rux--layer-two` FOR THE SAME REASON THE LIST NEEDED IT: `.rux--tile`
+         paints `background-color: var(--rux-layer)` (`css/rux.css:25970`),
+         and on a panel already sitting at `layer-01` that resolves to the
+         colour behind it. And the bleed, for the same reason again: the tile
+         pads itself by `spacing-05`, so without it every figure would sit
+         16px right of the fields below. */
+      const tile = el('div', 'rux--tile rux--layer-two sch-panel-section--bleed');
+      const tileStack = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      tileStack.append(
+        figures,
+        /* THE DERIVED THREE ARE DEMOTED, not dropped. They belong under the
+           two numbers they follow from, in the small type of a `dl`, because
+           a dispatcher reads them second -- after how much came in. */
+        derived,
+      );
+      tile.appendChild(tileStack);
+
+      const summary = el('div', 'rux--stack-vertical rux--stack-scale-5');
+      summary.append(
+        tile,
         moneyField('sch-f-quoted', 'Quoted price', trip.quoted_price),
-        moneyField('sch-f-deposit', 'Deposit', trip.deposit_amount),
       );
-      panelBilling.appendChild(section('Pricing', pricing));
+      panelBilling.appendChild(section(null, summary));
 
-      /* THE BALANCE IS ARITHMETIC, NOT A FIELD. Quoted less what has been paid,
-         from `trip_payments` -- the same rows the list below shows, so the sum
-         and its workings cannot disagree. With no quoted price there is no
-         balance to state and it says so rather than showing the deposit as if
-         it were the whole debt. */
-      const paidSum = (trip.trip_payments || []).reduce((n, p) => n + (Number(p.amount) || 0), 0);
-      const owed = trip.quoted_price === null || trip.quoted_price === undefined
-        ? null : Number(trip.quoted_price) - paidSum;
-      const status = el('div', 'rux--stack-vertical rux--stack-scale-5');
-      status.append(
-        def([
-          ['Paid', paidSum ? usd(paidSum) : 'Nothing recorded'],
-          ['Balance', owed === null ? 'No quoted price' : usd(owed)],
-        ]),
-        toggleField('sch-f-contract', 'Contract signed', trip.contract_status === 'Signed'),
-        toggleField('sch-f-invoice', 'Invoice sent', trip.invoice_status === 'Invoiced'),
-        toggleField('sch-f-paid', 'Balance paid', !!trip.balance_paid),
-        textField('sch-f-invnum', 'Invoice number', trip.invoice_number),
-        textField('sch-f-poref', 'PO reference', trip.po_ref),
-        moneyField('sch-f-poamount', 'PO amount', trip.po_amount),
-        dateOne('sch-f-datepaid', 'Date paid', trip.date_paid),
+      /* `--disclosed`, NOT `--on-page`, so the four headings on this tab are
+         one heading. `--on-page` renders its header at `heading-compact-01`
+         (14px/600) on a filled band; `--disclosed` renders it at `label-01`
+         (12px/400, text-secondary), which is character for character what
+         `.sch-panel-section__title` sets for Summary, Pricing & invoice and
+         Billing status. A shipped Carbon variant rather than a rule of ours,
+         which is the whole reason to prefer it over restyling the header. */
+      /* `rux--layer-two` IS WHAT MAKES THE HEADER BAND VISIBLE, and it is
+         Carbon's own mechanism rather than a rule of ours. `--disclosed`
+         already paints its header `background-color: var(--rux-layer)`
+         (`css/rux.css:10640`) -- the band was never missing, it was the same
+         colour as the thing behind it. Measured: header `#393939`, panel
+         `#393939`, and no `rux--layer-*` ancestor anywhere, so `--rux-layer`
+         fell through to the root's `layer-01`, which is exactly what the side
+         panel is already painted with.
+
+         Stepping the list to layer two makes `--rux-layer` resolve to
+         `layer-02` and the band appears, in the token Carbon meant for it.
+         An override setting a background on `.rux--contained-list__header`
+         would have been a component rule in an app stylesheet for a problem
+         the design system had already solved. */
+      /* `size-md` MOVES THE ROWS AND NOT THE HEADER, which is why it is safe
+         here. `--disclosed` pins its header to a hard `block-size: 2rem`
+         (`css/rux.css:10641`) where `--on-page` reads
+         `--rux-layout-size-height-local`, so the band stays 32px at every
+         size and keeps matching `.sch-panel-section__head`. Measured across
+         all three: header 32/32/32, rows 32/44/52 for sm/md/lg.
+
+         md FOR THE ROWS BECAUSE THEY HOLD A TAG. A `CHK` tag is 18px inside
+         what was a 32px row, leaving 7px above and below; 44px gives it room
+         and gives the row and its delete button a fair click target. The
+         inline density does not change with size -- 16px at all three -- so
+         the bleed above still lands the rows on the same left as the fields. */
+      const list = el('div', 'rux--contained-list rux--contained-list--disclosed rux--layout--size-md rux--layer-two');
+      const draw = () => {
+        list.replaceChildren();
+        const head = el('div', 'rux--contained-list__header');
+        /* NOT AN `<h3>`, AND THAT IS A rux-ds BUG BEING STEERED AROUND rather
+           than a preference. `.rux--contained-list__label` sets no typography,
+           so whatever the label element's own rule says wins over the
+           `__header` font it is supposed to inherit. rux-ds has a bare
+           `h3 { font-size: heading-04 }`, so the heading rendered at 28px --
+           the same size as `$45,300` right above it, and 2.3x every other
+           section title on the tab. Measured in rux-ds's OWN sink too, where
+           the label comes out at 18.7px against a 16px header, so the markup
+           there is wrong in the same way and mine copied it. Filed.
+
+           A div with the heading role keeps the outline entry for assistive
+           tech and inherits the header's 14px/600, which is what Carbon meant
+           `--on-page` to look like. */
+        const label = el('div', 'rux--contained-list__label', 'Payments');
+        label.setAttribute('role', 'heading');
+        label.setAttribute('aria-level', '3');
+        head.appendChild(label);
+        const headAction = el('div', 'rux--contained-list__action');
+        const add = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm');
+        add.type = 'button';
+        add.id = 'sch-f-payadd';
+        add.setAttribute('aria-label', 'Add payment');
+        add.appendChild(svgUse('#i-add', '16', '0 0 32 32'));
+        add.lastChild.setAttribute('class', 'rux--btn__icon');
+        add.addEventListener('click', () => openPaymentDialog(null));
+        headAction.appendChild(add);
+        head.appendChild(headAction);
+        list.appendChild(head);
+
+        const ul = el('ul');
+        ul.setAttribute('role', 'list');
+        if (!pending.length) {
+          const li = el('li', 'rux--contained-list-item');
+          li.appendChild(el('div', 'rux--contained-list-item__content', 'No payments recorded.'));
+          ul.appendChild(li);
+        }
+        pending.forEach((p, i) => {
+          const li = el('li', 'rux--contained-list-item rux--contained-list-item--with-action rux--contained-list-item--clickable');
+          /* THE ROW ITSELF OPENS THE EDITOR, which is why it is a button and
+             carries `--clickable`. The X beside it removes; a row with only
+             a delete control would make editing a payment mean deleting and
+             retyping it. */
+          const open = el('button', 'rux--contained-list-item__content');
+          const mark = PAYMENT_TAG[p.method] || { code: '···', tone: 'rux--tag--gray' };
+          const when = p.date ? mdy(p.date) : 'No date';
+          const much = usd(Number(p.amount) || 0);
+          const tag = el('span', `rux--tag rux--tag--sm ${mark.tone}`, mark.code);
+          tag.title = p.method || 'Method not set';
+          /* THE ROW IS A GRID OF THREE, so the amounts line up as a column
+             down the list instead of floating wherever the date ended. Money
+             is what this list is read for; a ragged right edge makes two
+             receipts a comparison you have to do by eye. */
+          const line = el('span', 'sch-payment-row');
+          line.append(tag, el('span', 'sch-payment-row__when', when),
+                      el('span', 'sch-payment-row__much', much));
+          open.appendChild(line);
+          /* THE REFERENCE IS OFF THE ROW, on the tooltip and in the dialog.
+             It is a cheque number -- looked up when there is a question about
+             a specific payment, not scanned down a list -- and it was the one
+             field long enough to wrap the row onto a second line. */
+          open.title = [p.method || 'Payment', when, much,
+                        p.ref ? `Ref ${p.ref}` : null].filter(Boolean).join(' · ');
+          open.setAttribute('aria-label', `Edit ${open.title}`);
+          open.type = 'button';
+          open.addEventListener('click', () => openPaymentDialog(i));
+          li.appendChild(open);
+          const act = el('div', 'rux--contained-list-item__action');
+          const drop = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm');
+          drop.type = 'button';
+          drop.setAttribute('aria-label', `Remove ${p.method || 'payment'} of ${usd(Number(p.amount) || 0)}`);
+          drop.appendChild(svgUse('#i-close', '16', '0 0 32 32'));
+          drop.lastChild.setAttribute('class', 'rux--btn__icon');
+          drop.addEventListener('click', () => {
+            /* NO CONFIRM ON THE X, deliberately, and this is the one place
+               that differs from rux-ui. Nothing is written until the panel
+               saves, so a mis-click costs a `Reset` rather than a receipt --
+               and the row is still on screen to be re-entered. A dialog to
+               undo a thing that has not happened is theatre. */
+            pending.splice(i, 1);
+            draw();
+            refreshDirty();
+          });
+          act.appendChild(drop);
+          li.appendChild(act);
+          ul.appendChild(li);
+        });
+        list.appendChild(ul);
+        drawSummary();
+      };
+      draw();
+      redrawPayments = draw;
+      /* NO `section()` AROUND THE LIST, and the first attempt had one: the tab
+         rendered "Payments" twice, once as the small section label and once in
+         the contained-list's own `__header` two pixels below it. The header IS
+         the section title -- that is what Carbon ships it for -- so the wrapper
+         here exists only for the `spacing-06` above it that every other section
+         gets. */
+      const listWrap = el('div', 'sch-panel-section sch-panel-section--bleed');
+      listWrap.appendChild(list);
+
+      /* THE ORDER, AND PAYMENTS MOVED TO THE END, 2026-09-10. Summary, then
+         the three milestones in the order the ladder climbs -- contract, PO,
+         invoice -- then the receipts.
+
+         PAYMENTS SAT SECOND UNTIL rux MOVED IT. The argument for second was
+         that the summary derives from it; the argument for last, which wins,
+         is that it is the only section that GROWS. A list of eight receipts
+         pushed Contract, PO and Invoice off the bottom of a 320px panel, so
+         the three fixed-height sections a dispatcher fills in while booking
+         sat below the one that gets longer the more the trip is paid. Last,
+         it can run as long as it likes. */
+      panelBilling.append(
+        section('Contract', contract, contractSwitch),
+        section('Purchase order', po, poSwitch),
+        section('Invoice', invoice, invoiceSwitch),
+        listWrap,
       );
-      panelBilling.appendChild(section('Billing status', status));
 
-      /* PAYMENTS ARE READ ONLY, deliberately. `backend-inventory.md` records
-         that the old app REWRITES every row of a trip on save, so editing here
-         means owning insert, update, delete and position for a list -- an
-         editor, not a panel field, and one nobody has asked for yet. Showing
-         them is what makes the balance above checkable. */
-      const pays = (trip.trip_payments || [])
-        .slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-      panelBilling.appendChild(section('Payments', pays.length
-        ? def(pays.map(p => [
-            [p.date ? mdy(p.date) : 'No date', p.method].filter(Boolean).join(' · '),
-            [usd(Number(p.amount) || 0), p.ref].filter(Boolean).join(' — '),
-          ]))
-        : el('p', 'sch-panel-hint', creating
-            ? 'Payments can be recorded once the trip is saved.'
-            : 'No payments recorded.')));
+      /* WHAT A SWITCH DOES TO ITS FIELDS: hides the block, clears the values,
+         and disables the inputs. `clear` is false on the first pass so a row
+         already holding a value does not arm Save merely by being opened --
+         the invariant says none should, and if one ever does it is a fact to
+         see rather than to erase.
+
+         `disabled` STAYS ALONGSIDE `hidden` rather than being replaced by it.
+         It costs nothing, it keeps the state the tests here already check,
+         and it means a field is never typeable in the one frame between the
+         toggle firing and the block being hidden. */
+      const GATES = [
+        ['sch-f-contract', ['sch-f-contractnote'], contract],
+        ['sch-f-poreceived', ['sch-f-poref', 'sch-f-poamount'], po],
+        ['sch-f-invoice', ['sch-f-invnum'], invoice],
+      ];
+      const syncGates = (clear) => {
+        for (const [toggleId, fieldIds, box] of GATES) {
+          const open = on(document.getElementById(toggleId));
+          box.hidden = !open;
+          for (const fid of fieldIds) {
+            const input = document.getElementById(fid);
+            if (!input) continue;
+            input.disabled = !open;
+            if (!open && clear) input.value = '';
+          }
+        }
+      };
+      syncGates(false);
+      /* DELEGATED ON THE TAB, NOT BOUND TO THE SWITCH. `setToggle` dispatches
+         `rux:toggle` on the `.rux--toggle` BOX (`js/form-controls.js:94`),
+         while the id is on the `__button` INSIDE it -- so a listener on the
+         button never sees the event, because bubbling goes up and the button
+         is a descendant of the dispatcher. The first version bound to the
+         button and silently did nothing: the patch was right, because
+         `readForm` re-reads `aria-checked` on demand, but the fields stayed
+         enabled and the coverage line went stale. `panelBilling` already
+         listens for the same event to drive `refreshDirty`, which is what
+         made the difference visible. */
+      panelBilling.addEventListener('rux:toggle', () => {
+        syncGates(true);
+        drawSummary();
+      });
+      /* THE QUOTED PRICE AND THE PO AMOUNT BOTH FEED THE TOP OF THE TAB, so
+         typing in either redraws it. `input`, not `change`: the numbers should
+         follow the keystroke the way the payment list follows the dialog. */
+      for (const fid of ['sch-f-quoted', 'sch-f-poamount']) {
+        document.getElementById(fid)?.addEventListener('input', drawSummary);
+      }
+      drawSummary();
     }
 
     // FLEET IS THE BUS AND WHO IS ON IT, and nothing else -- the leg's own
@@ -2019,7 +3096,22 @@
 
     // The module claims a picker on load; these were built just now, so it is
     // asked again for this subtree.
-    window.Rux?.datePicker?.init?.(panelDetails);
+    /* EVERY TAB, NOT JUST DETAILS, corrected 2026-09-10. This claimed
+       `panelDetails` alone, so a date picker built into any other tab was
+       never claimed at all -- and `date-picker.js` is the only thing that
+       DETACHES a calendar, which is how a closed calendar is expressed
+       (Carbon ships no closed state; see that module's header). An
+       unclaimed picker therefore renders its calendar open, inline, pushing
+       the form down, and no click closes it.
+
+       THAT IS THE WHOLE OF THE `Date paid` DEFECT, and this session first
+       filed it against rux-ds as a single-variant claim bug on the strength
+       of the symptom -- the Billing calendar sitting in the DOM while the
+       Details ones were detached. Both facts have one cause and it is here:
+       the module was never asked to look at that panel. Nothing upstream
+       needed fixing. Scoped to the panel body so all four tabs are covered
+       and a fifth cannot repeat it. */
+    window.Rux?.datePicker?.init?.(panelBody);
 
     /* A TABPANEL IS A TAB STOP ONLY WHEN NOTHING INSIDE IT IS. That is the
        ARIA rule, and Details breaks it: it holds 16 focusable controls, so its
@@ -2029,14 +3121,23 @@
        keyboard user could reach the tab and never reach what it reveals.
        Decided per panel, from its contents, rather than written into the
        markup once and left to rot as the contents change. */
-    for (const tp of [panelDetails, panelFleet]) {
+    /* BILLING JOINED THIS LIST 2026-09-10, having been left out of it since
+       the rule was written. It kept the static `tabindex="0"` from
+       index.html while holding nine focusable controls, so it was exactly
+       the redundant tab stop the note below describes -- one Tab landed on
+       the panel itself and drew a focus ring round the whole tab, which is
+       what rux saw as the section being selectable. The loop decides this
+       per panel from its contents; Billing simply was not being asked. */
+    for (const tp of [panelDetails, panelBilling, panelFleet, panelSchedule]) {
       const focusable = tp.querySelector('input, select, textarea, button, a[href], [tabindex]:not([tabindex="-1"])');
       if (focusable) tp.removeAttribute('tabindex');
       else tp.setAttribute('tabindex', '0');
     }
 
     document.getElementById('sch-f-type')?.addEventListener('change', e => {
-      returnDates.hidden = e.target.value !== SPLIT;
+      const split = e.target.value === SPLIT;
+      returnDates.hidden = !split;
+      setOutLabels(split);
       refreshDirty();
     });
 
@@ -2395,6 +3496,33 @@
   panelBilling?.addEventListener('change', refreshDirty);
   panelBilling?.addEventListener('rux:toggle', refreshDirty);
 
+  /* RESET REBUILDS RATHER THAN UNDOES. Every field is written from `trip` on
+     the way in, so replaying `openPanel` with the arguments that opened it
+     restores all of them at once -- including the ones a field-by-field undo
+     would have to know about separately: the type-dependent date labels, the
+     return pair's hidden state, the day-of rows that `Add another contact`
+     appended, the disabled schedule inputs. It also re-runs `refreshDirty`,
+     so the bar disarms itself the moment there is nothing left to discard.
+
+     NO CONFIRM ON IT, which is a judgement and not an oversight: what it
+     discards is unsaved typing in a panel that already discards the same
+     thing when closed, and the button is dead unless there IS something to
+     discard. A confirm on the smaller of two ways to lose the same edits
+     would be theatre. */
+  panelReset?.addEventListener('click', () => {
+    if (!panelArgs) return;
+    openPanel(panelArgs.bar, panelArgs.draft);
+  });
+
+  /* THE BUTTON ASKS; THE MODAL DECIDES. This opens `sch-cancel-modal` and
+     stops -- the write lives on that dialog's own confirm, which is why
+     this can sit beside Save at all. It reads `editing.id` rather than
+     closing over a trip, so it is right for whichever trip the panel is
+     showing now and not whichever one it was showing when it was wired. */
+  panelCancel?.addEventListener('click', () => {
+    if (editing?.id) openCancelModal(editing.id);
+  });
+
   panelSave?.addEventListener('click', async () => {
     if (!editing) return;
     const patch = patchOf();
@@ -2419,7 +3547,21 @@
          and the next field added to `readForm` deserves to fail loudly. */
       const form = creating ? readForm() : null;
       if (creating && !form) throw new Error('The form is not complete — a field is missing from the panel.');
-      const row = creating ? { ...form, bus_count: 1 } : patch;
+      /* `confirmed: false` IS SET ONCE, AT INSERT, and only here. The form
+         stopped writing that column on 2026-09-10 because rux-ui derives it
+         -- but an INSERT that omits it leans on a database default nothing
+         in this repo states, and the column's own history says it is never
+         null. Getting it wrong the other way is not cosmetic: `confirmed`
+         is false on 274 trips and it COLOURS THE BAR, so a new trip born
+         `true` would read as agreed with the customer when nobody has
+         agreed anything.
+
+         IT IS NOT A SECOND WRITER RETURNING. rux-ui's rule derives
+         `pending` for a trip with no contract, no PO and no payment -- which
+         is every trip at the instant it is created -- so this writes the
+         value that derivation would produce, once, and never touches it
+         again. */
+      const row = creating ? { ...form, bus_count: 1, confirmed: false } : patch;
       const wantBus = creating ? createBusId : null;
       /* TWO WRITES WHEN A CELL ASKED FOR A BUS, and they cannot be one:
          the assignment needs the trip's id, which only exists after the
@@ -2492,6 +3634,44 @@
         const { error: cErr } = await withTimeout(
           client.from('contacts').update(cWork.patch).eq('id', cWork.id).then(r => r));
         if (cErr) throw new Error(`The trip saved, but the customer did not: ${cErr.message}`);
+      }
+
+      /* PAYMENTS, THEN THE AGGREGATE THEY ADD UP TO. `deposit_amount` is not
+         a deposit despite its name -- rux-ui writes the SUM of the payment
+         rows into it and reads it back as "paid" when deriving a trip's
+         billing status (`normalizeRecord` in its billing-config.js). So
+         writing payment rows without updating this column would leave the
+         other app deriving from a stale total: money recorded here, and a
+         status over there that never moved.
+
+         IT IS WRITTEN AS A SECOND UPDATE rather than folded into the trip
+         patch above, because its value is not known until the rows are.
+         `|| null` matches what rux-ui stores for an empty list. */
+      /* THE TRIP ID IS `made.id` ON CREATE and `id` on edit, because `id` is
+         `editing.id` and a trip being created has none until the INSERT above
+         comes back. Every payment write below hangs off this, which is the
+         whole of what it took to make payments work on a new trip. */
+      const payTripId = made?.id ?? id;
+      const payPatch = payTripId ? paymentsPatch() : null;
+      if (payPatch?.work) {
+        for (const p of payPatch.inserts) {
+          const { error: piErr } = await withTimeout(
+            client.from('trip_payments').insert({ trip_id: payTripId, ...p }).then(r => r));
+          if (piErr) throw piErr;
+        }
+        for (const u of payPatch.updates) {
+          const { error: puErr } = await withTimeout(
+            client.from('trip_payments').update(u.patch).eq('id', u.id).then(r => r));
+          if (puErr) throw puErr;
+        }
+        for (const delId of payPatch.deletes) {
+          const { error: pdErr } = await withTimeout(
+            client.from('trip_payments').delete().eq('id', delId).then(r => r));
+          if (pdErr) throw pdErr;
+        }
+        const { error: daErr } = await withTimeout(
+          client.from('trips').update({ deposit_amount: payPatch.paid || null }).eq('id', payTripId).then(r => r));
+        if (daErr) throw daErr;
       }
 
       for (const w of stopWork) {
@@ -2616,12 +3796,7 @@
     if (item.id === 'sch-bar-menu-open') { openPanel(bar); return; }
 
     if (item.id === 'sch-bar-menu-cancel') {
-      const trip = panelIndex.trips.get(bar.dataset.tripId);
-      cancelling = bar.dataset.tripId;
-      document.getElementById('sch-cancel-what').textContent =
-        `${trip?.destination || 'This trip'}${trip?.customer ? ` for ${trip.customer}` : ''}.`;
-      document.getElementById('sch-cancel-reason').value = '';
-      window.Rux?.modal?.open?.('sch-cancel-modal');
+      openCancelModal(bar.dataset.tripId);
       return;
     }
 
@@ -2652,6 +3827,21 @@
      THE REASON IS OPTIONAL HERE and stored when given. 32 of the 41 cancelled
      trips carry one, so it is normally written but not always, and refusing
      the cancel without one would be stricter than the data has ever been. */
+  /* ONE WAY IN FOR TWO WAYS TO ASK, 2026-09-10. The bar's own menu had this
+     inline; the Details tab's `Cancel trip` button needed the same six lines,
+     and two copies of "which trip, what does it say, clear the reason, open"
+     is two places for them to disagree about any of it. A function
+     declaration rather than a const because both callers are wired above
+     where `cancelling` is declared. */
+  function openCancelModal(tripId) {
+    const trip = panelIndex.trips.get(tripId);
+    cancelling = tripId;
+    document.getElementById('sch-cancel-what').textContent =
+      `${trip?.destination || 'This trip'}${trip?.customer ? ` for ${trip.customer}` : ''}.`;
+    document.getElementById('sch-cancel-reason').value = '';
+    window.Rux?.modal?.open?.('sch-cancel-modal');
+  }
+
   let cancelling = null;
 
   document.getElementById('sch-cancel-confirm')?.addEventListener('click', async () => {

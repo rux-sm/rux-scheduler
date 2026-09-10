@@ -162,17 +162,260 @@
 
    THE ANIMATED TITLE IS NOT IN PLAY. `--animated-title` is not on the element
    and `__collapsed-title-text` is inert without it, so collapsing the header to
-   one row cannot strand it. */
-.rux--side-panel__header {
-  padding-block: 0;
-  min-block-size: 2rem;
+   one row cannot strand it.
+
+   CORRECTION, 2026-09-09: none of the three rules below this comment ever
+   won -- header, title, and title-text were each one class deep
+   (`.rux--side-panel__header`, `__title`, `__title-text`), and Carbon's own
+   rules on the same elements run two and three classes deep. Higher
+   specificity beats source order regardless of which file loads last. The
+   header measured 60px and the title 44px, border and all, and the title
+   text itself was still 20px at 400 -- Carbon's `heading-03` default, not
+   the `heading-compact-02` this comment claimed -- the whole time. First
+   pass here (same day) caught header and title but missed title-text; all
+   three now match Carbon's own selector depth, per AGENTS.md's "at Carbon's
+   own specificity." */
+/* AND CENTRE IT IN THE BAND, 2026-09-09 -- found alongside the title-text
+   fix above. Compacting the header to 2rem didn't touch its layout: Carbon
+   leaves `.rux--side-panel__header` at `display: block`, so the 22px title
+   sat flush against the header's own top edge with the dead space below it
+   rather than split evenly, the one thing `.sch-aside__head`'s `flex` +
+   `align-items: center` already gets right for its own title. `flex: 1` on
+   `__title` keeps it at the header's full width -- `display: flex` alone
+   shrinks it to the text's own width, which would pull the background fill
+   and the close button's clearance in with it. */
+/* THE ROSTER'S CLOSE READS LIKE THE EDITOR'S, 2026-09-10. The two were
+   already the same 40px square holding the same 16px glyph; the only thing
+   that differed was the colour, and it was the one that matters --
+   #78a9ff against #f4f4f4, measured. `rux--btn--ghost` is Carbon's
+   INTERACTIVE ghost, so its icon takes the link colour, and a blue X reads
+   as an action to take rather than a way out of one. Carbon's side panel
+   already knows this: `.rux--side-panel .rux--btn.rux--side-panel__close-
+   button` sets `color: var(--rux-text-primary)` precisely so its own close
+   is neutral. This gives the roster's the same, which is why the rule names
+   the token rather than a colour.
+
+   IT IS SCOPED TO THE ONE BUTTON and not to `rux--btn--ghost`, because the
+   other ghosts on this page are genuinely interactive -- `Today`, `Drivers`
+   and `Add another contact` are actions, and they should keep the link
+   colour that says so. */
+#sch-avail-close {
+  color: var(--rux-text-primary);
 }
-.rux--side-panel__title {
+
+/* 40px SINCE 2026-09-10, the third of the three region heads that moved
+   together -- sch.css's `.sch-corner` carries the reasoning and the two
+   that stayed behind. Worth saying here what this number is NOT: Carbon's
+   own side panel header is about 84px, `padding: 1rem` over a `2.5rem`
+   min-block-size plus a 1rem transparent border under the title, with the
+   title at `heading-03`, 20px at 400. That is the header in Carbon's own
+   capture and it is right for a panel that owns its whole screen. This one
+   is a column on a dispatch board beside two dense grids, and it takes the
+   board's module instead so the three regions start on one line. 40px is a
+   step toward Carbon's shape, not an arrival at it; the type is still
+   `heading-compact-02` and moving THAT is the other half, unspent. */
+.rux--side-panel .rux--side-panel__header.rux--side-panel__header--has-title {
+  display: flex;
+  align-items: center;
+  padding-block: 0;
+  min-block-size: var(--rux-layout-size-height-md);
+}
+.rux--side-panel .rux--side-panel__title {
+  flex: 1;
   border-block-end: 0;
 }
-.rux--side-panel__title-text {
-  font-size: var(--rux-heading-compact-02-font-size);
-  font-weight: var(--rux-heading-compact-02-font-weight);
-  line-height: var(--rux-heading-compact-02-line-height);
-  letter-spacing: var(--rux-heading-compact-02-letter-spacing);
+/* THE TITLE IS CARBON'S OWN `heading-03` AGAIN, 2026-09-10 on rux's call,
+   and the way to say that is to STOP SAYING ANYTHING -- the four
+   declarations that were here forced `heading-compact-02`, 16px at 600, and
+   deleting them lets rux.css's own rule land: 20px at 400, the size Carbon
+   draws a side panel title at. An override that restates the default is
+   worse than no override, so this is a comment where a rule was.
+
+   IT UNPICKS HALF OF 2026-09-09, and the half is worth naming. That entry
+   matched all three region titles at `heading-compact-02` so none of them
+   matched its own subordinate. Two still do; this one no longer matches its
+   siblings -- and that is the point rather than a cost, because it is not
+   their kind of thing. The toolbar's date and the roster's title are table
+   chrome, labelling grids whose column headers sit 14px beneath them. This
+   labels a form. Carbon gives the two different components different specs
+   and the earlier entry had flattened that.
+
+   WHAT STILL HOLDS from that entry: the three heads are one BAND, 40px, so
+   the regions still start on one line. What changed is only what sits in
+   this one. */
+
+/* THE TRIP PANEL'S TABS FILL THE STRIP WITHOUT `--contained`. Carbon only
+   grid-fits nav items when `--contained` rides along with `--full-width`,
+   and `--contained` is the per-tab accent block plus shadow divider that
+   index.html rejected on 2026-09-07 for reading as floating boxes -- a call
+   about the tabs' surface, not their width. `flex: 1` on line tabs' own
+   content-sized nav items gets the fill without that surface: the single
+   underline stays, and Details/Billing/Fleet now split the strip evenly
+   instead of clustering left with the panel's dead space to their right.
+
+   BOTH LEVELS NEED IT. `.rux--tab--list` -- the row the buttons sit
+   in -- is `inline-size: auto` in rux.css, a sibling of the (hidden)
+   overflow-nav buttons inside `.rux--tabs`'s own flex row; nothing told
+   it to claim the space `.rux--tabs` already has. Flexing only the
+   buttons stretched them to fill THAT auto-sized row, which stopped short
+   of the panel's own edge -- measured at 217px of a 288px content width.
+   `flex: 1` on the list too makes it claim the full row first.
+
+   THE FOURTH TAB CHANGED THE SHARE, 2026-09-10. `flex: 1` is `1 1 0%`:
+   every tab equal, content ignored. Three fitted that way; `Schedule`
+   as a fourth did not -- 288/4 is 72px, and 60px of word inside 16px
+   padding a side wants 92. Measured clipped on the page, mid-word.
+   `flex: 1 1 auto` grows each tab FROM its own content instead, so the
+   long label takes the room the short one does not need: Schedule 86px
+   against Fleet's 59, filling 285 of 288. The padding drops to
+   `spacing-03` in the same breath, which is what buys the fit -- at
+   `spacing-05` the four still want 308. Both are this panel's numbers,
+   not Carbon's: 320px is the narrowest side panel it ships and four
+   tabs is the most this one should ever carry.
+
+   AND THEY STICK, on rux's ask the same day. The strip lives inside
+   `__inner-content`, which is the scrolling box, so it used to leave
+   with the form -- on a Details tab this long it was gone entirely by
+   the contacts, and switching tabs meant scrolling back for the
+   control that switches them. `inset-block-start: 0` pins it under the
+   header, which is `sticky` in Carbon's own CSS, so the two read as one
+   fixed head. It needs an opaque `layer-01` of its own or the fields
+   would scroll THROUGH it, and a `z-index` over the fluid labels'
+   own `1` -- while staying far under the date picker's calendar at
+   9000, which must still open over the strip. */
+/* THE TWO FLEX RULES CAME OUT ON 2026-09-10, and everything above this line
+   is the record of why they were ever needed. `--contained --full-width`
+   lays the list out as `repeat(auto-fit, minmax(0, 1fr))` from rux.css
+   itself, so the even fill they were hand-rolling is the component's now.
+   Both were deleted rather than left as a belt: a rule that restates what
+   the component already does is one more thing to explain the next time
+   this strip moves.
+
+   THE PADDING STAYS, and it is load-bearing rather than leftover. An even
+   column is 72px; Carbon's own `spacing-05` would spend 32 of that on
+   padding and leave 40 for the word, where `spacing-03` leaves 56. That is
+   the difference between `Schedule` losing two characters and losing four.
+   The strip truncates either way -- rux chose the even grid knowing it --
+   so this simply buys back as much of the label as the token scale allows. */
+#sch-panel-body .rux--tabs__nav-link {
+  padding-inline: var(--rux-spacing-03);
+}
+/* AND IT RUNS EDGE TO EDGE, 2026-09-10. `__inner-content` is
+   `padding: 0 1rem 1rem` in rux.css with no exception for fluid anywhere in
+   the sheet -- looked for one -- so a contained strip inset 16px a side sat
+   as four blocks floating off both edges, which is the 2026-09-07 objection
+   arriving by a different road. `inline-size: auto` is half the rule and
+   not decoration: `.rux--tabs` is pinned to `100%` upstream, so the negative
+   margins moved the strip without widening it until that came off.
+
+   IT PAID FOR ITSELF. The even columns went 72px to 80px, which is 64px of
+   room for a label against the 60px `Schedule` needs -- so the truncation
+   this variant was accepted WITH is gone, and `Sched…` reads `Schedule`
+   again. The note in index.html that offered to shorten the word is left
+   standing because the offer still holds if a fifth tab ever lands. */
+/* THE SPACE UNDER THE TABS BELONGS TO THE TABS, 2026-09-10. rux scrolled the
+   Details tab and watched `Round trip` slide up and cut itself in half on the
+   strip's bottom edge, and asked whether the padding could stick too. It can,
+   and the fix is a MOVE rather than an addition: the 16px sat on
+   `.rux--tab-content`'s `padding-block-start`, which scrolls, so it was gone
+   exactly when it was wanted. Zeroing it there and spending the same token
+   here leaves the resting layout identical -- measured 16px between the tabs
+   and the first field before and after -- while the gap now travels with the
+   sticky box and content passes UNDER it.
+
+   `block-size` IS NOT ARITHMETIC FOR ITS OWN SAKE. `.rux--tabs` is a flex row
+   and its nav items STRETCH to the content box, so padding alone came out of
+   the tabs: they measured 32px against the 40 they are meant to be, and the
+   strip stayed 48. Stating the height as the band plus the gap gives the
+   buttons their 40 back and puts the 16 below them.
+
+   WHAT CARBON DOES INSTEAD, since it is worth knowing this is not its answer:
+   a side panel fades a 1px rule in under the header as content scrolls --
+   `__header::before`, `opacity: var(--rux--side-panel--scroll-animation-
+   progress)`. It is inert here, measured 0, because that progress is driven
+   by the animated-title machinery this panel runs without. A divider says
+   "something is under me"; this says "nothing gets that close". */
+#sch-panel-body .rux--tabs {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 3;
+  background: var(--rux-layer-01);
+  margin-inline: calc(-1 * var(--rux-spacing-05));
+  inline-size: auto;
+  padding-block-end: var(--rux-spacing-05);
+  block-size: calc(var(--rux-layout-size-height-md) + var(--rux-spacing-05));
+  max-block-size: none;
+}
+#sch-panel-body .rux--tab-content {
+  padding-block-start: 0;
+}
+
+/* THREE FLUID RULES LIVED HERE AND ARE GONE, 2026-09-10, with the style
+   they served. Two completed a pattern Carbon leaves half-done in a side
+   panel -- it raises a fluid control to `field-02` but not the wrapper
+   behind it, so the date picker's box and the textarea's label strip each
+   sat a layer back. The third re-anchored Carbon's range divider on `--to`
+   because its own `:last-child` selector stops matching when
+   `date-picker.js` re-inserts the calendar.
+
+   ALL THREE WERE CORRECT AND ALL THREE ARE DEAD, because every selector
+   began at a `--fluid` class this app no longer writes. The divider defect
+   they worked around is upstream and unfixed; docs/rux-ds-requests.md keeps
+   the record, so returning to fluid means writing them again rather than
+   rediscovering why. */
+
+
+/* THREE EVEN ACTIONS IN A 320px BAR, 2026-09-10. rux asked why the three
+   were not the same width, and the answer was not the flex: all three
+   compute `grow: 1, shrink: 1, basis: 0`, which should divide the bar in
+   thirds by itself. It is the PADDING, and only on two of them --
+
+     Cancel (danger--ghost)   15px / 15px
+     Reset  (secondary)       15px / 63px
+     Save   (primary)         15px / 63px
+
+   -- because Carbon reserves a trailing 4rem on a filled action button for
+   an icon that may sit after the label. That reserve is part of each
+   button's min-content, and a flex item will not shrink below its own
+   min-content however the basis is written, so Reset and Save floored at
+   122.2px and Cancel took whatever was left: 75.5. Equal flex, unequal
+   boxes.
+
+   ONE SYMMETRIC PADDING FIXES IT because it is the actual cause: with all
+   three at `spacing-05` the minimums come out under a third of the bar and
+   Carbon's own basis divides it evenly -- measured 106.7 / 106.7 / 106.7
+   in edit mode, 160 / 160 when Cancel is hidden on a new trip, flush to
+   both panel edges in both. No icon is used on any button in this bar, so
+   the reserve was holding space for nothing.
+
+   IT IS SCOPED TO THE PANEL'S ACTION BAR, not to `.rux--action-set` at
+   large: `sch-cancel-modal`'s footer is wide enough for Carbon's own
+   spacing and keeps it. */
+.rux--side-panel__actions-container .rux--action-set__action-button {
+  padding-inline: var(--rux-spacing-05);
+}
+
+
+/* THE ROW ACTION NEVER CENTRES IN A ROW TALLER THAN ITSELF, 2026-09-10.
+   `.rux--contained-list-item__action` is `position: absolute` with
+   `inset-block-start: 0`, no block-end and no `align-items`
+   (`css/rux.css:10752-10760`), so the control is pinned to the top of the
+   row and the row's height has no effect on it.
+
+   INVISIBLE AT `size-sm` AND ONLY THERE, which is why it went unnoticed: a
+   32px row holding a 32px button has nowhere to be off-centre. The Billing
+   tab's payment list moved to `size-md`, whose rows are 44px, and the delete
+   button measured 0px above and 12px below.
+
+   NOT ONLY THIS APP. rux-ds's own `sink/contained-list.html` shows it as
+   well -- its `size-lg` list has a 40px row holding a 22px button at 19px
+   above and 0 below. Filed in `docs/rux-ds-requests.md`; this goes away when
+   the component centres its own action.
+
+   ONE CLASS DEEP, MATCHING CARBON'S OWN SELECTOR, so the cascade decides it
+   and no `!important` is needed. The header's action is left alone: its band
+   is 32px and holds a 32px button, so there is nothing there to centre. */
+.rux--contained-list-item__action {
+  inset-block: 0;
+  align-items: center;
 }

@@ -153,11 +153,27 @@
      was a line doing a job the accent band already does. */
   /* ONE ROW OF 2rem, CARBON'S sm, AND A SQUARE CORNER.
 
-     THE RULE, WHICH OUTLIVES THE NUMBER: the toolbar, this band and the buttons
-     in the toolbar are ONE module, because that is what Carbon's table does --
-     and the bus column's floor is whatever that module is, so the corner comes
-     out square. Change one and change all four (`.sch-toolbar`, this rule, the
-     button size classes in both pages, and `.sch-aside`'s top offset).
+     THE MODULE SPLIT IN TWO ON 2026-09-10, and this band kept the smaller
+     half. The three REGION HEADS -- the toolbar, `.sch-aside__head` and the
+     trip editor's -- went to `size-md`, 40px, on rux's call that they read
+     too small. This band and the roster's `.sch-avail__day` did NOT: they
+     are COLUMN headers, subordinate to those titles, and the type already
+     says so (`heading-compact-02` over `-01`). Giving the heads the taller
+     band puts the heights in the same order the type is in.
+
+     WHAT IT PROTECTS, which is why the split went this way round: this rule
+     is what makes the corner square, and the corner IS the bus column's
+     width. At 40px the column would take 8px from the day tracks, and the
+     week already runs 323px short at 1440 with both companions open
+     (docs/log.md, 2026-09-08). The heads cost 8px of vertical board and
+     nothing horizontal; this band would have cost the opposite.
+
+     THE RULE, WHICH OUTLIVES THE NUMBER: this band and the toolbar's own
+     BUTTONS stay one module at 32px, because that is what Carbon's small
+     table does -- the toolbar's height follows the table's density
+     (`block-size: var(--rux-layout-size-height-local)` in rux.css) and the
+     controls in it stay `sm`. What changed is only the BAND the controls sit
+     in, which now centres 32px buttons in 40px of room.
 
      THE NUMBER HAS MOVED THREE TIMES and the history is the argument. 51px as
      two stacked lines; 2rem when the day and its date went onto one line; 2.5rem
@@ -686,7 +702,12 @@ button.sch-row-head__num {
   align-items: center;
   justify-content: space-between;
   gap: var(--rux-spacing-03);
-  min-block-size: 2rem;
+  /* 40px, `size-md`, 2026-09-10 -- one of the three region heads that moved
+     together. It must equal `.sch-toolbar`'s to the pixel or the two grids'
+     COLUMN headers stop landing on one line, which is the whole reason this
+     head exists in this band. See `.sch-corner` for why the bands below
+     them stayed at 32. */
+  min-block-size: var(--rux-layout-size-height-md);
   padding-inline-start: var(--rux-spacing-05);
   background: var(--rux-layer);
 }
@@ -782,7 +803,22 @@ button.sch-row-head__num {
      time it happened. One row, always; what gives way is the label, below. */
   flex-wrap: nowrap;
   background: var(--rux-layer);
-  min-block-size: 2rem;
+  /* 40px, `size-md`, 2026-09-10. CORRECTION, same day: this first read "with
+     its BUTTONS left at `sm`", and that lasted about an hour -- rux's next
+     call was that the controls match the band, so every button in the three
+     heads is `rux--layout--size-md` now and the toolbar is 40px of band
+     holding 40px of control, edge to edge, which is what Carbon's own table
+     toolbar is at any density.
+
+     WHAT THAT TRADES, stated because the version above traded the opposite
+     way: Carbon ties a toolbar's height to its TABLE's density, and the rows
+     and day band here are still `sm`. So the chrome is md over an sm grid,
+     which is a decoupling Carbon does not do. It buys the touch target the
+     note on `.sch-corner` asked for -- the paging chevrons were the two most
+     repeated targets on the board and were under both platforms' guidance at
+     32px. 40px is still under iOS's 44 and Android's 48, but it is 8px
+     closer and it is the whole module rather than a patch on two buttons. */
+  min-block-size: var(--rux-layout-size-height-md);
 }
 /* THE LABEL IS THE ONLY THING THAT GIVES WAY, and it is the right one. A
    truncated "September 7 – 13, 20…" still says which week; a hidden button says
@@ -855,6 +891,104 @@ button.sch-row-head__num {
   line-height: var(--rux-body-compact-01-line-height);
   color: var(--rux-text-primary);
 }
+/* The two headline figures at the top of Billing. This lays out Carbon
+   big-numbers, it does not restyle them: nothing here touches a `rux--*`
+   class, and the figures keep every size and colour rux-ds gives them.
+
+   ONE PER ROW, ALWAYS, AND THAT IS THE POINT. Two earlier versions tried to
+   fit them side by side: an auto-fit grid at `minmax(9rem, 1fr)` that could
+   never fire -- the panel is a fixed 320px at every viewport, measured from
+   800px to 1500px, so two 144px tracks plus a 16px gap never fit -- and then
+   a `flex-wrap` that fired only sometimes.
+
+   SOMETIMES IS WORSE THAN NEVER HERE. Measured: `Paid` is 176px carrying
+   `$25,500 / $45,500`, and `Balance` is 92px at `$4,500` but 108px at
+   `$20,000`. 176 + 92 + 16 fits in 288; 176 + 108 + 16 does not. So the two
+   figures sat side by side or stacked DEPENDING ON THE AMOUNTS, and the tile
+   reflowed while a payment was being typed. A summary that changes shape as
+   its own numbers change is harder to read than either arrangement.
+
+   Stacking always is the stable answer, and it is the one rux chose after
+   seeing both. Two headline numbers at `heading-04` were never going to fit
+   on one 288px line anyway; forcing it would have meant a rule on
+   `.rux--big-number__value`, which is rux-ds's to set. */
+.sch-billing-figures {
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: var(--rux-spacing-03);
+}
+
+/* One payment on one line: code, date, amount. Carbon's row content is an
+   inline-block, so this grid goes INSIDE it rather than on it -- no rule here
+   touches a `rux--*` class.
+
+   THE AMOUNT IS ITS OWN COLUMN, right-aligned, so the money reads as a column
+   down the list rather than trailing whatever width the date happened to be.
+   The date column takes the slack; the two outer columns are content-sized. */
+.sch-payment-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--rux-spacing-03);
+  inline-size: 100%;
+}
+.sch-payment-row__when {
+  color: var(--rux-text-secondary);
+  text-align: start;
+}
+.sch-payment-row__much {
+  color: var(--rux-text-primary);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The PO coverage line. Carbon's `rux--form__helper-text` carries the type and
+   the muted colour; this only adds the one state that class has no opinion
+   about — a PO that does not reach the remaining balance. `text-error` rather
+   than `support-warning` because the two sit on different surfaces: the error
+   token is the one Carbon tunes for text on a layer, and a shortfall is read,
+   not glanced at. It is not a validation failure and never blocks a save. */
+.sch-po-coverage { margin-block-start: calc(-1 * var(--rux-spacing-03)); }
+.sch-po-coverage--short { color: var(--rux-text-error); }
+
+/* A milestone's fields, shown only while its switch is on. The rule is needed
+   because the block is also a `rux--stack-vertical`, which is `display: grid`
+   — that beats the user agent's own `[hidden] { display: none }`, so the bare
+   attribute would leave the fields on screen with nothing reporting an error.
+   Scoped to this app's own class, never to the Carbon one. */
+.sch-milestone-fields[hidden] { display: none; }
+
+/* A section heading with an inline control on its right. Sized to match the
+   `contained-list` header that Payments uses two sections above — same
+   `size-sm` height, and `__title` already carries the same 12px/400 — so the
+   billing tab reads as one rhythm even though one header is a Carbon
+   component and the others are app chrome. */
+.sch-panel-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rux-spacing-05);
+  min-block-size: var(--rux-layout-size-height-sm);
+}
+
+/* A section pulled out to the panel's edges. The panel body carries
+   `spacing-05` of inline padding and a `contained-list` carries `spacing-05`
+   of its own inside the header and every row, so the list's text sat 16px
+   right of every other heading and field on the tab — measured, not guessed.
+
+   IT BLEEDS RATHER THAN DROPPING THE PADDING, and that is the whole point of
+   doing it this way. Setting `padding-inline: 0` on the header would align
+   the text too, but the header band is exactly the content width, so the
+   words would touch its left edge. Pulling the list out by the body's own
+   padding keeps Carbon's 16px INSIDE the band and lands the text at the same
+   left as the fields, with the band running to the panel's edges. Same trick,
+   and the same number, as the sticky tab strip in `rux-overrides.css`.
+
+   The margin is on this app's wrapper, never on `.rux--contained-list`. */
+.sch-panel-section--bleed {
+  margin-inline: calc(-1 * var(--rux-spacing-05));
+}
+
 .sch-panel-section { margin-block-start: var(--rux-spacing-06); }
 .sch-panel-section__title {
   font-size: var(--rux-label-01-font-size);
@@ -1240,19 +1374,33 @@ button.sch-row-head__num {
 .sch-times .rux--text-input { inline-size: 100%; min-inline-size: 0; }
 
 
-/* ── TWO FIELDS ON ONE ROW ──────────────────────────────────────────────────
-   Carbon pairs two DATES with `rux--date-picker--range` and ships nothing for
-   an arbitrary pair, so this is the `sch-` rule for it -- Phone beside Email,
-   and a day-of contact's Name beside their Phone. Same reasoning and the same
-   shape as `.sch-times`: the track is `minmax(0, 1fr)` and the control is told
-   to fill it, because an <input> carries an intrinsic width from its own
-   default `size` and would otherwise overflow a track narrower than that. */
-.sch-two-up {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--rux-spacing-03);
-}
-.sch-two-up > .rux--form-item,
-.sch-two-up .rux--text-input__field-outer-wrapper,
-.sch-two-up .rux--text-input__field-wrapper { min-inline-size: 0; inline-size: 100%; }
-.sch-two-up .rux--text-input { inline-size: 100%; min-inline-size: 0; }
+/* TWO FIELDS ON ONE ROW WAS `.sch-two-up`, and it is GONE as of 2026-09-10.
+   It paired Phone beside Email in the booking block and Name beside Phone in
+   a day-of contact. Fluid ended both: a fluid field is a 64px box with its
+   label floating over its value, and two of them in a 288px column leave
+   about 140px each -- an email address ellipsises by its third character and
+   a phone number has nowhere to sit beside a name. Both blocks stack now, so
+   the class had no caller left and its rules went with it rather than staying
+   as a shape nothing makes. `.sch-times` above is the surviving grid pair;
+   it holds three SHORT time controls, which is the case this one was not. */
+
+/* ── FLUID CAME AND WENT, 2026-09-09 to 2026-09-10 ──────────────────────────
+   The trip editor's fields were Carbon's FLUID style for a day: label inside
+   a 64px filled block, runs of them flush against each other and bled to the
+   panel's edges by a negative margin. Two rules lived here to arrange it --
+   `.sch-fluid-group { --rux-stack-gap: 0 }` and the bleed -- and both are
+   gone with it, on rux's call to return to the default style at the same
+   field order.
+
+   WHAT DECIDED IT, recorded because the argument is older than the trial:
+   docs/log.md's 2026-09-08 entry rejected fluid for one reason, which the
+   trial then reproduced exactly -- rux-ds compiles no fluid checkbox, so
+   Equipment could not follow the rest and the form mixed the two styles,
+   "the one thing fluid must not do". Seen on the built page as a filled card
+   that stopped, with three checkboxes and a ghost button on bare panel under
+   it. Default style has no such gap in coverage: every control this form
+   uses has one.
+
+   THE TABS DID NOT COME BACK. They keep `--contained`, their sticky pin and
+   their edge-to-edge bleed, which never depended on the fields' style --
+   rux-overrides.css holds all three. */

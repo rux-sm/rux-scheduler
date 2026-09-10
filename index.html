@@ -472,28 +472,28 @@
                  week changes, moving the very buttons being clicked. New trip is
                  pushed right, which is Carbon's own place for a primary action and
                  keeps creating a trip clear of the paging controls. -->
-            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-prev" aria-label="Previous week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
-            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-next" aria-label="Next week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
-            <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-today">Today</button>
+            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-prev" aria-label="Previous week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
+            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-next" aria-label="Next week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
+            <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-md" id="sch-today">Today</button>
             <h2 class="sch-toolbar__range rux--type-heading-compact-02" id="sch-range">&nbsp;</h2>
             <!-- New trip sits after the spacer, below. It was absent rather than
                  disabled until 2026-09-06, because a disabled primary button was
                  the most prominent thing on the page and did nothing. -->
             <div class="sch-toolbar__spacer"></div>
-          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-sm" id="sch-avail-toggle" aria-pressed="false">Drivers</button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-md" id="sch-avail-toggle" aria-pressed="false">Drivers</button>
             <!-- VIEW OPTIONS. screen-inventory.md section 7 left four of these
                homeless when the specimen's menu went: they change how the board
                DRAWS rather than what it holds, which is a menu's job and not a
                toolbar's. Only the two that exist are here -- a control for a
                mode this grid cannot draw would be a lie. -->
-          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-view-trigger" aria-label="View options" aria-haspopup="menu" aria-expanded="false"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg></button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-view-trigger" aria-label="View options" aria-haspopup="menu" aria-expanded="false"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg></button>
             <!-- BACK, AND NOT DISABLED THIS TIME. The comment above promised it
                  for the day the editor could make a trip, which is today: dates
                  were the only thing standing in the way, and a trip with a start
                  date and no bus lands in the Unassigned row. Primary and
                  rightmost, which is Carbon's place for the one action that
                  creates something. -->
-            <button type="button" class="rux--btn rux--btn--primary rux--layout--size-sm" id="sch-new-trip">New trip
+            <button type="button" class="rux--btn rux--btn--primary rux--layout--size-md" id="sch-new-trip">New trip
               <svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg>
             </button>
           </div>
@@ -515,7 +515,7 @@
           <div class="sch-aside" id="sch-aside" hidden>
             <div class="sch-aside__head">
               <span class="sch-aside__title">Driver availability</span>
-              <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm" id="sch-avail-close" aria-label="Hide driver availability">
+              <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-avail-close" aria-label="Hide driver availability">
                 <svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
               </button>
             </div>
@@ -544,7 +544,15 @@
           <h2 class="rux--side-panel__collapsed-title-text" id="sch-panel-title-collapsed">&nbsp;</h2>
         </div>
         <div class="rux--side-panel__decorator-and-close">
-          <button type="button" class="rux--side-panel__close-button rux--btn rux--btn--primary rux--btn--icon-only" id="sch-panel-close" aria-label="Close">
+          <!-- `--md` IS HOW THIS ONE TAKES 40px, 2026-09-10, and it is not the
+               same lever as its siblings. The toolbar's and the roster's close
+               take `rux--layout--size-md` like any button; this one is inside
+               `.rux--side-panel`, where Carbon sizes it by a rule of its own --
+               `.rux--side-panel .rux--btn.rux--side-panel__close-button` pins
+               2rem square, and `.rux--btn--md.rux--side-panel__close-button`
+               is the compiled variant that says 2.5rem. So the class differs
+               because the component does, not because the size does. -->
+          <button type="button" class="rux--side-panel__close-button rux--btn rux--btn--primary rux--btn--icon-only rux--btn--md" id="sch-panel-close" aria-label="Close">
             <svg class="rux--side-panel--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
           </button>
         </div>
@@ -553,13 +561,34 @@
            components-tabs--default puts them, and rux-ds's detail-page template
            says the same. `tabs.js` claims the strip and drives the arrow keys. -->
       <div class="rux--side-panel__inner-content rux--side-panel--scrolls" id="sch-panel-body">
-        <!-- LINE TABS, NOT CONTAINED, 2026-09-07. `--contained` gives every nav item
-             `layer-accent` and a shadow divider, and is built to FILL its
-             container's width -- two tabs in a 20rem column fill about half of
-             it, so they read as two blocks floating on nothing, which is what
-             rux saw. Carbon's default line tabs draw a rule under the whole nav
-             and that rule is what attaches tabs to the panel below them. -->
-        <div class="rux--tabs rux--layout--size-md">
+        <!-- CONTAINED AFTER ALL, 2026-09-10, REVERSING THE ENTRY BELOW.
+
+             WHAT 2026-09-07 SAID, kept because the reasoning was sound on the
+             facts it had: "`--contained` gives every nav item `layer-accent`
+             and a shadow divider, and is built to FILL its container's width
+             -- two tabs in a 20rem column fill about half of it, so they read
+             as two blocks floating on nothing, which is what rux saw. Carbon's
+             default line tabs draw a rule under the whole nav and that rule is
+             what attaches tabs to the panel below them."
+
+             WHY IT NO LONGER HOLDS: there are FOUR tabs now, not two, and the
+             strip has been filling its width since 2026-09-09. "Two blocks
+             floating on nothing" described a strip that no longer exists.
+
+             `--full-width` IS THE POINT, and it is what makes this cheaper
+             than what it replaces. Carbon lays the list out as
+             `grid-template-columns: repeat(auto-fit, minmax(0, 1fr))` when
+             `--contained` and `--full-width` ride together, which is even
+             fill from the component itself -- so the two flex rules that were
+             doing that job by hand come out of rux-overrides.css.
+
+             IT TRUNCATES, KNOWINGLY. Even columns are 72px and `Schedule` is
+             60px of word in 56px of room once padding is taken, so it renders
+             `Sched…`. rux chose the even grid over the proportional fill with
+             that measured and may shorten the label to fit; the alternative
+             was keeping the hand-rolled flex to avoid it, which is paying an
+             override to not use the component. -->
+        <div class="rux--tabs rux--tabs--contained rux--tabs--full-width rux--layout--size-md">
           <button type="button" class="rux--tab--overflow-nav-button rux--tab--overflow-nav-button--previous rux--tab--overflow-nav-button--hidden" aria-hidden="true" tabindex="-1"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
           <div class="rux--tab--list" role="tablist" aria-label="Trip">
             <button id="sch-tab-details" class="rux--tabs__nav-item rux--tabs__nav-link rux--tabs__nav-item--selected" role="tab" type="button" aria-selected="true" aria-controls="sch-panel-details" tabindex="0">
@@ -571,12 +600,16 @@
             <button id="sch-tab-fleet" class="rux--tabs__nav-item rux--tabs__nav-link" role="tab" type="button" aria-selected="false" aria-controls="sch-panel-fleet" tabindex="-1">
               <div class="rux--tabs__nav-item-label-wrapper"><span class="rux--tabs__nav-item-label">Fleet</span></div>
             </button>
+            <button id="sch-tab-schedule" class="rux--tabs__nav-item rux--tabs__nav-link" role="tab" type="button" aria-selected="false" aria-controls="sch-panel-schedule" tabindex="-1">
+              <div class="rux--tabs__nav-item-label-wrapper"><span class="rux--tabs__nav-item-label">Schedule</span></div>
+            </button>
           </div>
           <button type="button" class="rux--tab--overflow-nav-button rux--tab--overflow-nav-button--next rux--tab--overflow-nav-button--hidden" aria-hidden="true" tabindex="-1"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
         </div>
         <div class="rux--tab-content" role="tabpanel" id="sch-panel-details" aria-labelledby="sch-tab-details" tabindex="0"></div>
         <div class="rux--tab-content" role="tabpanel" id="sch-panel-billing" aria-labelledby="sch-tab-billing" tabindex="0" hidden></div>
         <div class="rux--tab-content" role="tabpanel" id="sch-panel-fleet" aria-labelledby="sch-tab-fleet" tabindex="0" hidden></div>
+        <div class="rux--tab-content" role="tabpanel" id="sch-panel-schedule" aria-labelledby="sch-tab-schedule" tabindex="0" hidden></div>
       </div>
       <!-- ONE BUTTON, BECAUSE ONE IS WHAT IS CAPTURED. `action-set--row-double`
            is compiled but no captured story shows a two-button action set, and
@@ -595,8 +628,57 @@
            IT IS ALREADY THE RIGHT SHAPE FOR A SECOND BUTTON. `--row-single`
            gives the one button the full width; `--row-double` is the swap when
            Cancel or Clear arrives, and it splits the bar rather than stacking.
-           No other class changes and the height stays 3rem. -->
-      <div class="rux--action-set rux--side-panel__actions-container rux--action-set--row-single rux--action-set--md rux--btn-set" role="presentation">
+           No other class changes and the height stays 3rem.
+
+           THE SECOND BUTTON ARRIVED 2026-09-10 and it is RESET, taking the
+           `--row-double` this comment held open for it. It is `--secondary`
+           because the pair is one decision with two answers -- keep these
+           edits or drop them -- and a ghost would have read as the lesser
+           of two unequal things. Reset is dead whenever Save is dead for
+           the dirty reason, so the bar can never offer to discard nothing.
+
+           CANCEL TRIP IS IN THIS BAR AFTER ALL, moved here 2026-09-10 when
+           rux asked the question that settles it: is there a confirmation.
+           There is, and it is not a thin one -- `sch-cancel-modal` names the
+           trip, says it comes off the schedule and can be brought back, and
+           asks for a reason before its own danger button will do anything.
+           The objection to seating a destructive verb beside Save was that a
+           wrong click lands the action; here a wrong click lands a dialog,
+           and the trip is only cancelled by a second, deliberate press. The
+           modal's own note puts it plainly: it is reversible, which is why
+           it is not a delete.
+
+           IT STAYS `--row-double` WITH THREE BUTTONS IN IT, which needs
+           saying because the name argues otherwise. The row classes are a
+           flex BASIS, not a headcount: `--row-double.--md` gives every
+           action button `flex: 0 1 50%`, and three of those shrink to exact
+           thirds. All four combinations were measured in the 320px panel,
+           and this is the only one that fills it without clipping:
+
+             --row-double --md    106.7 / 106.7 / 106.7  = 320, even, flush
+             --row-triple --lg     95.3 /  80.0 /  80.0  = 255, 65 dead
+             --row-triple --md    320 each, overflowed -- Carbon leaves
+                                  triple undefined at md
+             --row-double --md    with two buttons: 160 / 160 = 320
+
+           That last line is why nothing here switches on the button count:
+           the same class fills the bar whether Cancel is shown or hidden,
+           so create mode needs no second shape. The height is unchanged
+           either way -- it comes from `--condensed-actions` on the panel
+           and measured 49px before and after. Left-to-right runs least to
+           most committing: leave the trip, drop the edits, keep them.
+
+           THE LABEL IS `Cancel` AND NOT `Cancel trip`, on rux's call. The
+           longer one wrapped over two lines in a 48px button and wanted two
+           overrides to seat; this one fits with room to spare, and one rule
+           in rux-overrides.css evens the three widths. The word is
+           ambiguous on its own -- in a form beside Save it could be read as
+           "cancel my edits" -- and what disambiguates it is the dialog:
+           nothing happens on this press except `Cancel this trip?` opening
+           to ask, and `Reset` beside it is the button that drops edits. -->
+      <div class="rux--action-set rux--side-panel__actions-container rux--action-set--row-double rux--action-set--md rux--btn-set" role="presentation">
+        <button type="button" class="rux--action-set__action-button rux--btn rux--btn--danger--ghost" id="sch-panel-cancel">Cancel</button>
+        <button type="button" class="rux--action-set__action-button rux--btn rux--btn--secondary" id="sch-panel-reset" disabled>Reset</button>
         <button type="button" class="rux--action-set__action-button rux--btn rux--btn--primary" id="sch-panel-save" disabled>Save</button>
       </div>
     </aside>
@@ -679,6 +761,43 @@
        `modal.js` claims it and supplies the focus trap, Escape and
        `data-rux-close`. Danger, because it takes a trip off the board -- but
        it is reversible, which is why it is not a delete. -->
+  <!-- A PAYMENT IS ENTERED HERE AND SAVED WITH THE TRIP, added 2026-09-10.
+       Four fields is a comfortable dialog and a poor inline form in a 320px
+       column: the Billing tab was stacking method, amount, date and reference
+       for EVERY payment, which is four labelled boxes per receipt and a tab
+       that got longer with each one. The list behind this dialog shows one
+       row per payment instead.
+
+       ITS BUTTON SAYS `Done`, NOT `Save`, and the word is the contract. This
+       dialog writes nothing: it edits a row in the panel's pending list, and
+       that list reaches `trip_payments` only when the panel's own Save runs.
+       Calling it Save would promise a write that has not happened and would
+       leave `Reset` meaning two different things depending on which surface
+       was last touched.
+
+       THE DATE PICKER LIVES BETTER HERE than in the panel. In the tab its
+       calendar opens inside a scrolling box it is taller than; a modal has
+       room. `date-picker.js` is asked to claim this subtree when the dialog
+       opens, for the same reason every other picker is -- an unclaimed one
+       renders its calendar permanently open. -->
+  <div class="rux--layer-one rux--modal" id="sch-payment-modal" role="presentation">
+    <div role="dialog" aria-modal="true" aria-labelledby="sch-payment-h" tabindex="-1" class="rux--modal-container rux--modal-container--sm">
+      <div class="rux--modal-header">
+        <h2 class="rux--modal-header__heading" id="sch-payment-h">Add payment</h2>
+        <div class="rux--modal-close-button">
+          <button type="button" class="rux--modal-close" aria-label="Close" data-rux-close>
+            <svg class="rux--modal-close__icon" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="rux--modal-content" id="sch-payment-fields"></div>
+      <div class="rux--modal-footer">
+        <button type="button" class="rux--btn rux--btn--secondary" data-rux-close>Cancel</button>
+        <button type="button" class="rux--btn rux--btn--primary" id="sch-payment-done">Done</button>
+      </div>
+    </div>
+  </div>
+
   <div class="rux--layer-one rux--modal" id="sch-cancel-modal" role="presentation">
     <div role="dialog" aria-modal="true" aria-labelledby="sch-cancel-h" tabindex="-1" class="rux--modal-container rux--modal-container--sm">
       <div class="rux--modal-header">
