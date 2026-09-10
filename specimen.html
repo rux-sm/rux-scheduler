@@ -7,6 +7,11 @@
 <link rel="icon" href="brand/favicon.svg" type="image/svg+xml">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="/rux-ds/assets/fonts/IBMPlexSans-Regular-Latin1.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="/rux-ds/assets/fonts/IBMPlexSans-SemiBold-Latin1.woff2">
+<!-- MONO, FOR THE <code>sch.css</code> IN THE INTRO PARAGRAPH. One word,
+     but font-display: optional means a cold-cache load that misses the
+     preload stays in the browser's fallback monospace for the whole
+     visit and never swaps. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/rux-ds/assets/fonts/IBMPlexMono-Regular-Latin1.woff2">
 <link rel="stylesheet" href="/rux-ds/assets/fonts/plex.css">
 <link rel="stylesheet" href="/rux-ds/css/rux.css">
 <link rel="stylesheet" href="/rux-ds/css/rux-theme.css">

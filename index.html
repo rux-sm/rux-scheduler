@@ -7,6 +7,16 @@
 <link rel="icon" href="brand/favicon.svg" type="image/svg+xml">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="/rux-ds/assets/fonts/IBMPlexSans-Regular-Latin1.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="/rux-ds/assets/fonts/IBMPlexSans-SemiBold-Latin1.woff2">
+<!-- MONO, FOR THE TRIP EDITOR'S DATE FIELDS. sch-data.js builds real
+     rux--date-picker__input elements at runtime (dateOne/dateRange) for
+     Start/End date, the pick-up return range and Date paid -- Carbon sets
+     that input's font-family to code-02, which resolves to IBM Plex Mono.
+     Nothing in the initial markup shows it, which is why a static read of
+     this page missed it; the editor is a normal, frequent path, not an
+     edge case. Preloaded like the two Sans faces so the first open of the
+     editor does not render in the browser's fallback monospace under
+     font-display: optional and stay there for the session. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/rux-ds/assets/fonts/IBMPlexMono-Regular-Latin1.woff2">
 <link rel="stylesheet" href="/rux-ds/assets/fonts/plex.css">
 <link rel="stylesheet" href="/rux-ds/css/rux.css">
 <link rel="stylesheet" href="/rux-ds/css/rux-theme.css">
