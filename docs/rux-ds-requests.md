@@ -87,105 +87,6 @@ section title on the tab, which is how it was noticed.
 
 ---
 
-## Open — four dark themes wearing white's tag colours, 2026-09-10
-
-**ANSWERED ON rux-ds `main` AT `4814f15` ("feat(theme): Add dark tag tokens
-to four themes"), IN NO TAG, and VERIFIED FROM THIS APP'S OWN PAGE rather
-than from theirs.** All 62 values are in each of the four blocks. Carbon
-ships only two sets for these families — white and g10 identical for all 62,
-g90 and g100 for 58 — so the ask was transcription, as this entry guessed,
-and the four values that are not copied are the notification surfaces, which
-take each theme's own `layer-01`: geist #0a0a0a, linear #141419, ant-dark
-#141414, spotify #181818.
-
-**MEASURED ON `/rux-scheduler/` ON THE WORKSPACE SERVER, ON THE TWO GRIDS
-THIS ENTRY WAS FILED FOR.** A `.sch-bar--blue` computes `#0043ce` with
-`#d0e2ff` text under geist, linear, ant-dark and spotify — byte-identical to
-g90 and g100, where before all four read white's `#d0e2ff` on `#0043ce`. The
-availability grid follows: 51 `--busy` cells blue and 5 `--off` cells
-`#a2191f`, all dark in all four. White is unmoved, still light on both grids.
-
-**ONE CLAIM ABOVE IS WRONG AND IS LEFT STANDING BELOW RATHER THAN EDITED.**
-This entry counted `status-*` at 7. It is 9, so the per-block total is 62 and
-not 60. Nothing else in the report was off, and the `syntax-*`/`ai-*`
-exclusion was read correctly — rux-ds left both deferred.
-
-**WHAT IS NOT COVERED, said there and repeated here.** The three
-`content-switcher-*` values are transcribed but exercised by nothing: they
-only reach the `--low-contrast` variant, and no such switcher exists on
-rux-ds's sink or on any page here. Nobody has looked at one.
-
-**NO PIN TO MOVE** (`AGENTS.md`, "Which rux-ds this app is on"), so this
-reaches the site on its next deploy rather than waiting for a tag. Stays open
-until that deploy is out and the board has been looked at in all four themes.
-
-**Asked for:** `tag-*`, `notification-*`, `status-*` and `content-switcher-*`
-values inside the four theme blocks `css/rux-theme.css` added on 2026-09-10 —
-`[data-theme="geist"]`, `[data-theme="linear"]`, `[data-theme="ant-dark"]`
-and `[data-theme="spotify"]`. Or a statement that these families are deferred
-in those themes the way `syntax-*` and `ai-*` already are, so a consumer knows
-the light values are a decision and not an omission.
-
-**Why:** every trip bar on the board takes its fill from Carbon's tag palette
-(`sch.css:546`, ten hue classes from `:590`), and so do the busy and off cells
-of the driver-availability grid (`:1234`, `:1238`) — deliberately, so the two
-grids read as one system. All four of the new themes are dark. All four render
-those bars pale-blue-on-black.
-
-**MEASURED ON THE SERVED PAGE, NOT REASONED FROM THE SOURCE.** Computed values
-of `<html>` under each theme, at `/rux-scheduler/` on the workspace server:
-
-| theme | `--rux-tag-background-blue` | `--rux-tag-color-blue` |
-|---|---|---|
-| white | `#d0e2ff` | `#0043ce` |
-| g100 | `#0043ce` | `#d0e2ff` |
-| geist, linear, ant-dark, spotify | `#d0e2ff` | `#0043ce` |
-
-The four are byte-identical to white. Each block defines 141 tokens and not one
-of them is a `tag-*`; custom properties inherit, so all 40 fall through to
-white's compiled `:root`.
-
-**IT IS CARBON'S OWN TAG THAT IS WRONG, NOT THIS APP'S BAR.** Worth stating
-because the first guess was that `sch-` components are the problem — an app
-element that themes were never built to account for. They are not. A bare
-`<div class="rux--tag rux--tag--blue">` injected into the page computes to the
-same `rgb(208, 226, 255)` on `rgb(0, 0, 0)` under geist and spotify. `sch.css`
-is reading the token it is supposed to read; the token behind it is light.
-
-**FOUR FAMILIES, 60 TOKENS, AND NONE OF IT IS THIS APP'S TO INVENT.** Diffing
-g100's values against `:root` for names the four blocks never mention: `tag-`
-40, `notification-` 10, `status-` 7, `content-switcher-` 3. `syntax-` 88 and
-`ai-` 19 are in the same position but are **not** part of this request —
-`css/rux-theme.css`'s own header already records those two as deliberately
-deferred, and a request that swept them in would be asking to reopen a decision
-rux-ds made on purpose.
-
-**THE VALUES LOOK DETERMINED RATHER THAN CHOSEN, which is why this is worth
-asking for rather than living with.** Carbon appears to ship only two sets:
-g90 and g100 are identical for all 40 `tag-*`, all 7 `status-*` and all 3
-`content-switcher-*`, and white and g10 are identical to each other. Six of the
-ten `notification-*` match across g90/g100 too; the four that differ are each
-theme's own `layer-01`, which all four blocks already define. So the ask is
-mostly transcription, not a palette design — measured here, and stated as what
-it looked like from this side rather than as a finding rux-ds has to accept.
-
-**WHAT THIS APP IS DOING MEANWHILE: nothing, and that is the point.** A
-`[data-theme="geist"]` block in this repository's own `rux-theme.css` would
-mean inventing ten hue ramps for a theme this app does not own, for four
-themes, and it would still leave Carbon's own tags, notifications and
-indicators light-on-black everywhere else on the shared origin. `AGENTS.md`:
-everything under `/rux-ds/` is rux-ds's, and a missing rule is a request with
-invented content, never a local rule. The bars stay wrong in those four themes
-until this lands; g90, g100, white and g10 are unaffected, and the app opens in
-g90.
-
-**What it is not:** not a request to change `rux--tag`, `rux--notification` or
-either indicator — no component rule is wanted, only token values. Not a
-request for `syntax-*` or `ai-*`. Not a request for a fifth theme, or for
-anything about the four palettes' own core tokens, which are complete.
-
----
-
 ## Open — no icon in the sprite says "money", 2026-09-10
 
 **Asked for:** four glyphs in `assets/icons.svg`, enough to tell payment
@@ -628,4 +529,112 @@ later costs more than the eight clicks.
 
 ## Settled
 
-Nothing yet.
+### Four dark themes wearing white's tag colours — v0.1.21, 2026-09-10
+
+**SETTLED BY rux-ds v0.1.21, WHICH IS LIVE.** The work is `4814f15`
+("feat(theme): Add dark tag tokens to four themes"); v0.1.20 first carried
+it and v0.1.21 is what is deployed at `/rux-ds/` now. This paragraph said
+"IN NO TAG" when it was written a few hours earlier, which was true then and
+is left visible here rather than quietly rewritten.
+
+All 62 values are in each of the four blocks. Carbon ships only two sets
+for these families — white and g10 identical for all 62, g90 and g100 for
+58 — so the ask was transcription, as this entry guessed,
+and the four values that are not copied are the notification surfaces, which
+take each theme's own `layer-01`: geist #0a0a0a, linear #141419, ant-dark
+#141414, spotify #181818.
+
+**MEASURED ON `/rux-scheduler/` ON THE WORKSPACE SERVER, ON THE TWO GRIDS
+THIS ENTRY WAS FILED FOR.** A `.sch-bar--blue` computes `#0043ce` with
+`#d0e2ff` text under geist, linear, ant-dark and spotify — byte-identical to
+g90 and g100, where before all four read white's `#d0e2ff` on `#0043ce`. The
+availability grid follows: 51 `--busy` cells blue and 5 `--off` cells
+`#a2191f`, all dark in all four. White is unmoved, still light on both grids.
+
+**ONE CLAIM ABOVE IS WRONG AND IS LEFT STANDING BELOW RATHER THAN EDITED.**
+This entry counted `status-*` at 7. It is 9, so the per-block total is 62 and
+not 60. Nothing else in the report was off, and the `syntax-*`/`ai-*`
+exclusion was read correctly — rux-ds left both deferred.
+
+**WHAT IS NOT COVERED, said there and repeated here.** The three
+`content-switcher-*` values are transcribed but exercised by nothing: they
+only reach the `--low-contrast` variant, and no such switcher exists on
+rux-ds's sink or on any page here. Nobody has looked at one.
+
+**CLOSED ON THE LIVE SITE, NOT ON THE COMMIT.** There was no pin to move
+(`AGENTS.md`, "Which rux-ds this app is on"), so this needed the deploy
+rather than a tag alone. Cutting the tag IS rux-ds's roll-out, and its pages
+workflow published v0.1.21 on 2026-09-10. Read back at
+`https://rux-sm.github.io/rux-scheduler/`: the served
+`/rux-ds/css/rux-theme.css` carries the tag values in all four dark blocks,
+and with the theme set to spotify a `.sch-bar--blue` on the real board
+computes `rgb(0, 67, 206)` with `rgb(208, 226, 255)` text on an
+`rgb(18, 18, 18)` page — the same pair g100 draws, where before all four
+themes drew white's inversion of it. 22 bars rendered, looked at, not only
+measured.
+
+**Asked for:** `tag-*`, `notification-*`, `status-*` and `content-switcher-*`
+values inside the four theme blocks `css/rux-theme.css` added on 2026-09-10 —
+`[data-theme="geist"]`, `[data-theme="linear"]`, `[data-theme="ant-dark"]`
+and `[data-theme="spotify"]`. Or a statement that these families are deferred
+in those themes the way `syntax-*` and `ai-*` already are, so a consumer knows
+the light values are a decision and not an omission.
+
+**Why:** every trip bar on the board takes its fill from Carbon's tag palette
+(`sch.css:546`, ten hue classes from `:590`), and so do the busy and off cells
+of the driver-availability grid (`:1234`, `:1238`) — deliberately, so the two
+grids read as one system. All four of the new themes are dark. All four render
+those bars pale-blue-on-black.
+
+**MEASURED ON THE SERVED PAGE, NOT REASONED FROM THE SOURCE.** Computed values
+of `<html>` under each theme, at `/rux-scheduler/` on the workspace server:
+
+| theme | `--rux-tag-background-blue` | `--rux-tag-color-blue` |
+|---|---|---|
+| white | `#d0e2ff` | `#0043ce` |
+| g100 | `#0043ce` | `#d0e2ff` |
+| geist, linear, ant-dark, spotify | `#d0e2ff` | `#0043ce` |
+
+The four are byte-identical to white. Each block defines 141 tokens and not one
+of them is a `tag-*`; custom properties inherit, so all 40 fall through to
+white's compiled `:root`.
+
+**IT IS CARBON'S OWN TAG THAT IS WRONG, NOT THIS APP'S BAR.** Worth stating
+because the first guess was that `sch-` components are the problem — an app
+element that themes were never built to account for. They are not. A bare
+`<div class="rux--tag rux--tag--blue">` injected into the page computes to the
+same `rgb(208, 226, 255)` on `rgb(0, 0, 0)` under geist and spotify. `sch.css`
+is reading the token it is supposed to read; the token behind it is light.
+
+**FOUR FAMILIES, 60 TOKENS, AND NONE OF IT IS THIS APP'S TO INVENT.** Diffing
+g100's values against `:root` for names the four blocks never mention: `tag-`
+40, `notification-` 10, `status-` 7, `content-switcher-` 3. `syntax-` 88 and
+`ai-` 19 are in the same position but are **not** part of this request —
+`css/rux-theme.css`'s own header already records those two as deliberately
+deferred, and a request that swept them in would be asking to reopen a decision
+rux-ds made on purpose.
+
+**THE VALUES LOOK DETERMINED RATHER THAN CHOSEN, which is why this is worth
+asking for rather than living with.** Carbon appears to ship only two sets:
+g90 and g100 are identical for all 40 `tag-*`, all 7 `status-*` and all 3
+`content-switcher-*`, and white and g10 are identical to each other. Six of the
+ten `notification-*` match across g90/g100 too; the four that differ are each
+theme's own `layer-01`, which all four blocks already define. So the ask is
+mostly transcription, not a palette design — measured here, and stated as what
+it looked like from this side rather than as a finding rux-ds has to accept.
+
+**WHAT THIS APP IS DOING MEANWHILE: nothing, and that is the point.** A
+`[data-theme="geist"]` block in this repository's own `rux-theme.css` would
+mean inventing ten hue ramps for a theme this app does not own, for four
+themes, and it would still leave Carbon's own tags, notifications and
+indicators light-on-black everywhere else on the shared origin. `AGENTS.md`:
+everything under `/rux-ds/` is rux-ds's, and a missing rule is a request with
+invented content, never a local rule. The bars stay wrong in those four themes
+until this lands; g90, g100, white and g10 are unaffected, and the app opens in
+g90.
+
+**What it is not:** not a request to change `rux--tag`, `rux--notification` or
+either indicator — no component rule is wanted, only token values. Not a
+request for `syntax-*` or `ai-*`. Not a request for a fifth theme, or for
+anything about the four palettes' own core tokens, which are complete.
+
