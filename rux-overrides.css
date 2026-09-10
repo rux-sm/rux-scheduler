@@ -453,3 +453,29 @@
 .rux--modal .rux--date-picker__input {
   background-color: var(--rux-field-02);
 }
+
+/* A DATE PICKER INSIDE A MODAL IS CLIPPED BY THE MODAL, 2026-09-10.
+   `.rux--modal-content` is `overflow-y: auto` (`css/rux.css:20593`) and
+   rux-ds's calendar is deliberately NOT portaled -- its own header says so,
+   and says why: it matches Carbon, which portals only the classic flatpickr
+   calendar. The calendar is `position: absolute` against the picker root, so
+   inside a scrolling ancestor it is cut off at that ancestor's edge. Measured
+   on the payment dialog: calendar 288x348, sheared through by the footer.
+
+   RESIZING THE MODAL WAS THE WRONG INSTINCT and is worth recording as such.
+   The clipping is vertical, so a wider modal changes nothing; and rux-ds
+   ships no modal size variants at all -- no `--sm`, `--md` or `--lg`, only a
+   `min-width: 42rem` media query -- so there was no size to reach for. A tall
+   `min-block-size` would have fixed it by leaving 348px of empty dialog under
+   a closed calendar, every time.
+
+   SO THE SCROLL IS TURNED OFF FOR THIS ONE MODAL, which is safe because of
+   what is in it: four fields that fit without scrolling at any viewport this
+   app runs at. It is NOT safe as a blanket rule -- a modal with long content
+   and no scroll puts that content out of reach -- which is why it is scoped
+   to a class this app puts on the one dialog that holds a calendar, rather
+   than to `.rux--modal-content` at large. Any future modal with a picker gets
+   the class; any modal with long content must not have it. */
+.sch-modal--has-calendar .rux--modal-content {
+  overflow: visible;
+}

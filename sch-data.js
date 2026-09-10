@@ -1646,19 +1646,20 @@
        three times wider than any value in it, and `Done` sat a long way below
        `Method`.
 
-       THE PAIRING IS BY ROLE, NOT BY THE ROW'S ORDER. Method and Amount are
-       what MAKE a payment -- they are the two `Done` tests before deciding a
-       dialog was left empty, and the two the list row leads with. Date and
-       Reference qualify it: the date is prefilled to today and the reference
-       is optional, so neither should lead. rux suggested Date and Amount
-       first; that puts a prefilled field in the position the eye starts at,
-       and separates the two fields that belong together. */
+       DATE LEADS, AND I ARGUED THE OTHER WAY FIRST. The case for Method and
+       Amount on the top row is that they are what MAKE a payment -- the two
+       `Done` tests before deciding a dialog was left empty. rux put Date
+       first, and the calendar settles it: it is 348px tall and drops from
+       whatever row its field is on, so a Date field on the second row puts
+       the calendar through the footer. On the first row it has the height of
+       the dialog beneath it. A layout reason beats a semantic one when the
+       semantic one costs a clipped control. */
     const grid = el('div', 'sch-dialog-grid');
     grid.append(
+      dateOne('sch-f-pdate', 'Date', p.date),
+      moneyField('sch-f-pamount', 'Amount', p.amount),
       selectField('sch-f-pmethod', 'Method', p.method ?? '',
         [['', '—'], ...PAYMENT_METHODS.map(m => [m, m])]),
-      moneyField('sch-f-pamount', 'Amount', p.amount),
-      dateOne('sch-f-pdate', 'Date', p.date),
       textField('sch-f-pref', 'Reference', p.ref),
     );
     host.replaceChildren(grid);
