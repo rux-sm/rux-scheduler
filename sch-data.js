@@ -1270,7 +1270,21 @@
   // source and cannot see through an interpolation, so a composed class name
   // is one it cannot verify -- and it said so. Same rule as the notification
   // kinds. These are the two the range capture carries.
+  /* `--single` JOINED THESE TWO ON 2026-09-10, and its absence was a bug with
+     a visible width. `dateOne` was passing `from`, so a lone date picker wore
+     the class Carbon puts on the FIRST HALF OF A RANGE -- and
+     `.rux--date-picker--next .rux--date-picker-container--from
+     .rux--date-picker__input` pins `inline-size: 8.96875rem`, which is one
+     half of a range control, not a field. Measured at 143.5px in a 287px grid
+     cell, which is the gap rux saw beside it.
+
+     The rule that should have applied is
+     `.rux--date-picker.rux--date-picker--single .rux--date-picker__input` at
+     `18rem`; it never matched, because the container said range. rux-ds's own
+     `sink/date-picker.html:158` uses `--single` on a single picker, so the
+     class existed and this file simply reached for the wrong one. */
   const DP_CONTAINER = {
+    single: 'rux--date-picker-container rux--date-picker-container--single',
     from: 'rux--date-picker-container rux--date-picker-container--from',
     to: 'rux--date-picker-container rux--date-picker-container--to',
   };
@@ -1348,7 +1362,7 @@
      class is the whole difference, which is how Carbon means it. */
   function dateOne(id, label, value) {
     const root = el('div', 'rux--date-picker rux--date-picker--next rux--date-picker--single');
-    root.appendChild(dpContainer('from', id, label, value));
+    root.appendChild(dpContainer('single', id, label, value));
     root.appendChild(calendarBody());
     const item = el('div', 'rux--form-item');
     item.appendChild(root);

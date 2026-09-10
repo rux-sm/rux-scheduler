@@ -479,3 +479,29 @@
 .sch-modal--has-calendar .rux--modal-content {
   overflow: visible;
 }
+
+/* A SINGLE DATE PICKER IS A FIXED 18rem, WHICH A FLUID CELL IS NOT.
+   `.rux--date-picker.rux--date-picker--single .rux--date-picker__input` sets
+   `inline-size: 18rem` — a sensible standalone default, and 288px against the
+   payment dialog's 287px grid track, so the input hung 1px past the control
+   below it. Carbon sizes this control rather than letting it fill, because its
+   own examples place it in flow rather than in a grid.
+
+   EVERY LEVEL NEEDS IT, WHICH THE FIRST ATTEMPT GOT WRONG. Setting `100%` on
+   the input alone made it NARROWER, not wider — 208px — because the picker
+   root, its container and the input wrapper are each flex items sizing to
+   content inside the 287px cell, so the input was taking 100% of 208 rather
+   than of the track. Measured up the chain: root 208, container 208, wrapper
+   208, cell 287. Widening the root alone leaves the input at 208; all four
+   together land it on 287.
+
+   Scoped to the dialog's own grid, at the same three-class specificity as the
+   rule it displaces, so the cascade decides it. Everywhere else — the trip
+   panel's own pickers, which sit one per row — keeps Carbon's 18rem. */
+.sch-dialog-grid .rux--date-picker--single,
+.sch-dialog-grid .rux--date-picker--single .rux--date-picker-container,
+.sch-dialog-grid .rux--date-picker--single .rux--date-picker-input__wrapper,
+.sch-dialog-grid .rux--date-picker--single .rux--date-picker-input__wrapper > span,
+.sch-dialog-grid .rux--date-picker--single .rux--date-picker__input {
+  inline-size: 100%;
+}
