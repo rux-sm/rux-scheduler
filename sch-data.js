@@ -1023,6 +1023,7 @@
      with, unchanged by moving it into a menu. */
   let rowMenuEl = null;
   let rowMenuFor = null;
+  let rowMenuTrigger = null;
   const rowMenu = () => {
     if (rowMenuEl) return rowMenuEl;
     const menu = el('ul', 'rux--menu rux--menu--sm rux--menu--open rux--menu--shown');
@@ -1042,7 +1043,11 @@
       return li;
     };
     menu.append(item('Edit', false, 'edit'), item('Remove', true, 'remove'));
-    menu.addEventListener('rux:menu-closed', () => { menu.hidden = true; });
+    menu.addEventListener('rux:menu-closed', () => {
+      menu.hidden = true;
+      rowMenuTrigger?.setAttribute('aria-expanded', 'false');
+      rowMenuTrigger = null;
+    });
     document.body.appendChild(menu);
     rowMenuEl = menu;
     return menu;
@@ -1051,16 +1056,50 @@
   const openRowMenu = (trigger, actions) => {
     const menu = rowMenu();
     rowMenuFor = actions;
-    const box = trigger.getBoundingClientRect();
     /* FIXED, WHICH IS THE ONE POSITION `menu.js` REPOSITIONS. Its kernel calls
        `anchor()` on scroll and resize and that is a no-op for anything not
        `position: fixed`; the panel scrolls, so a menu anchored any other way
        would sit still while its row moved out from under it. */
     menu.hidden = false;
     menu.style.position = 'fixed';
-    menu.style.insetInlineStart = `${Math.round(box.right - 160)}px`;
-    menu.style.insetBlockStart = `${Math.round(box.bottom)}px`;
-    window.Rux?.menu?.open?.(menu, trigger);
+
+    /* MEASURED, NOT ASSUMED, 2026-09-11. This read a hardcoded 160 -- right
+       for today's two items and wrong the moment one carries a longer word or
+       a third is added. The menu is laid out at the origin first so
+       `offsetWidth` is its real width, which is what `popMenuAt` does for the
+       board's menus and the same reason. */
+    menu.style.insetInlineStart = '0px';
+    menu.style.insetBlockStart = '0px';
+    const box = trigger.getBoundingClientRect();
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+
+    /* IT OPENS TO THE LEFT. The trigger sits at the row's right end, which is
+       hard against the panel's own right edge, so a menu growing rightward has
+       nowhere to grow -- right-aligning it to the trigger opens it back over
+       the row it belongs to. Clamped to the viewport on both axes: the board's
+       `popMenuAt` clamps horizontally, and a row low in a long list runs out of
+       room on the other one, so this flips above the trigger when the space
+       below cannot hold it. */
+    const left = Math.max(0, Math.min(box.right - width, window.innerWidth - width));
+    const top = box.bottom + height <= window.innerHeight
+      ? box.bottom
+      : Math.max(0, box.top - height);
+    menu.style.insetInlineStart = `${Math.round(left)}px`;
+    menu.style.insetBlockStart = `${Math.round(top)}px`;
+
+    /* `null`, NOT THE TRIGGER, and the first version passed the trigger.
+       `menu.js` registers an anchored surface with `reposition: anchor(...)`
+       and re-places any `position: fixed` menu itself -- so the placement
+       above was computed, written, and then overwritten. Measured: asked for
+       left 489 against a trigger ending at 649, got 537, opening RIGHTWARD off
+       the row. `popMenuAt` passes null for the same reason. The trade is that
+       the module does not wire `aria-controls` or return focus for us; the
+       trigger carries its own `aria-haspopup` and `aria-expanded` in markup,
+       and `aria-expanded` is synced on open and close below. */
+    window.Rux?.menu?.open?.(menu, null);
+    trigger.setAttribute('aria-expanded', 'true');
+    rowMenuTrigger = trigger;
   };
 
   /* ONE ROW: A TAG, A WORD, AN AMOUNT. `--with-action` puts the row's control

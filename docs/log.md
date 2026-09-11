@@ -4,6 +4,139 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-11 - the Billing tab answers the question it is for, and three of
+its faults were found by measuring rather than by looking.** rux: "still not
+happy with the design and workflow of the billing tab", then "im open to
+design suggestions -- keep in mind that there are items that trigger trip
+status to confirmed". That second sentence is the whole design.
+
+**THE RULE NOTHING ON SCREEN STATED.** `deriveStatus` takes `contractSigned`,
+`poReceived`, `poAmount`, `price` and `paid`, and `CONFIRM_WHEN` turns three of
+those into one answer: a signed contract, a PO received (a PARTIAL one counts,
+`po_partial` remaps to `po_received`), or ANY payment. Each confirms the trip
+on its own. **`Invoice sent` is not an input to `deriveStatus` at all** -- it
+moves neither the rung nor the confirmation -- and it sat between PO and
+Payments looking identical to both. That is what made the tab read as an
+undifferentiated stack of switches: four controls, three of which decide the
+one fact a dispatcher comes here for, and no sign of which.
+
+So the headline is the answer now. `Trip / Confirmed` or `Not confirmed`, the
+rung tag beside it, and a line naming WHICH trigger did it (`CONFIRM_BY`) or
+stating the rule when none has. Balance led this tile before, and on a new trip
+it read **"No quote"** -- the largest type on the panel saying there is no data
+yet, in the slot the eye lands on first. Balance keeps every digit, one row
+down beside Paid.
+
+**A BUG THE REWRITE WAS NOT LOOKING FOR.** `overpaid` was missing from
+`CONFIRM_WHEN`, where every other rung above `pending` was present. Driven live
+on an unsaved trip before the fix: quote $100, payment $150 gave `Balance
+-$50`, `Overpaid`, `Confirmed  Not yet`. A customer who had paid MORE than the
+quote left the trip reading as unconfirmed. Fixed, and verified the same way.
+
+**"ONCE SAVED" LEFT THE WORDING, deliberately.** The row said `Yes, once saved`
+to mark that the ladder is computed from the controls rather than read from the
+database. True -- and equally true of Balance, Paid and the coverage line, all
+recomputed on every keystroke. Singling out this one implied the others were
+stored. The footer's Save is what says nothing is written yet.
+
+**ONE CONTROL PER HEADER LINE, which is the whole of the alignment fix.** PO
+and Invoice carried a switch AND a `+` in the contained-list's `__action`;
+Contract carried only a switch. Measured at the 320px panel: switch right edges
+at 311 / 271 / 271, three consecutive rows on two edges. The label and switch
+moved out to `.sch-panel-section__head` -- the line Contract has always used --
+and the `+` became the list's last ROW. All three edges now agree.
+
+**THE ADD ROW IS ALSO THE EMPTY STATE**, which rux asked for: an empty list
+drew "No purchase order recorded." and then an add button under it, two rows
+saying one thing. `emptyRow` is deleted; nothing referenced it afterwards. And
+with the switch off the whole list hides, so the dead disabled `+` that shipped
+on a new trip -- visible, greyed, with an EMPTY tooltip, since the cap note
+applies only once a row exists -- is no longer on screen at all. The cap still
+disables the add row at `LIST_CAP`, in its own words: "One purchase order per
+trip for now".
+
+**A LONG REFERENCE CLIPS NOW.** `overflow-wrap: anywhere` broke "MT CONV DALLAS
+S26-ESCAMILLA" over two lines: 238px of text in a 173px box, one row 40px tall
+where every other is 20. With several POs on a trip that is the list losing its
+rhythm, not one tall row. The whole string stays on the row's `title` and in
+the dialog it opens.
+
+**THE ROW'S `X` BECAME AN OVERFLOW MENU.** A destructive control on screen at
+all times, in a row that has to grow a date and a second line once `trip_pos`
+and `trip_invoices` exist. Edit and Remove sit behind the row's own trigger
+now, `rux--menu-item--danger` on Remove. One menu element positioned at
+whichever trigger was pressed, the pattern the cell and bar menus already use;
+a menu per row would mint one on every redraw. Still no confirm on Remove:
+nothing is written until Save, so a mis-click costs a `Reset`.
+
+**AND IT OPENED THE WRONG WAY, for a reason worth writing down.**
+`Rux.menu.open(surface, trigger)` registers an anchored surface whose
+`reposition` re-places any `position: fixed` menu itself -- so a placement
+computed here is written and then overwritten. Measured: asked for left 489
+against a trigger ending at 649, got 537, opening RIGHTWARD off the row and off
+the panel's edge. `popMenuAt` passes `null` for exactly this reason and this
+does too now. It also measures its own `offsetWidth` rather than the hardcoded
+160 that was right only for today's two items, opens LEFT, and clamps on both
+axes. The trade for `null` is that the module no longer wires the trigger, so
+`aria-expanded` is synced here on open and on close.
+
+**THE DIVIDER THAT "DISAPPEARS", and it was not a weak divider.** rux reported
+it from the phone. `.sch-billing-rule` had padding above its border and none
+below, so a section's last element ended exactly ON the next section's border:
+Contract's Note field and the PO rule both at **y=395**, measured. A Carbon
+text input draws its own underline at `border-strong-01` (#6f6f6f) and the
+divider is `border-subtle-01` (#525252) -- the brighter line covered the dimmer
+one and the separation was not on screen. One section down, the same collision
+without the overlap: the coverage sentence butted onto the Invoice rule, so
+that border read as an UNDERLINE of the text rather than the start of a
+section. `padding-block-end: spacing-03` fixes both; verified 8px where there
+was 0.
+
+**A TILE PER SECTION WAS ASKED FOR AND NOT BUILT.** rux suggested it. The
+separation was not failing, it was being painted over -- and layer-two bands
+were REMOVED from these lists earlier the same day because repeated filled
+blocks competed with the summary. Reversing that to fix a collision would be
+the wrong instrument. Left open for rux to judge on the fixed version.
+
+**WHAT THE SEPARATION COST, AND A CLAIM OF MINE THAT WAS WRONG.** The first
+draft grouped the three triggers under a "Confirms the trip" heading; measured,
+it added 104px to a new trip and 168px to a trip with a PO. Replacing it with a
+labelled hairline was pitched as costing "1px instead of 60" -- and the first
+attempt measured 624px against the heading version's 608. TALLER, because the
+rule added `spacing-05` on top of the margin `.sch-billing-section` already
+carried. The margin goes to 0 and that space becomes padding under the border;
+then it measured 560. The claim was true only after the correction, and it was
+made before it.
+
+**MEASURED ON THE SERVED PAGE, live data, both themes inspected.** Remove takes
+the row and arms Save; Reset restores it and disables Save; coverage recomputes
+$22,750 -> $45,500 -> "Covers the balance"; the switch reveals and hides the
+list including its add; the cap disables the add row with its tooltip; the
+overpaid case reads `Confirmed`. Both row menus open leftward and stay on
+screen at 697px wide and at 375x812. `--rux-border-subtle-01` resolves in all
+eight themes.
+
+**NOT DONE.** Save was never PRESSED -- the patch `EDITS` builds was read off
+the panel on an existing and a new trip, but the database is production and
+shared with rux-ui, so writing a test record is rux's call. `posPatch()` /
+`invoicesPatch()` are still unwritten and the two `EDITS` keys still write the
+single columns. `LIST_CAP` stays 1 until the tables exist; no date on either
+section and no invoice amount, for the same reason -- Phase 1 of
+`docs/po-invoice-lists-plan.md`, whose Phase 0 is three decisions that are
+rux's. The menu's flip-above branch is written and NOT exercised: the footer
+holds the bottom of the panel, so no row gets close enough to the viewport edge
+to trigger it. And the toggle's tap target is 21px tall at EVERY size -- `--sm`
+and the default differ in width only, 40 against 56 -- so a bigger switch does
+not answer it. It is under iOS's 44 and Android's 48 either way, and it is a
+rux-ds request not yet filed.
+
+**THIS WORK WAS COMMITTED BY ANOTHER SESSION, as a passenger.** `ea6d7e9`
+"feat(schedule): Make the board usable on a phone" carried roughly 380
+uncommitted lines of it in `sch-data.js`; that commit's own body says so, and
+says it was not reviewed there. The entry above is this session's account of
+what those lines are and why. Only the divider and menu fixes, and this entry,
+are in the commit it belongs to.
+
 **2026-09-11 - the overflow menu carries icons, and Carbon had the shape
 already.** rux, from the phone: "what about the overflow items having the icons
 for driver + and today?" They do, and it took no invention at all.

@@ -1173,10 +1173,28 @@ button.sch-row-head__num {
    margin goes to 0 and the same space becomes padding under the border, so a
    separation is the border's own 1px. Measured before and after: the panel
    went 624px to 560px on a new trip when this was corrected. */
+/* THE SECTION ALSO NEEDS ROOM BELOW ITS CONTENT, and leaving it out is what
+   made rux report the divider "disappearing", 2026-09-11. With padding only
+   above the border, a section's last element ended exactly ON the next
+   section's border:
+
+     - Contract signed's Note field and the PO section's rule both landed at
+       y=395, measured. A Carbon text input draws its own bottom border at
+       `border-strong-01` (#6f6f6f) and the divider is `border-subtle-01`
+       (#525252), so the brighter field underline covered the dimmer rule and
+       the separation was simply not on screen.
+     - The PO coverage line had the same collision without the overlap: the
+       border directly under the text read as an UNDERLINE of that sentence
+       rather than as the start of the Invoice section.
+
+   `spacing-03` and not another `spacing-05`: 8px is enough to part a field's
+   own border from the section's, and a second 16 on four boundaries would put
+   64px back into a panel this pass spent measurable effort shortening. */
 .sch-billing-rule {
   margin-block-start: 0;
   border-block-start: 1px solid var(--rux-border-subtle-01);
   padding-block-start: var(--rux-spacing-05);
+  padding-block-end: var(--rux-spacing-03);
 }
 
 /* ── THE ADD IS THE LIST'S LAST ROW ─────────────────────────────────────────
