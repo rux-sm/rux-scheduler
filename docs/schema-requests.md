@@ -1,3 +1,7 @@
+---
+exchange: {kind: requests, from: rux-scheduler, to: rux-backend}
+---
+
 # Requests to the shared schema
 
 What this app has asked the **database** for, and why. Distinct from
