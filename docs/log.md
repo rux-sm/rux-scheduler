@@ -4,6 +4,105 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-11 - the PO and the invoice became lists, capped at one row.** rux
+asked for the layout to be finalised now and for the cap to hold
+compatibility with the columns that exist. Both sections are
+`contained-list`s with an add button, a row per record and their fields behind
+a dialog -- the shape `docs/po-invoice-lists-plan.md` Phase 4 draws, built
+ahead of the tables rather than waiting for them.
+
+**THE CAP IS THE SCHEMA'S AND IT IS ONE LINE.** `LIST_CAP = 1`, and the `+`
+disables at it with "One purchase order per trip for now" in its tooltip.
+`trips` holds one `po_ref`, one `po_amount` and one `invoice_number`;
+`trip_pos` and `trip_invoices` are still 404. On 2026-09-10 that was the
+argument for having NO add button, and the note in the code said a `+` would
+be a control that can never add a second row. That is still true of the
+database and is not true of a button that stops: a control refusing a second
+row at a stated limit is honest, one that accepts it and drops it on save is
+not. Raising the constant, giving the rows an `id` and swapping two keys in
+`EDITS` for `posPatch()` / `invoicesPatch()` is the whole of the UI half of
+the plan.
+
+**THE VALUES LEFT THE FORM AND `readForm` HAD TO BE TOLD.** `sch-f-poref`,
+`sch-f-poamount` and `sch-f-invnum` are dialog fields now, so they came OUT of
+`readForm`'s id list -- left in, three ids that never resolve would make
+`readForm` return null on every open and kill Save on a panel where nothing
+was wrong. `EDITS` reads `poPending[0]` and `invPending[0]` instead and
+touches no element at all. The same rule as 2026-09-10's, read the other way:
+a key added to `EDITS` must join that list, and an id whose control left the
+panel must leave it.
+
+**THE SWITCH STAYED, AND THE DATA IS WHY.** With a list, "at least one row"
+could be the switch and the section would lose a control -- Phase 4 lays out
+both options. 12 of the 55 trips with a PO carry `po_received` with no
+reference and no amount: a PO promised, nothing typed. A list alone cannot say
+that, and switch-on-with-an-empty-list is exactly those 12 rows. Off still
+hides and clears, so hidden means empty means what Save will write.
+
+**PAYMENTS MOVED ONTO THE SAME BUILDER, which is the part that makes "reads
+the same way" a fact rather than a claim.** `rowList` builds the header, the
+switch slot and the `+`; `listRow` builds the tag/middle/amount grid. Three
+lists cannot now drift in height, density, tag size or column alignment.
+Measured after: all three labels at x=311 and all three `+` right edges at
+x=599, the panel's own right edge.
+
+**A BUG OF MINE THAT rux SAW BEFORE THE CHECK DID, and it was in the same
+commit as the feature.** The shared row class was first named `.sch-row` --
+which is already the BOARD'S bus row at `sch.css:110`, `display: contents` so
+its cells join the week grid. A second `.sch-row { display: grid }` later in
+the file won on order, every bus row became a three-column grid, and the
+schedule came apart. rux reported it from the screenshot. It is now
+`.sch-listrow`, and the comment in `sch.css` says why the short name is not
+available. `check.mjs` cannot catch this class of fault at all: both names are
+this app's own, so there is nothing upstream to resolve them against -- the
+gate that would have caught it does not exist and this entry is the only
+record.
+
+**AND A CLIPPED CONTROL THAT HAS BEEN SHIPPING SINCE 2026-09-10.**
+`.rux--contained-list__action` is absolute with `inset-inline: 0`, so it
+resolves against the header's border box and ignores the header's own
+`padding-inline`. With the list bled out to the panel's edges that put the add
+button 16px OUTSIDE the panel: measured x 1036-1068 against a panel ending at
+1052, half a button clipped -- on the payments list as delivered yesterday,
+not only on the new ones. Fixed in `.sch-list-action`, this app's own element
+inside the slot, reading Carbon's own density variable; filed against rux-ds
+as its own open request.
+
+**WHAT WAS MEASURED ON THE SERVED PAGE**, trip 218's panel and a new trip,
+both themes: open with a PO shows the row and a disabled `+`; Save and Reset
+dead on an untouched panel, so no phantom patch. Remove the row -> empty
+state, `+` live, coverage recomputes from $22,750 to $45,500, Save arms. Add
+`PO-TEST-1` / $10,000 -> coverage $35,500; edit to $46,000 -> "Covers the
+balance" and the rung moves from Partial PO to PO received. Switch off ->
+rows hidden and cleared, coverage blank; on -> empty list, `+` live. Reset ->
+the original row and number back, Save dead. Blank `Done` adds nothing.
+Invoice remove/add/edit the same, its third column 0px wide. Payments add
+($5,000 Check) and remove still move the Paid figure. On a NEW trip both
+lists render hidden, the switch reveals them, and typing a destination and a
+date arms Save -- which is the check that `readForm` still returns non-null
+with three ids gone.
+
+**NOT DONE, AND THE FIRST TWO ARE THE SAME BLOCKER.** No second PO and no
+split invoice: the tables do not exist, and this pass deliberately did not
+touch `rux-backend`. No date on either section, which is the one thing rux
+asked for that is missing -- there is no column to write it to, so a picker
+here would be a control whose value is dropped on save; Phase 1 adds `date` to
+both tables and the row's middle column is the slot. No invoice amount, for
+the same reason. `posPatch()` / `invoicesPatch()` are not written -- the two
+`EDITS` keys still write the single columns. rux-ui is untaught either way
+(Phase 0.3).
+
+**NOT VERIFIED: THE WRITE ITSELF.** Save was armed and disarmed and the patch
+it would build was read from the panel, but Save was never PRESSED -- the
+database is production and shared with rux-ui, so writing a test PO to a real
+trip is rux's call, not this session's. What is verified is everything up to
+the update: the values `EDITS` produces, on both an existing and a new trip.
+
+**STILL MISSING FROM THIS LOG: the 2026-09-10 pass.** The Billing tab rebuild,
+the three billing fixes and the new cell mark are all committed and none of
+them is written up here. Not backfilled by this entry, which would be this
+session inventing another session's reasons.
+
 **2026-09-09 - every field on a new trip, and the regression that asking for
 it uncovered.** rux asked for all fields to be visible when creating. Building
 it found that the Billing tab had broken trip CREATION four commits ago.
@@ -2535,3 +2634,32 @@ permissive policies allow; every floating window becomes a side panel or
 modal; the week grid and the trip bar are the app's two components, rule
 added to `AGENTS.md`. Not done: no page beyond the scaffold, no Pages
 deployment, and rux-ds roadmap §4.13 step 8 amended separately there.
+
+
+## 2026-09-11 — Billing visual simplification
+
+Reworked the existing billing composition after the request for a clean,
+professional tab. Balance is the single headline, with the existing status
+tag beside it; Paid and the confirmation prediction are supporting rows.
+The first section no longer doubles the sticky tabs' top spacing. Document
+lists share the panel surface and omit their redundant PO/INV tags, while
+payments retain their method tags. Milestone headings now name their state,
+and the switches use Carbon's captured small variant. Section gaps use
+spacing-05. The coverage shortfall remains explicit in neutral helper text.
+
+This revises the earlier two-headline layout, layer-two list bands, full-size
+switches and red shortfall text. It changes presentation, not the billing
+ladder, fields, one-record caps, dialogs or persistence. The footer is left
+as previously chosen: its full labels had already been rejected for wrapping
+at this width. No database writes, release or commit were made.
+
+Validation: `node tools/check.mjs` and `node --check sch-data.js` exit 0.
+At the same 320px panel width, the inspected Billing content went from
+697.95px to 595.97px. Before/after DOM snapshots match every input value and
+disabled state, switch state, and named action's disabled state. Balance,
+paid total, coverage amount and confirmation agree. Pointer PO toggle,
+keyboard Contract toggle, quote recalculation, and Reset were exercised in
+unsaved drafts; Reset restored the original records and disabled Save.
+All eight themes were visually inspected; lower rows and footer clearance
+were checked in white. This was not a persistence test or a full browser-gate
+sweep, and no production records were saved.

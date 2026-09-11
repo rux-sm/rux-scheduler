@@ -8,6 +8,17 @@ Written 2026-09-10. The request behind it is
 `docs/schema-requests.md`, "one PO and one invoice per trip is not enough";
 this is the sequence for doing it once that is answered.
 
+**PHASE 4 IS BUILT AS OF 2026-09-11, CAPPED AT ONE ROW PER SECTION.** rux
+asked for the layout to be finalised ahead of the tables, so both sections are
+`contained-list`s now, with the add button disabled at the row `trips` can
+store (`LIST_CAP` in `sch-data.js`) and its tooltip saying so. Phase 4's two
+options were settled the way this plan recommends: the switch stays, because
+12 of the 55 PO trips are `po_received` with nothing typed. What is NOT built
+is everything the cap stands in for -- no second row, no `date` field on
+either section and no invoice amount, because those are columns rather than
+markup. Phases 1, 2, 3, 5 and 6 are untouched; Phase 6's arithmetic is already
+written as a SUM over the rows, so it needs no second pass.
+
 ---
 
 ## The blocker, stated first

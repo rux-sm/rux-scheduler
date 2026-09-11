@@ -10,6 +10,47 @@ with the tag that carried it.
 
 ---
 
+## Open — a contained-list header action ignores the header's own padding, 2026-09-11
+
+**Asked for:** `padding-inline` on `.rux--contained-list__action` matching the
+header's own `--rux-layout-density-padding-inline-local`, so the header's
+control ends where the header's label begins rather than at the band's border
+edge.
+
+**Why:** `.rux--contained-list__header` sets
+`padding-inline: var(--rux-layout-density-padding-inline-local)`
+(`css/rux.css:10556-10565`), and `__action` is `position: absolute` with
+`inset-inline: 0` (`css/rux.css:10752-10760`) — absolute insets resolve
+against the padding box's edges, not the content box, so the action lands
+16px outside the text it is aligned with. The label starts at the content
+edge; the button ends at the border edge. Same rule set as the row-action
+entry below, and the same cause: the component positions its actions against
+the box it pads.
+
+**MEASURED IN THIS APP, and the consequence is worse than misalignment here.**
+A `contained-list` in a 320px side panel is pulled out by the panel body's own
+`spacing-05` so Carbon's 16px lands the header text on the same left as every
+field (`.sch-panel-section--bleed`). That puts the band's border edge 16px
+outside the panel, so the action is outside the panel too: the add button
+measured **x 1036–1068 against a panel ending at 1052** — half of a 32px
+control clipped, on the payments list as it shipped 2026-09-10 and on both
+lists added 2026-09-11.
+
+**What this app is doing meanwhile:** its own element inside the action slot
+(`.sch-list-action` in `sch.css`) carries
+`padding-inline-end: var(--rux-layout-density-padding-inline-local)` — the
+same variable the header reads, so the two cannot drift, and no rule of ours
+touches a `rux--*` class. That box also gives the slot a flex row with
+`align-items: center`, which is what lets a 24px toggle and a 32px button
+share the band; `__action` has no height of its own to centre anything in.
+Both go away if the component pads and centres its own action.
+
+**Not asked for:** a change to the absolute positioning itself. It is what
+lets the action overlay a full-width label, and `__label` is
+`inline-size: 100%` by design.
+
+---
+
 ## Open — a contained-list row action never centres, 2026-09-10
 
 **Asked for:** `inset-block: 0` and `align-items: center` on
