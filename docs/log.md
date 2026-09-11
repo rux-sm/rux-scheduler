@@ -4,6 +4,51 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-11 - the billing composition simplified.** Reworked the existing
+billing composition after the request for a clean, professional tab. Balance
+is the single headline, with the existing status tag beside it; Paid and the
+confirmation prediction are supporting rows. The first section no longer
+doubles the sticky tabs' top spacing. Document lists share the panel surface
+and omit their redundant PO/INV tags, while payments retain their method
+tags. Milestone headings now name their state, and the switches use Carbon's
+captured small variant. Section gaps use spacing-05. The coverage shortfall
+remains explicit in neutral helper text.
+
+This revises the earlier two-headline layout, layer-two list bands, full-size
+switches and red shortfall text. It changes presentation, not the billing
+ladder, fields, one-record caps, dialogs or persistence. The footer is left
+as previously chosen: its full labels had already been rejected for wrapping
+at this width. No database writes, release or commit were made.
+
+Validation: `node tools/check.mjs` and `node --check sch-data.js` exit 0.
+At the same 320px panel width, the inspected Billing content went from
+697.95px to 595.97px. Before/after DOM snapshots match every input value and
+disabled state, switch state, and named action's disabled state. Balance,
+paid total, coverage amount and confirmation agree. Pointer PO toggle,
+keyboard Contract toggle, quote recalculation, and Reset were exercised in
+unsaved drafts; Reset restored the original records and disabled Save.
+All eight themes were visually inspected; lower rows and footer clearance
+were checked in white. This was not a persistence test or a full browser-gate
+sweep, and no production records were saved.
+
+**MOVED HERE 2026-09-11, FROM THE FOOT OF A FILE THAT SAYS NEWEST FIRST.** It
+was written as a `##` heading below the 2026-09-06 entry, the oldest position
+in the log. Only its heading changed in the move -- restyled to the bold
+dated form every other entry uses -- and the lines rewrapped; the words above
+are its own. Its place is above the list entry rather than below it because
+it treats the document lists, the one-record caps and the dialogs as already
+built, and those are the list pass's, so it is the later of the day's two
+passes.
+
+**AND ITS LAST LINE IS STALE: THE CODE IT DESCRIBES IS COMMITTED.** "No
+database writes, release or commit were made" was true when written; the work
+then went into `a3f8bf9` together with the list pass -- the small switch
+variant and `.sch-billing-section` enter the history there and nowhere else.
+The line is left standing rather than edited, as what that session saw. It is
+not the missing 2026-09-10 write-up the entry below asks for, either: the
+Billing tab rebuild at `8af1f6b`, the three billing fixes and the cell mark
+are still unwritten here.
+
 **2026-09-11 - the PO and the invoice became lists, capped at one row.** rux
 asked for the layout to be finalised now and for the cap to hold
 compatibility with the columns that exist. Both sections are
@@ -2635,31 +2680,3 @@ modal; the week grid and the trip bar are the app's two components, rule
 added to `AGENTS.md`. Not done: no page beyond the scaffold, no Pages
 deployment, and rux-ds roadmap §4.13 step 8 amended separately there.
 
-
-## 2026-09-11 — Billing visual simplification
-
-Reworked the existing billing composition after the request for a clean,
-professional tab. Balance is the single headline, with the existing status
-tag beside it; Paid and the confirmation prediction are supporting rows.
-The first section no longer doubles the sticky tabs' top spacing. Document
-lists share the panel surface and omit their redundant PO/INV tags, while
-payments retain their method tags. Milestone headings now name their state,
-and the switches use Carbon's captured small variant. Section gaps use
-spacing-05. The coverage shortfall remains explicit in neutral helper text.
-
-This revises the earlier two-headline layout, layer-two list bands, full-size
-switches and red shortfall text. It changes presentation, not the billing
-ladder, fields, one-record caps, dialogs or persistence. The footer is left
-as previously chosen: its full labels had already been rejected for wrapping
-at this width. No database writes, release or commit were made.
-
-Validation: `node tools/check.mjs` and `node --check sch-data.js` exit 0.
-At the same 320px panel width, the inspected Billing content went from
-697.95px to 595.97px. Before/after DOM snapshots match every input value and
-disabled state, switch state, and named action's disabled state. Balance,
-paid total, coverage amount and confirmation agree. Pointer PO toggle,
-keyboard Contract toggle, quote recalculation, and Reset were exercised in
-unsaved drafts; Reset restored the original records and disabled Save.
-All eight themes were visually inspected; lower rows and footer clearance
-were checked in white. This was not a persistence test or a full browser-gate
-sweep, and no production records were saved.
