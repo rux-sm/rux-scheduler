@@ -912,6 +912,123 @@
     return wrap;
   };
 
+  /* ── A MILESTONE THAT IS A LIST ─────────────────────────────────────────────
+     THREE LISTS, ONE BUILDER, 2026-09-11. Payments shipped as a
+     `contained-list` on 2026-09-10 and rux asked for Purchase order and
+     Invoice to read the same way -- a row per PO, a row per invoice, an add
+     button on the heading. Built as one header and one row rather than three
+     copies of each, because "structurally identical to Payments" is a claim
+     worth making true in the code rather than by eye: the three lists cannot
+     drift in height, density, tag size or row grid, since there is one of
+     each.
+
+     THE SWITCH GOES IN THE HEADER'S ACTION SLOT beside the `+`, which is where
+     `section()` already puts it for Contract -- the same heading line, at the
+     same height. It is passed in rather than built here because PO and Invoice
+     have one and Payments does not.
+
+     `__action` IS ABSOLUTE AND THAT IS WHY THE CONTROLS GET A BOX OF THEIR
+     OWN. `.rux--contained-list__action` is `position: absolute` with
+     `inset-inline: 0` and `justify-content: flex-end` (`css/rux.css:10752`),
+     so it has no height of its own to centre a 24px toggle in beside a 32px
+     button. An app element inside it carries the flex row, which keeps the
+     override file out of it -- `rux-overrides.css` already steers around the
+     same absolute-positioning fault for the ROW action, and the note there
+     says the header's own action was left alone. It still is.
+
+     THE HEADER IS BUILT ONCE AND ONLY THE BODY IS REDRAWN. Payments rebuilds
+     its whole list on every change, which is safe for markup this file owns;
+     a header holding a live toggle is not -- rebuilding it would mint a new
+     switch on every row added and drop whatever state the old one held. */
+  const rowList = ({ title, action, addId, addLabel }) => {
+    // One surface for the document sections; only the summary gets a tile.
+    const list = el('div', 'rux--contained-list rux--contained-list--disclosed rux--layout--size-md');
+    const head = el('div', 'rux--contained-list__header');
+    /* NOT AN `<h3>`, AND THAT IS A rux-ds BUG BEING STEERED AROUND rather
+       than a preference. `.rux--contained-list__label` sets no typography, so
+       whatever the label element's own rule says wins over the `__header`
+       font it is supposed to inherit -- and rux-ds has a bare
+       `h3 { font-size: heading-04 }`, so the heading rendered at 28px, the
+       size of the figures above it. Measured in rux-ds's own sink too, where
+       the label comes out at 18.7px against a 16px header. Filed.
+
+       A div with the heading role keeps the outline entry for assistive tech
+       and inherits the header's 14px/600. */
+    const label = el('div', 'rux--contained-list__label', title);
+    label.setAttribute('role', 'heading');
+    label.setAttribute('aria-level', '3');
+    head.appendChild(label);
+    const slot = el('div', 'rux--contained-list__action');
+    const controls = el('div', 'sch-list-action');
+    const add = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm');
+    add.type = 'button';
+    add.id = addId;
+    add.setAttribute('aria-label', addLabel);
+    add.appendChild(svgUse('#i-add', '16', '0 0 32 32'));
+    add.lastChild.setAttribute('class', 'rux--btn__icon');
+    if (action) controls.appendChild(action);
+    controls.appendChild(add);
+    slot.appendChild(controls);
+    head.appendChild(slot);
+    const body = el('ul', 'sch-list-body');
+    body.setAttribute('role', 'list');
+    list.append(head, body);
+    return { list, body, add };
+  };
+
+  /* ONE ROW: A TAG, A WORD, AN AMOUNT. `--with-action` puts the delete control
+     at the row's end and `--clickable` makes the row itself the editor, which
+     is what keeps editing a row from meaning deleting and retyping it.
+
+     THE GRID IS INSIDE THE ROW'S CONTENT, NOT ON IT. Carbon's
+     `__content` is an inline-block of its own, so the three columns go in a
+     span this app owns -- no rule here touches a `rux--*` class.
+
+     THE CODE IS NEVER THE ONLY NAME. `CHK`, `PO` and `INV` mean nothing to a
+     screen reader, so the row button carries the whole thing in `aria-label`
+     and the tag carries its own long form in `title`. */
+  const listRow = ({ code, tone, codeTitle, when, much, title, edit, remove, removeLabel }) => {
+    const li = el('li', 'rux--contained-list-item rux--contained-list-item--with-action rux--contained-list-item--clickable');
+    const open = el('button', 'rux--contained-list-item__content');
+    open.type = 'button';
+    const line = el('span', code ? 'sch-listrow' : 'sch-listrow sch-listrow--document');
+    // A method distinguishes payments; the section already names PO/invoice.
+    if (code) {
+      const tag = el('span', `rux--tag rux--tag--sm ${tone}`, code);
+      if (codeTitle) tag.title = codeTitle;
+      line.appendChild(tag);
+    }
+    line.append(el('span', 'sch-listrow__when', when),
+                el('span', 'sch-listrow__much', much ?? ''));
+    open.appendChild(line);
+    open.title = title;
+    open.setAttribute('aria-label', `Edit ${title}`);
+    open.addEventListener('click', edit);
+    li.appendChild(open);
+    const act = el('div', 'rux--contained-list-item__action');
+    const drop = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm');
+    drop.type = 'button';
+    drop.setAttribute('aria-label', removeLabel);
+    drop.appendChild(svgUse('#i-close', '16', '0 0 32 32'));
+    drop.lastChild.setAttribute('class', 'rux--btn__icon');
+    /* NO CONFIRM ON THE X, deliberately. Nothing is written until the panel
+       saves, so a mis-click costs a `Reset` rather than a record -- and the
+       row is still on screen to be re-entered. A dialog to undo a thing that
+       has not happened is theatre. */
+    drop.addEventListener('click', remove);
+    act.appendChild(drop);
+    li.appendChild(act);
+    return li;
+  };
+
+  // An empty list says so in a row of its own rather than collapsing to a
+  // header with nothing under it.
+  const emptyRow = (text) => {
+    const li = el('li', 'rux--contained-list-item');
+    li.appendChild(el('div', 'rux--contained-list-item__content', text));
+    return li;
+  };
+
   /* CLOSING IS NOW `hidden`, AND THE APPARATUS BELOW IT IS GONE.
      The editor is a flex child of the board rather than a fixed overlay, so
      there is no entrance or exit animation to wait out -- `--right-placement`
@@ -1089,17 +1206,12 @@
     return box;
   }
 
-  /* THE SAME TOGGLE WITH ITS LABEL TAKEN OFF, for a section heading that
-     already says what the switch is for. `setToggle` needs the `.rux--toggle`
-     root, the `__button`, the `__switch` and the `__text` -- all still here;
-     only the `__label-text` span is gone, so nothing about rux-ds's behaviour
-     changes. The name moves to `aria-label` on the button, because an empty
-     `<label>` would leave the control unnamed for a screen reader, and the
-     heading beside it is not programmatically associated.
-
-     "On"/"Off" STAYS VISIBLE. It is hard-coded in `setToggle` and cannot be
-     ours (see `toggleField`), and beside a heading that reads "Contract" it
-     is the only thing saying which way the switch is thrown. */
+  /* Compact milestone toggle, using sink/toggle.html's small variant.
+     The visible section heading now says the full state (Contract signed,
+     PO received, Invoice sent), so the repeated On/Off text is unnecessary.
+     The button keeps its accessible name and the same rux:toggle event.
+     Carbon hides the check glyph while off; keeping it mounted lets the
+     existing class toggle handle both states without new behaviour. */
   function toggleAction(id, label, on) {
     const box = el('div', 'rux--toggle');
     const btn = el('button', 'rux--toggle__button');
@@ -1110,12 +1222,20 @@
     btn.setAttribute('aria-label', label);
     const lab = el('label', 'rux--toggle__label');
     lab.setAttribute('for', id);
-    const appearance = el('div', 'rux--toggle__appearance');
+    const appearance = el('div', 'rux--toggle__appearance rux--toggle__appearance--sm');
     const sw = el('div', 'rux--toggle__switch');
     if (on) sw.classList.add('rux--toggle__switch--checked');
-    const text = el('span', 'rux--toggle__text', on ? 'On' : 'Off');
-    text.setAttribute('aria-hidden', 'true');
-    appearance.append(sw, text);
+    const check = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    check.setAttribute('class', 'rux--toggle__check');
+    check.setAttribute('width', '6px');
+    check.setAttribute('height', '5px');
+    check.setAttribute('viewBox', '0 0 6 5');
+    check.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M2.2 2.7L5 0 6 1 2.2 5 0 2.7 1 1.5z');
+    check.appendChild(path);
+    sw.appendChild(check);
+    appearance.appendChild(sw);
     lab.appendChild(appearance);
     box.append(btn, lab);
     return box;
@@ -1455,15 +1575,33 @@
     { key: 'contract_status', get: f => on(f['sch-f-contract']) ? 'Signed' : 'Pending' },
     { key: 'contract_note',
       get: f => on(f['sch-f-contract']) ? (f['sch-f-contractnote'].value.trim() || null) : null },
+    /* THE PO AND THE INVOICE COME OFF THEIR PENDING ROW, NOT OFF A FIELD,
+       2026-09-11. Both sections became `contained-list`s, so there is no
+       `sch-f-poref` or `sch-f-invnum` on the panel to read -- the values live
+       in `poPending` / `invPending` and the inputs exist only inside a dialog
+       while it is open, the same arrangement `payPending` has had since
+       2026-09-10.
+
+       ROW ZERO, BECAUSE THERE IS ONE COLUMN FOR EACH. The lists are capped at
+       one row apiece until `trip_pos` and `trip_invoices` exist
+       (docs/po-invoice-lists-plan.md), so the first row IS the value. When the
+       tables land these three keys become the mirror writes of Phase 0.2 --
+       `po_amount` a SUM over the rows, `po_ref` the first by position -- and
+       the rest of this list does not change.
+
+       NO ROW IS A NULL, AND THE SWITCH STILL NULLS BOTH. `po_received` with
+       an empty list is the state 12 of the 55 existing PO trips are in: a PO
+       expected, nothing typed. That is why the switch is not merely
+       `count > 0`. */
     { key: 'po_received', get: f => on(f['sch-f-poreceived']) },
     { key: 'po_ref',
-      get: f => on(f['sch-f-poreceived']) ? (f['sch-f-poref'].value.trim() || null) : null },
+      get: f => on(f['sch-f-poreceived']) ? (poPending[0]?.ref ?? null) : null },
     { key: 'po_amount',
-      get: f => on(f['sch-f-poreceived']) ? money(f['sch-f-poamount'].value) : null },
+      get: f => on(f['sch-f-poreceived']) ? money(String(poPending[0]?.amount ?? '')) : null },
     { key: 'invoice_status', get: f => on(f['sch-f-invoice']) ? 'Invoiced' : 'Pending' },
     { key: 'invoiced', get: f => on(f['sch-f-invoice']) },
     { key: 'invoice_number',
-      get: f => on(f['sch-f-invoice']) ? (f['sch-f-invnum'].value.trim() || null) : null },
+      get: f => on(f['sch-f-invoice']) ? (invPending[0]?.number ?? null) : null },
     /* THE CONTACT LINKS ARE TRIP COLUMNS, so they diff here rather than with
        the contact's own fields. Read straight from the DOM and not through
        `f`: these controls exist only when a trip is open, and `readForm`
@@ -1541,8 +1679,17 @@
                       // would have erased a real PO. The guard below could not
                       // catch it: an id that is not in this list never becomes
                       // a key of `f`, so `some(v => !v)` has nothing to test.
+                      // AND AN ID WHOSE CONTROL LEFT THE PANEL MUST LEAVE
+                      // THIS LIST, 2026-09-11, which is the same rule read
+                      // the other way. `poref`, `poamount` and `invnum` went
+                      // behind the PO and Invoice dialogs when those sections
+                      // became lists; left here they would be three ids that
+                      // never resolve, `readForm` would return null on every
+                      // open, and Save would die on a panel where nothing was
+                      // wrong. Their values now come off the pending rows in
+                      // `EDITS` above, which read no element at all.
                       'start', 'end', 'rstart', 'rend',
-                      'quoted', 'poref', 'poamount', 'invnum',
+                      'quoted',
                       'contract', 'contractnote', 'poreceived', 'invoice']) {
       f[`sch-f-${id}`] = document.getElementById(`sch-f-${id}`);
     }
@@ -1644,6 +1791,31 @@
   let redrawPayments = () => {};
   let payEditing = null;   // index being edited, or null for a new row
 
+  /* THE PO AND THE INVOICE ARE PENDING ROWS TOO, 2026-09-11, for the reason
+     the payments are: the list is a render of the array and the array is what
+     Save reads. Module scope because the dialogs live outside the panel's
+     build closure.
+
+     ONE ROW EACH, AND THE CAP IS THE SCHEMA'S RATHER THAN THE LAYOUT'S.
+     `trips` holds one `po_ref`, one `po_amount` and one `invoice_number`;
+     `trip_pos` and `trip_invoices` do not exist -- probed live, both 404. So
+     the `+` disables at `LIST_CAP` and the second row is refused by the thing
+     that actually cannot store it. Raising this to Infinity, teaching
+     `poPending` an `id`, and swapping the two mirror keys in `EDITS` for
+     `posPatch()` / `invoicesPatch()` is the whole of the UI half of
+     docs/po-invoice-lists-plan.md; nothing else here is shaped by the cap. */
+  const LIST_CAP = 1;
+  const CAP_NOTE = {
+    po: 'One purchase order per trip for now',
+    inv: 'One invoice per trip for now',
+  };
+  let poPending = [];
+  let invPending = [];
+  let redrawPos = () => {};
+  let redrawInvoices = () => {};
+  let poEditing = null;
+  let invEditing = null;
+
   /* THE DIALOG BUILDS ITS FIELDS EACH TIME rather than reusing four kept
      inputs. `dateOne` mints a Carbon date picker with a calendar the module
      has to claim, and claiming the same one twice leaves two; building fresh
@@ -1701,6 +1873,92 @@
     else Object.assign(payPending[payEditing], row);
     window.Rux?.modal?.close?.('sch-payment-modal');
     redrawPayments();
+    refreshDirty();
+  });
+
+  /* THE PO DIALOG: A REFERENCE AND AN AMOUNT, and no date, 2026-09-11. rux
+     asked for `mm/dd/yyyy` on this section and it is the one thing here that
+     is NOT built: there is nowhere to put it. `trips` has no PO date column,
+     and a picker whose value is dropped on save is worse than no picker --
+     see the `+` for the same argument about a second row. Phase 1 of
+     docs/po-invoice-lists-plan.md adds `date` to `trip_pos`, and the row's
+     middle column is already the slot it goes in.
+
+     TWO FIELDS STILL EARN A DIALOG rather than staying inline. The pair was
+     inline until today and cost the tab about 120px whenever a PO existed;
+     behind a dialog the section is a header and a row at 44px, which is what
+     let all three milestones and the receipts fit a 320px column at once.
+
+     BOTH FIELDS KEEP A REAL LABEL HERE, unlike the inline version they
+     replace. In the panel the heading said "Purchase order" directly above
+     them and the labels were dropped for placeholders (rux asked); a modal
+     headed "Add purchase order" has the room, and a labelled field is the
+     better default whenever the space is there. */
+  function openPoDialog(index) {
+    const host = document.getElementById('sch-po-fields');
+    if (!host) return;
+    poEditing = index;
+    const p = index === null ? {} : poPending[index];
+    document.getElementById('sch-po-h').textContent =
+      index === null ? 'Add purchase order' : 'Edit purchase order';
+    const grid = el('div', 'sch-dialog-grid');
+    grid.append(
+      textField('sch-f-oref', 'Reference', p.ref),
+      moneyField('sch-f-oamount', 'Amount', p.amount),
+    );
+    host.replaceChildren(grid);
+    window.Rux?.modal?.open?.('sch-po-modal');
+  }
+
+  document.getElementById('sch-po-done')?.addEventListener('click', () => {
+    const val = id => document.getElementById(id)?.value.trim() ?? '';
+    const row = { ref: val('sch-f-oref') || null, amount: money(val('sch-f-oamount')) };
+    /* AN EMPTY DIALOG ADDS NOTHING, the same rule the payment dialog follows.
+       `Done` on a blank form is the same intention as `Cancel`, and a PO with
+       no reference and no amount is not a PO -- it is the state the switch
+       already expresses on its own, which 12 of the 55 existing PO trips are
+       in. An EXISTING row emptied this way is left alone rather than blanked;
+       removing it is what the X is for. */
+    if (row.ref === null && row.amount === null) {
+      window.Rux?.modal?.close?.('sch-po-modal');
+      return;
+    }
+    if (poEditing === null) { if (poPending.length < LIST_CAP) poPending.push(row); }
+    else Object.assign(poPending[poEditing], row);
+    window.Rux?.modal?.close?.('sch-po-modal');
+    redrawPos();
+    refreshDirty();
+  });
+
+  /* THE INVOICE DIALOG IS ONE FIELD, and it is still a dialog rather than an
+     inline box. The section has to look like the other two -- rux asked for
+     all three to read the same way -- and an invoice AMOUNT and DATE are the
+     next two fields to land in it the moment `trip_invoices` exists. A
+     one-field dialog today is the same layout as a three-field one then;
+     an inline box would have to be torn out again. */
+  function openInvoiceDialog(index) {
+    const host = document.getElementById('sch-inv-fields');
+    if (!host) return;
+    invEditing = index;
+    const v = index === null ? {} : invPending[index];
+    document.getElementById('sch-inv-h').textContent =
+      index === null ? 'Add invoice' : 'Edit invoice';
+    const grid = el('div', 'sch-dialog-grid');
+    grid.append(textField('sch-f-inum', 'Invoice number', v.number));
+    host.replaceChildren(grid);
+    window.Rux?.modal?.open?.('sch-inv-modal');
+  }
+
+  document.getElementById('sch-inv-done')?.addEventListener('click', () => {
+    const number = document.getElementById('sch-f-inum')?.value.trim() || null;
+    if (number === null) {
+      window.Rux?.modal?.close?.('sch-inv-modal');
+      return;
+    }
+    if (invEditing === null) { if (invPending.length < LIST_CAP) invPending.push({ number }); }
+    else Object.assign(invPending[invEditing], { number });
+    window.Rux?.modal?.close?.('sch-inv-modal');
+    redrawInvoices();
     refreshDirty();
   });
 
@@ -2616,31 +2874,130 @@
          `po_amount` column and no second PO row, so "another PO" in practice
          means raising this number. */
       const poCoverage = el('p', 'rux--form__helper-text sch-po-coverage');
-      /* BOTH PO FIELDS LOSE THEIR LABEL, not just the reference. rux asked
-         for the reference; leaving "PO amount" labelled beside an unlabelled
-         reference would read as one field having lost its label rather than
-         as a pair that does not need them. The placeholders say which is
-         which, and `$` marks the amount as money without a word. */
-      const po = gate(
-        [textField('sch-f-poref', 'PO reference', trip.po_ref, 'Reference'),
-         moneyField('sch-f-poamount', 'PO amount', trip.po_amount, '$ Amount')],
-        poCoverage);
       const poSwitch = toggleAction('sch-f-poreceived', 'PO received',
         !!trip.po_received);
-
-      /* NO `+` ON THESE TWO HEADINGS, and that is the schema talking rather
-         than a layout choice. rux asked for an add button so a trip could
-         carry several POs and a split invoice. `trips` holds ONE `po_ref`,
-         ONE `po_amount` and ONE `invoice_number`, and there is no
-         `trip_pos` or `trip_invoices` table -- checked against the live
-         database, all 404. A `+` here would be a control that can never add
-         a second row. The ask is written up in docs/rux-ds-requests.md as a
-         schema proposal instead; if those tables land, the button drops into
-         the heading slot this section now has and the fields become rows. */
-      const invoice = gate(
-        [textField('sch-f-invnum', 'Invoice number', trip.invoice_number, 'Number')]);
       const invoiceSwitch = toggleAction('sch-f-invoice', 'Invoice sent',
         trip.invoice_status === 'Invoiced');
+
+      /* PO AND INVOICE BECAME LISTS, 2026-09-11, and the `+` that was refused
+         on 2026-09-10 is here -- capped rather than absent.
+
+         WHAT CHANGED SINCE THAT REFUSAL, because it was the right call and
+         this is not a reversal of it: the note here said a `+` would be a
+         control that can never add a second row, which is still true of the
+         DATABASE and no longer true of the BUTTON. rux asked for the layout
+         to be finalised now and for the cap to hold the compatibility, so the
+         button exists, disables at the row `trips` can store, and says why in
+         its tooltip. A control that stops at a limit is honest; one that
+         accepts a row and loses it on save is not.
+
+         THE ROWS ARE THE FIELDS THAT WERE HERE. `sch-f-poref` and
+         `sch-f-poamount` were a labelless pair under this heading and
+         `sch-f-invnum` a single box under the next; all three moved into
+         dialogs, which is why they left `readForm`'s id list. What is on the
+         tab is a 32px header and one 44px row per record instead of a header
+         plus 120px of form -- and it is the same shape as Payments below,
+         built from the same `rowList`.
+
+         THE SWITCH STAYS, AND OPTION 2 WAS THE TEMPTING ONE. With a list,
+         "at least one row" could BE the switch (Phase 4 of
+         docs/po-invoice-lists-plan.md lays out both) and the section would
+         lose a control. The data refuses it: 12 of the 55 trips with a PO
+         carry `po_received` with no reference and no amount -- a PO promised,
+         nothing typed -- and a list alone cannot say that. Switch on with an
+         empty list is exactly those 12 rows.
+
+         WHAT THE SWITCH DOES TO A LIST is what it did to the fields: off
+         hides the rows and clears them, so hidden still means empty means
+         exactly what Save will write. See `syncLists`. */
+      const poList = rowList({
+        title: 'PO received', action: poSwitch,
+        addId: 'sch-f-poadd', addLabel: 'Add purchase order',
+      });
+      const invList = rowList({
+        title: 'Invoice sent', action: invoiceSwitch,
+        addId: 'sch-f-invadd', addLabel: 'Add invoice',
+      });
+      poList.add.addEventListener('click', () => openPoDialog(null));
+      invList.add.addEventListener('click', () => openInvoiceDialog(null));
+
+      /* THE `+` IS DEAD IN TWO CASES, and they are different sentences. With
+         the switch off there is nothing to add a record to -- the section is
+         saying "not yet" and the rows are hidden. At the cap the section is
+         full, and the tooltip says so in the product's words rather than the
+         schema's: a dispatcher does not need to hear about `trip_pos`.
+
+         `aria-disabled` IS NOT USED HERE. The button does nothing at either
+         point, so `disabled` is the honest attribute -- it takes the control
+         out of the tab order instead of letting a keyboard user land on
+         something that will not respond. */
+      const syncCap = () => {
+        for (const [toggleId, box, pending, note] of [
+          ['sch-f-poreceived', poList, poPending, CAP_NOTE.po],
+          ['sch-f-invoice', invList, invPending, CAP_NOTE.inv]]) {
+          const open = on(document.getElementById(toggleId));
+          const full = pending.length >= LIST_CAP;
+          box.add.disabled = !open || full;
+          box.add.title = full ? note : '';
+        }
+      };
+
+      /* A ROW EXISTS WHEN THERE IS SOMETHING IN IT, which is the only reading
+         of one column that survives the cap. A trip with a `po_ref` or a
+         `po_amount` has a PO row; one with `po_received` and neither has the
+         switch on and no row, which is the state those 12 trips are in and
+         the state this panel must be able to re-save unchanged.
+
+         `?? null` ON THE AMOUNT, BECAUSE 0 IS A NUMBER. `trip.po_amount` of 0
+         is falsy and would have dropped the row -- no trip carries one today,
+         and a truthiness test here is the kind of thing that is true until it
+         is not. */
+      poPending = (trip.po_ref || (trip.po_amount ?? null) !== null)
+        ? [{ ref: trip.po_ref ?? null, amount: trip.po_amount ?? null }] : [];
+      invPending = trip.invoice_number ? [{ number: trip.invoice_number }] : [];
+
+      const drawPos = () => {
+        poList.body.replaceChildren();
+        if (!poPending.length) poList.body.appendChild(emptyRow('No purchase order recorded.'));
+        poPending.forEach((p, i) => {
+          const much = (p.amount ?? null) === null ? '' : usd(Number(p.amount) || 0);
+          const ref = p.ref || 'No reference';
+          poList.body.appendChild(listRow({
+            when: ref, much,
+            title: ['Purchase order', ref, much || 'No amount'].join(' · '),
+            edit: () => openPoDialog(i),
+            removeLabel: `Remove purchase order ${ref}`,
+            remove: () => { poPending.splice(i, 1); drawPos(); refreshDirty(); },
+          }));
+        });
+        syncCap();
+        drawSummary();
+      };
+
+      const drawInvoices = () => {
+        invList.body.replaceChildren();
+        if (!invPending.length) invList.body.appendChild(emptyRow('No invoice recorded.'));
+        invPending.forEach((v, i) => {
+          const num = v.number || 'No number';
+          invList.body.appendChild(listRow({
+            /* NO AMOUNT COLUMN FOR AN INVOICE, and the slot is left empty
+               rather than filled with the quoted price. There is no
+               `invoice_amount` anywhere in the schema -- the invoice is for
+               the trip's own money, and showing `quoted_price` on this row
+               would be this app inventing a fact. The empty third column
+               keeps the number aligned with the PO's reference above it,
+               which is what makes the two sections read as one system. */
+            when: num, much: '',
+            title: ['Invoice', num].join(' · '),
+            edit: () => openInvoiceDialog(i),
+            removeLabel: `Remove invoice ${num}`,
+            remove: () => { invPending.splice(i, 1); drawInvoices(); refreshDirty(); },
+          }));
+        });
+        syncCap();
+      };
+      redrawPos = drawPos;
+      redrawInvoices = drawInvoices;
 
       /* PAYMENTS ARE EDITABLE AS OF 2026-09-10, and they are the reason the
          rest of this tab can be honest. `deposit_amount`, `balance_paid`,
@@ -2748,9 +3105,9 @@
          done, `magenta` is wrong in the customer's favour, `cool-gray` is
          nothing yet.
 
-         RED IS NOT USED. A partial PO is not an error: it confirms the trip.
-         The only red on this tab is the coverage shortfall beside the amount
-         it refers to. */
+         A partial PO is not an error: it confirms the trip. The coverage
+         shortfall was red until the 2026-09-11 composition pass; it now
+         uses helper text, with this tag carrying the status colour. */
       const STATUS_LABEL = {
         overpaid: ['Overpaid', 'rux--tag--magenta'],
         paid_full: ['Paid in full', 'rux--tag--green'],
@@ -2780,7 +3137,13 @@
         const paid = pending.reduce((n, p) => n + (Number(p.amount) || 0), 0);
         const price = quoted ?? 0;
         const poOn = on(document.getElementById('sch-f-poreceived'));
-        const poAmount = money(document.getElementById('sch-f-poamount')?.value ?? '') ?? 0;
+        /* THE PO AMOUNT IS A SUM OVER THE ROWS, 2026-09-11, where it used to
+           be one field's value. With the list capped at one row the two are
+           the same number; written as a sum it is already Phase 6 of
+           docs/po-invoice-lists-plan.md, and the coverage line below --
+           `max(0, (quoted - paid) - poAmount)` -- becomes correct for several
+           POs without being touched again. */
+        const poAmount = poPending.reduce((n, p) => n + (Number(p.amount) || 0), 0);
         const remaining = Math.max(0, price - paid);
         const shortfall = Math.max(0, remaining - poAmount);
         const rung = deriveStatus({
@@ -2793,11 +3156,10 @@
            them how big it is, which is what the next PO or payment has to
            close. rux-ui shows the same figure beside the same field
            (`js/panels/trip-panel.js:505-535`). */
-        poCoverage.classList.toggle('sch-po-coverage--short', poOn && shortfall > 0);
         poCoverage.textContent = !poOn ? ''
           : price <= 0 ? 'No quoted price to cover'
           : shortfall <= 0 ? 'Covers the balance'
-          : `${usd(shortfall)} not authorized — needs another PO or a payment`;
+          : `${usd(shortfall)} uncovered. Add a PO or payment.`;
 
         /* TWO ROWS LEFT THIS LIST, 2026-09-10, and neither was merely
            redundant -- both could contradict the lines above them.
@@ -2821,72 +3183,29 @@
            where it surprises. */
         const [rungLabel, rungTone] = STATUS_LABEL[rung];
         derived.replaceChildren(def([
-          ['Status', el('span', `rux--tag rux--tag--sm ${rungTone}`, rungLabel)],
+          ['Paid', quoted === null ? usd(paid) : `${usd(paid)} of ${usd(quoted)}`],
           ['Confirmed', CONFIRM_WHEN.includes(rung === 'po_partial' ? 'po_received' : rung)
             ? 'Yes, once saved' : 'Not yet'],
         ]));
-
+        const status = el('span', `rux--tag rux--tag--sm ${rungTone}`, rungLabel);
+        status.title = `Billing status: ${rungLabel}`;
         figures.replaceChildren(
-          /* THE NO-BREAK SPACE IS LOAD-BEARING. `__row` is `display: flex`, so
-             value and total are flex items sitting flush -- measured at a 0px
-             gap, which read `$0/ $45,500`. A leading ordinary space would be
-             collapsed away at the start of the span's own inline context. The
-             alternative was a margin on `.rux--big-number__total`, and that is
-             a rule on a Carbon class in an app stylesheet, which this project
-             does not do. */
-          bigNumber('Paid', usd(paid), quoted === null ? null : ` / ${usd(quoted)}`),
-          /* THE MINUS GOES BEFORE THE DOLLAR, not inside the number. `usd()`
-             wraps `toLocaleString`, so an overpaid trip rendered `$-500` --
-             the sign stranded between the symbol and the digits. Found by
-             overpaying a trip by $500 while checking what was redundant here.
-             U+2212, the real minus, because a hyphen at `heading-04` beside a
-             `$` reads as a dash. */
           bigNumber('Balance', quoted === null ? 'No quote'
             : (quoted - paid < 0 ? `−${usd(paid - quoted)}` : usd(quoted - paid))),
+          status,
         );
       };
-      /* THE READOUT COMES BEFORE THE INPUT THAT DRIVES IT, 2026-09-10. The
-         quoted price led this section until rux moved it; the tab now opens
-         on what a dispatcher came to find out -- paid, balance, status --
-         and the one field that feeds them sits under the answer rather than
-         in front of it.
-
-         IT IS THE SAME RULE THE REST OF THE TAB ALREADY FOLLOWS: summary,
-         then milestones, then receipts; and inside each milestone, the switch
-         on the heading and its fields beneath. Read first, edit second, all
-         the way down. With no quote the balance reads "No quote" and the
-         empty field is directly below it, which is the one case where the
-         order also puts the fix next to the problem. */
-      /* THE READOUT IS A TILE AND THE FIELD IS NOT, 2026-09-10. rux asked
-         whether the summary should sit in one; it should, but only the half
-         of it that is a readout.
-
-         WHY THE QUOTED PRICE COMES OUT OF IT. Everything in the tile is
-         derived -- paid and balance from the payment rows, status and
-         confirmed from the ladder -- and none of it is typed. `Quoted price`
-         is the one thing here a dispatcher SETS, and a box drawn around a
-         mixture of output and input says nothing, which is the opposite of
-         what a container is for. Outside and below, the tile reads "this is
-         what the money looks like" and the field under it reads "this is the
-         number you choose", which is also the order rux asked for.
-
-         IT IS A SURFACE, WHICH THE TAB NEEDED. Contract, PO, Invoice and
-         Payments all have a header band now; the summary was the one block
-         with neither a heading nor a surface, floating above the rest.
-
-         `rux--layer-two` FOR THE SAME REASON THE LIST NEEDED IT: `.rux--tile`
-         paints `background-color: var(--rux-layer)` (`css/rux.css:25970`),
-         and on a panel already sitting at `layer-01` that resolves to the
-         colour behind it. And the bleed, for the same reason again: the tile
-         pads itself by `spacing-05`, so without it every figure would sit
-         16px right of the fields below. */
+      /* Billing composition revised 2026-09-11 for a quieter, shorter panel.
+         Balance is the headline; Paid is a supporting definition row. This
+         replaces the two stacked headlines chosen on 2026-09-10, while
+         keeping their values, the status ladder and confirmation prediction.
+         The summary keeps its distinct surface; the lists below now share
+         the panel surface. No extra section margin above the first tile:
+         the sticky tab strip already supplies that space. */
       const tile = el('div', 'rux--tile rux--layer-two sch-panel-section--bleed');
       const tileStack = el('div', 'rux--stack-vertical rux--stack-scale-5');
       tileStack.append(
         figures,
-        /* THE DERIVED THREE ARE DEMOTED, not dropped. They belong under the
-           two numbers they follow from, in the small type of a `dl`, because
-           a dispatcher reads them second -- after how much came in. */
         derived,
       );
       tile.appendChild(tileStack);
@@ -2896,7 +3215,7 @@
         tile,
         moneyField('sch-f-quoted', 'Quoted price', trip.quoted_price),
       );
-      panelBilling.appendChild(section(null, summary));
+      panelBilling.appendChild(summary);
 
       /* `--disclosed`, NOT `--on-page`, so the four headings on this tab are
          one heading. `--on-page` renders its header at `heading-compact-01`
@@ -2905,20 +3224,10 @@
          `.sch-panel-section__title` sets for Summary, Pricing & invoice and
          Billing status. A shipped Carbon variant rather than a rule of ours,
          which is the whole reason to prefer it over restyling the header. */
-      /* `rux--layer-two` IS WHAT MAKES THE HEADER BAND VISIBLE, and it is
-         Carbon's own mechanism rather than a rule of ours. `--disclosed`
-         already paints its header `background-color: var(--rux-layer)`
-         (`css/rux.css:10640`) -- the band was never missing, it was the same
-         colour as the thing behind it. Measured: header `#393939`, panel
-         `#393939`, and no `rux--layer-*` ancestor anywhere, so `--rux-layer`
-         fell through to the root's `layer-01`, which is exactly what the side
-         panel is already painted with.
-
-         Stepping the list to layer two makes `--rux-layer` resolve to
-         `layer-02` and the band appears, in the token Carbon meant for it.
-         An override setting a background on `.rux--contained-list__header`
-         would have been a component rule in an app stylesheet for a problem
-         the design system had already solved. */
+      /* The layer-two header bands introduced on 2026-09-10 are removed
+         from the lists in this design pass. Repeated filled blocks competed
+         with the summary; headings and row boundaries now do the grouping.
+         The existing disclosed variant, sizes and action slots are retained. */
       /* `size-md` MOVES THE ROWS AND NOT THE HEADER, which is why it is safe
          here. `--disclosed` pins its header to a hard `block-size: 2rem`
          (`css/rux.css:10641`) where `--on-page` reads
@@ -2931,97 +3240,53 @@
          and gives the row and its delete button a fair click target. The
          inline density does not change with size -- 16px at all three -- so
          the bleed above still lands the rows on the same left as the fields. */
-      const list = el('div', 'rux--contained-list rux--contained-list--disclosed rux--layout--size-md rux--layer-two');
+      /* THE PAYMENT LIST IS BUILT FROM THE SAME `rowList` AS THE TWO ABOVE
+         IT, 2026-09-11. It shipped first and carried its own header and row
+         markup; PO and Invoice would have been a second and third copy of
+         both, so the three share one builder instead and this section lost
+         about forty lines without changing a pixel. What is still its own is
+         what is genuinely different: a method tag rather than a fixed code,
+         a date in the middle column, and no switch on the header -- there is
+         no milestone to gate, a receipt either exists or does not.
+
+         THE METHOD IS A WORD AND NOT A GLYPH, for now. rux asked for icons
+         and Carbon's `--with-icon` variant is built for it, but rux-ds's
+         whole sprite is 63 symbols and none of them means money -- counted,
+         and filed in docs/rux-ds-requests.md. Pressing `i-document` or
+         `i-copy` into service would be a glyph that lies. The word costs a
+         reader nothing to learn, which four near-neighbour methods --
+         Check, ACH, Card, Cash are all "money arrived" -- otherwise would.
+
+         THE LIST IS DRAWN FROM `pending`, NOT FROM THE DOM. The old version
+         read its values back out of the inputs it had built; with the fields
+         behind a dialog there are no inputs to read, so the array is the
+         truth and the list is a render of it. That also makes the diff a
+         comparison of two arrays rather than a walk over form controls. */
+      const payList = rowList({
+        title: 'Payments', addId: 'sch-f-payadd', addLabel: 'Add payment',
+      });
+      payList.add.addEventListener('click', () => openPaymentDialog(null));
       const draw = () => {
-        list.replaceChildren();
-        const head = el('div', 'rux--contained-list__header');
-        /* NOT AN `<h3>`, AND THAT IS A rux-ds BUG BEING STEERED AROUND rather
-           than a preference. `.rux--contained-list__label` sets no typography,
-           so whatever the label element's own rule says wins over the
-           `__header` font it is supposed to inherit. rux-ds has a bare
-           `h3 { font-size: heading-04 }`, so the heading rendered at 28px --
-           the same size as `$45,300` right above it, and 2.3x every other
-           section title on the tab. Measured in rux-ds's OWN sink too, where
-           the label comes out at 18.7px against a 16px header, so the markup
-           there is wrong in the same way and mine copied it. Filed.
-
-           A div with the heading role keeps the outline entry for assistive
-           tech and inherits the header's 14px/600, which is what Carbon meant
-           `--on-page` to look like. */
-        const label = el('div', 'rux--contained-list__label', 'Payments');
-        label.setAttribute('role', 'heading');
-        label.setAttribute('aria-level', '3');
-        head.appendChild(label);
-        const headAction = el('div', 'rux--contained-list__action');
-        const add = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm');
-        add.type = 'button';
-        add.id = 'sch-f-payadd';
-        add.setAttribute('aria-label', 'Add payment');
-        add.appendChild(svgUse('#i-add', '16', '0 0 32 32'));
-        add.lastChild.setAttribute('class', 'rux--btn__icon');
-        add.addEventListener('click', () => openPaymentDialog(null));
-        headAction.appendChild(add);
-        head.appendChild(headAction);
-        list.appendChild(head);
-
-        const ul = el('ul');
-        ul.setAttribute('role', 'list');
-        if (!pending.length) {
-          const li = el('li', 'rux--contained-list-item');
-          li.appendChild(el('div', 'rux--contained-list-item__content', 'No payments recorded.'));
-          ul.appendChild(li);
-        }
+        payList.body.replaceChildren();
+        if (!pending.length) payList.body.appendChild(emptyRow('No payments recorded.'));
         pending.forEach((p, i) => {
-          const li = el('li', 'rux--contained-list-item rux--contained-list-item--with-action rux--contained-list-item--clickable');
-          /* THE ROW ITSELF OPENS THE EDITOR, which is why it is a button and
-             carries `--clickable`. The X beside it removes; a row with only
-             a delete control would make editing a payment mean deleting and
-             retyping it. */
-          const open = el('button', 'rux--contained-list-item__content');
           const mark = PAYMENT_TAG[p.method] || { code: '···', tone: 'rux--tag--gray' };
           const when = p.date ? mdy(p.date) : 'No date';
           const much = usd(Number(p.amount) || 0);
-          const tag = el('span', `rux--tag rux--tag--sm ${mark.tone}`, mark.code);
-          tag.title = p.method || 'Method not set';
-          /* THE ROW IS A GRID OF THREE, so the amounts line up as a column
-             down the list instead of floating wherever the date ended. Money
-             is what this list is read for; a ragged right edge makes two
-             receipts a comparison you have to do by eye. */
-          const line = el('span', 'sch-payment-row');
-          line.append(tag, el('span', 'sch-payment-row__when', when),
-                      el('span', 'sch-payment-row__much', much));
-          open.appendChild(line);
-          /* THE REFERENCE IS OFF THE ROW, on the tooltip and in the dialog.
-             It is a cheque number -- looked up when there is a question about
-             a specific payment, not scanned down a list -- and it was the one
-             field long enough to wrap the row onto a second line. */
-          open.title = [p.method || 'Payment', when, much,
-                        p.ref ? `Ref ${p.ref}` : null].filter(Boolean).join(' · ');
-          open.setAttribute('aria-label', `Edit ${open.title}`);
-          open.type = 'button';
-          open.addEventListener('click', () => openPaymentDialog(i));
-          li.appendChild(open);
-          const act = el('div', 'rux--contained-list-item__action');
-          const drop = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm');
-          drop.type = 'button';
-          drop.setAttribute('aria-label', `Remove ${p.method || 'payment'} of ${usd(Number(p.amount) || 0)}`);
-          drop.appendChild(svgUse('#i-close', '16', '0 0 32 32'));
-          drop.lastChild.setAttribute('class', 'rux--btn__icon');
-          drop.addEventListener('click', () => {
-            /* NO CONFIRM ON THE X, deliberately, and this is the one place
-               that differs from rux-ui. Nothing is written until the panel
-               saves, so a mis-click costs a `Reset` rather than a receipt --
-               and the row is still on screen to be re-entered. A dialog to
-               undo a thing that has not happened is theatre. */
-            pending.splice(i, 1);
-            draw();
-            refreshDirty();
-          });
-          act.appendChild(drop);
-          li.appendChild(act);
-          ul.appendChild(li);
+          payList.body.appendChild(listRow({
+            code: mark.code, tone: mark.tone, codeTitle: p.method || 'Method not set',
+            when, much,
+            /* THE REFERENCE IS OFF THE ROW, on the tooltip and in the dialog.
+               It is a cheque number -- looked up when there is a question
+               about a specific payment, not scanned down a list -- and it was
+               the one field long enough to wrap the row onto a second line. */
+            title: [p.method || 'Payment', when, much,
+                    p.ref ? `Ref ${p.ref}` : null].filter(Boolean).join(' · '),
+            edit: () => openPaymentDialog(i),
+            removeLabel: `Remove ${p.method || 'payment'} of ${much}`,
+            remove: () => { pending.splice(i, 1); draw(); refreshDirty(); },
+          }));
         });
-        list.appendChild(ul);
         drawSummary();
       };
       draw();
@@ -3032,8 +3297,8 @@
          the section title -- that is what Carbon ships it for -- so the wrapper
          here exists only for the `spacing-06` above it that every other section
          gets. */
-      const listWrap = el('div', 'sch-panel-section sch-panel-section--bleed');
-      listWrap.appendChild(list);
+      const listWrap = el('div', 'sch-billing-section sch-panel-section--bleed');
+      listWrap.appendChild(payList.list);
 
       /* THE ORDER, AND PAYMENTS MOVED TO THE END, 2026-09-10. Summary, then
          the three milestones in the order the ladder climbs -- contract, PO,
@@ -3046,10 +3311,27 @@
          the three fixed-height sections a dispatcher fills in while booking
          sat below the one that gets longer the more the trip is paid. Last,
          it can run as long as it likes. */
+      /* THE TWO LISTS BLEED AND THEIR HELPER TEXT DOES NOT. A
+         `contained-list` pads itself by `spacing-05` inside the band, so the
+         wrapper is pulled out by the panel body's own `spacing-05` to land
+         the header text on the same left as every field -- the trick Payments
+         already uses. The coverage line is NOT a list row, so it stays in the
+         padded section and keeps the panel's own inline margin; bleeding it
+         too would run it to the panel's edges. */
+      const poWrap = el('div', 'sch-billing-section');
+      const poBleed = el('div', 'sch-panel-section--bleed');
+      poBleed.appendChild(poList.list);
+      poWrap.append(poBleed, poCoverage);
+
+      const invWrap = el('div', 'sch-billing-section sch-panel-section--bleed');
+      invWrap.appendChild(invList.list);
+
+      const contractSection = section('Contract signed', contract, contractSwitch);
+      contractSection.classList.replace('sch-panel-section', 'sch-billing-section');
       panelBilling.append(
-        section('Contract', contract, contractSwitch),
-        section('Purchase order', po, poSwitch),
-        section('Invoice', invoice, invoiceSwitch),
+        contractSection,
+        poWrap,
+        invWrap,
         listWrap,
       );
 
@@ -3065,8 +3347,6 @@
          toggle firing and the block being hidden. */
       const GATES = [
         ['sch-f-contract', ['sch-f-contractnote'], contract],
-        ['sch-f-poreceived', ['sch-f-poref', 'sch-f-poamount'], po],
-        ['sch-f-invoice', ['sch-f-invnum'], invoice],
       ];
       const syncGates = (clear) => {
         for (const [toggleId, fieldIds, box] of GATES) {
@@ -3080,7 +3360,38 @@
           }
         }
       };
+      /* A LIST IS GATED BY ITS BODY, NOT BY ITS SECTION, 2026-09-11. The
+         switch is IN the header, so hiding the whole list would hide the
+         control that unhides it. The `<ul>` goes instead, which is also what
+         makes the closed state cost 32px: a header line reading
+         "Purchase order   Off".
+
+         `[hidden]` NEEDS A RULE HERE FOR THE SAME REASON THE FIELDS DID. The
+         body is a flex/grid descendant of a Carbon component, so the user
+         agent's `[hidden] { display: none }` is not safe to rely on -- see
+         `.sch-milestone-fields[hidden]`, which was written after the fields
+         stayed on screen with nothing reporting an error. `.sch-list-body`
+         carries its own.
+
+         CLEARING IS THE SAME BARGAIN AS THE FIELDS'. Off empties the array,
+         so a hidden list holds nothing and `EDITS` writes nulls that match
+         what is on screen. `clear` is false on the first pass so opening a
+         trip that breaks the invariant -- a `po_ref` with `po_received`
+         false, which 0 of 779 rows do -- shows the row rather than silently
+         arming Save to delete it. */
+      const syncLists = (clear) => {
+        for (const [toggleId, box, pending, redraw] of [
+          ['sch-f-poreceived', poList, poPending, drawPos],
+          ['sch-f-invoice', invList, invPending, drawInvoices]]) {
+          const open = on(document.getElementById(toggleId));
+          box.body.hidden = !open;
+          if (!open && clear && pending.length) { pending.length = 0; redraw(); }
+        }
+        syncCap();
+      };
+
       syncGates(false);
+      syncLists(false);
       /* DELEGATED ON THE TAB, NOT BOUND TO THE SWITCH. `setToggle` dispatches
          `rux:toggle` on the `.rux--toggle` BOX (`js/form-controls.js:94`),
          while the id is on the `__button` INSIDE it -- so a listener on the
@@ -3093,14 +3404,18 @@
          made the difference visible. */
       panelBilling.addEventListener('rux:toggle', () => {
         syncGates(true);
+        syncLists(true);
         drawSummary();
       });
-      /* THE QUOTED PRICE AND THE PO AMOUNT BOTH FEED THE TOP OF THE TAB, so
-         typing in either redraws it. `input`, not `change`: the numbers should
-         follow the keystroke the way the payment list follows the dialog. */
-      for (const fid of ['sch-f-quoted', 'sch-f-poamount']) {
-        document.getElementById(fid)?.addEventListener('input', drawSummary);
-      }
+      /* THE QUOTED PRICE IS THE ONE FIELD LEFT THAT FEEDS THE TOP OF THE TAB,
+         so typing in it redraws the figures. `input`, not `change`: the
+         numbers should follow the keystroke. The PO amount was the second
+         entry in this loop until it moved into a dialog -- it now redraws
+         through `drawPos`, which is the same arrangement the payment list has
+         always had. */
+      document.getElementById('sch-f-quoted')?.addEventListener('input', drawSummary);
+      drawPos();
+      drawInvoices();
       drawSummary();
     }
 

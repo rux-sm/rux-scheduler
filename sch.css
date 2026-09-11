@@ -891,65 +891,111 @@ button.sch-row-head__num {
   line-height: var(--rux-body-compact-01-line-height);
   color: var(--rux-text-primary);
 }
-/* The two headline figures at the top of Billing. This lays out Carbon
-   big-numbers, it does not restyle them: nothing here touches a `rux--*`
-   class, and the figures keep every size and colour rux-ds gives them.
-
-   ONE PER ROW, ALWAYS, AND THAT IS THE POINT. Two earlier versions tried to
-   fit them side by side: an auto-fit grid at `minmax(9rem, 1fr)` that could
-   never fire -- the panel is a fixed 320px at every viewport, measured from
-   800px to 1500px, so two 144px tracks plus a 16px gap never fit -- and then
-   a `flex-wrap` that fired only sometimes.
-
-   SOMETIMES IS WORSE THAN NEVER HERE. Measured: `Paid` is 176px carrying
-   `$25,500 / $45,500`, and `Balance` is 92px at `$4,500` but 108px at
-   `$20,000`. 176 + 92 + 16 fits in 288; 176 + 108 + 16 does not. So the two
-   figures sat side by side or stacked DEPENDING ON THE AMOUNTS, and the tile
-   reflowed while a payment was being typed. A summary that changes shape as
-   its own numbers change is harder to read than either arrangement.
-
-   Stacking always is the stable answer, and it is the one rux chose after
-   seeing both. Two headline numbers at `heading-04` were never going to fit
-   on one 288px line anyway; forcing it would have meant a rule on
-   `.rux--big-number__value`, which is rux-ds's to set. */
+/* Billing summary composition, 2026-09-11: one headline beside its status.
+   This replaces the two stacked big-numbers; Paid is now a definition row.
+   Carbon still owns the number and tag styles. Wrapping keeps unusually
+   long amounts readable rather than clipping them against the status. */
 .sch-billing-figures {
-  display: grid;
-  grid-template-columns: 1fr;
-  row-gap: var(--rux-spacing-03);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--rux-spacing-03) var(--rux-spacing-05);
 }
 
-/* One payment on one line: code, date, amount. Carbon's row content is an
-   inline-block, so this grid goes INSIDE it rather than on it -- no rule here
-   touches a `rux--*` class.
+/* ONE RECORD ON ONE LINE: a code, a word, an amount. Carbon's row content is
+   an inline-block, so this grid goes INSIDE it rather than on it -- no rule
+   here touches a `rux--*` class.
 
    THE AMOUNT IS ITS OWN COLUMN, right-aligned, so the money reads as a column
-   down the list rather than trailing whatever width the date happened to be.
-   The date column takes the slack; the two outer columns are content-sized. */
-.sch-payment-row {
+   down the list rather than trailing whatever width the middle value happened
+   to be. The middle column takes the slack; the two outer ones are
+   content-sized.
+
+   ONE RULE FOR ALL THREE LISTS, renamed from `.sch-payment-row` on 2026-09-11
+   when Purchase order and Invoice became lists too. The middle column holds a
+   date on a payment, a reference on a PO and the number on an invoice, and
+   the third is empty on an invoice -- `auto 1fr auto` handles an empty end
+   column without collapsing the row, so the tag and the value still line up
+   across all three sections. That alignment is the whole reason the three
+   share a class rather than having one each.
+
+   AND IT IS `listrow`, NOT `row`, BECAUSE `.sch-row` IS ALREADY THE BOARD'S.
+   The first version of this rename took the shorter name and broke the
+   schedule in the same commit: `.sch-row` is a bus row at line 110 of this
+   file, set to `display: contents` so its cells join the week grid, and a
+   second `.sch-row { display: grid }` further down the file won on order --
+   every bus row became a three-column grid and the board came apart. rux saw
+   it before the check did, and the check cannot see it at all: both classes
+   are this app's own, so nothing upstream is there to resolve them against.
+   A prefix is cheap; a name shared with an existing component is not. */
+.sch-listrow {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--rux-spacing-03);
   inline-size: 100%;
 }
-.sch-payment-row__when {
+/* Document rows omit the redundant type tag, giving the reference room. */
+.sch-listrow--document { grid-template-columns: minmax(0, 1fr) auto; }
+.sch-listrow--document .sch-listrow__when {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.sch-listrow__when {
   color: var(--rux-text-secondary);
   text-align: start;
 }
-.sch-payment-row__much {
+.sch-listrow__much {
   color: var(--rux-text-primary);
   text-align: end;
   font-variant-numeric: tabular-nums;
 }
 
-/* The PO coverage line. Carbon's `rux--form__helper-text` carries the type and
-   the muted colour; this only adds the one state that class has no opinion
-   about — a PO that does not reach the remaining balance. `text-error` rather
-   than `support-warning` because the two sit on different surfaces: the error
-   token is the one Carbon tunes for text on a layer, and a shortfall is read,
-   not glanced at. It is not a validation failure and never blocks a save. */
-.sch-po-coverage { margin-block-start: calc(-1 * var(--rux-spacing-03)); }
-.sch-po-coverage--short { color: var(--rux-text-error); }
+/* A LIST HEADER CARRYING TWO CONTROLS. `.rux--contained-list__action` is
+   `position: absolute` with `inset-inline: 0` and no block-end
+   (`css/rux.css:10752`), so it has no height of its own -- a 24px toggle and
+   a 32px button dropped straight into it would each hang from the top of the
+   band. This box gives them a flex row that centres them against each other,
+   and it is an element this app owns rather than a second override of a
+   Carbon component whose absolute positioning `rux-overrides.css` already
+   steers around once.
+
+   THE SWITCH COMES FIRST AND THE `+` IS LAST, so the add button sits at the
+   same right edge on all three lists whether or not the section has a switch.
+   Payments has no switch and its `+` does not move.
+
+   THE END PADDING IS THE HEADER'S OWN, PUT BACK, and it is a real bug being
+   fixed rather than a nicety. `__action` is absolute with `inset-inline: 0`,
+   so it resolves against the header's BORDER box and ignores the
+   `padding-inline` the header sets on itself -- the button lands flush to the
+   band's edge instead of at the header's content edge, which is where the
+   label starts. With the list bled out by the panel body's `spacing-05` that
+   edge is 16px OUTSIDE the panel, so the `+` was half clipped: measured
+   x 1036-1068 against a panel ending at 1052, on the Payments list as it has
+   shipped since 2026-09-10 and on both new lists. Reading Carbon's own local
+   density variable rather than hard-coding 16px keeps it correct if the list's
+   size changes. Filed against rux-ds as well -- the component should pad its
+   own action -- and this goes away when it does. */
+.sch-list-action {
+  display: flex;
+  align-items: center;
+  gap: var(--rux-spacing-03);
+  padding-inline-end: var(--rux-layout-density-padding-inline-local);
+}
+
+/* A LIST'S ROWS, HIDDEN WHILE ITS SWITCH IS OFF. The rule is needed for the
+   same reason `.sch-milestone-fields[hidden]` is: the bare attribute is not
+   safe on an element inside a Carbon component that may set `display` on it,
+   and the failure mode is silent -- the rows simply stay on screen. The
+   header is never hidden, because the switch that unhides the rows is in it. */
+.sch-list-body[hidden] { display: none; }
+
+/* The shortfall remains explicit, but uses the existing helper-text tone.
+   This replaces the red text treatment: a partial PO is a supported billing
+   state, not an input error. The summary tag still identifies that state. */
+.sch-billing-section { margin-block-start: var(--rux-spacing-05); }
+.sch-po-coverage { margin-block-start: var(--rux-spacing-03); }
 
 /* The payment dialog's fields, two to a row. `minmax` rather than `1fr 1fr`
    so the pair collapses to one column if the modal is ever narrower than the

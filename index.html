@@ -798,6 +798,64 @@
     </div>
   </div>
 
+  <!-- A PO AND AN INVOICE ARE ENTERED THE SAME WAY AS A PAYMENT, added
+       2026-09-11. Both sections became `contained-list`s so a trip can carry
+       rows rather than one pair of boxes, and a list's fields live behind a
+       dialog for the reason the payment list's do: a 320px column cannot hold
+       a labelled form per row.
+
+       CAPPED AT ONE ROW EACH, AND THE CAP IS THE SCHEMA'S. `trips` holds one
+       `po_ref`, one `po_amount` and one `invoice_number`; `trip_pos` and
+       `trip_invoices` do not exist -- probed live, both 404, and written up in
+       docs/schema-requests.md with the migration in
+       docs/po-invoice-lists-plan.md. So the layout is the one the lists will
+       have and the `+` disables at the row the database can store, which is
+       the honest version of a control that would otherwise promise a second
+       row and lose it on save.
+
+       NO DATE FIELD ON EITHER, for the same reason and it is the one thing
+       rux asked for that is missing here: neither table exists, so there is
+       no column to put a PO date or an invoice date in. Phase 1 of the plan
+       adds `date` to both; the row's middle column is where it lands.
+
+       `Done`, NOT `Save`, exactly as the payment dialog: this writes nothing
+       and the panel's own Save is what reaches `trips`. -->
+  <div class="rux--layer-one rux--modal" id="sch-po-modal" role="presentation">
+    <div role="dialog" aria-modal="true" aria-labelledby="sch-po-h" tabindex="-1" class="rux--modal-container rux--modal-container--sm">
+      <div class="rux--modal-header">
+        <h2 class="rux--modal-header__heading" id="sch-po-h">Add purchase order</h2>
+        <div class="rux--modal-close-button">
+          <button type="button" class="rux--modal-close" aria-label="Close" data-rux-close>
+            <svg class="rux--modal-close__icon" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="rux--modal-content" id="sch-po-fields"></div>
+      <div class="rux--modal-footer">
+        <button type="button" class="rux--btn rux--btn--secondary" data-rux-close>Cancel</button>
+        <button type="button" class="rux--btn rux--btn--primary" id="sch-po-done">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="rux--layer-one rux--modal" id="sch-inv-modal" role="presentation">
+    <div role="dialog" aria-modal="true" aria-labelledby="sch-inv-h" tabindex="-1" class="rux--modal-container rux--modal-container--sm">
+      <div class="rux--modal-header">
+        <h2 class="rux--modal-header__heading" id="sch-inv-h">Add invoice</h2>
+        <div class="rux--modal-close-button">
+          <button type="button" class="rux--modal-close" aria-label="Close" data-rux-close>
+            <svg class="rux--modal-close__icon" width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="rux--modal-content" id="sch-inv-fields"></div>
+      <div class="rux--modal-footer">
+        <button type="button" class="rux--btn rux--btn--secondary" data-rux-close>Cancel</button>
+        <button type="button" class="rux--btn rux--btn--primary" id="sch-inv-done">Done</button>
+      </div>
+    </div>
+  </div>
+
   <div class="rux--layer-one rux--modal" id="sch-cancel-modal" role="presentation">
     <div role="dialog" aria-modal="true" aria-labelledby="sch-cancel-h" tabindex="-1" class="rux--modal-container rux--modal-container--sm">
       <div class="rux--modal-header">
