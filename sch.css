@@ -218,6 +218,17 @@
   gap: var(--rux-spacing-02);
   padding-block: 0;
   padding-inline: var(--rux-spacing-04);
+  /* CENTRED OVER THE COLUMN, 2026-09-11, AND ONLY BECAUSE THE RULES CAME BACK.
+     These were start-aligned, and the reason was load-bearing: with no vertical
+     rules between days, the label's left edge was the ONLY thing saying where a
+     column began, and it sat on the same pixel as the bar text below it --
+     measured at 1440, labels and bar text both 12px from their column's left
+     edge, in all seven. Centring then would have deleted the boundary cue.
+
+     THE BODY DRAWS A RULE AT EVERY DAY NOW, so the boundary is drawn rather
+     than implied and the label is free of that job. rux asked for the pair
+     together, which is the only order in which either makes sense. */
+  justify-content: center;
   /* CARBON'S TABLE HEADER TYPE, 2026-09-07, ON BOTH BANDS AT ONCE. `thead` in
      `.rux--data-table` is `heading-compact-01` at weight 600 in `text-primary`;
      this band was label-01 at 400 in `text-secondary`, which is a caption, not
@@ -243,9 +254,28 @@
 .sch-corner {
   inset-inline-start: 0;
   z-index: 4;
-  /* THE HEADER BAND STAYS OPEN AT THE CORNER. The body keeps its divider,
-     where it separates bus identity from trip content; carrying that line
-     through the header boxed "Bus" in and competed with the active day rule. */
+  /* NO VERTICAL RULE IN THE HEADER BAND. NOT ONE, ANYWHERE, 2026-09-11.
+
+     A RULE WAS PUT HERE EARLIER THE SAME DAY AND TAKEN BACK OUT, so both the
+     argument and its answer are kept. It was added on the strength of the
+     2026-09-07 note on `.sch-row-head` -- "this one line comes back and the
+     corner's with it, they are a pair" -- and the pair was the wrong unit. rux
+     saw it rendered: "i dont want these vertical border to be applied on the
+     header row. similar rule to weekend border. doesnt cross into header."
+
+     WHICH MAKES ONE RULE OUT OF THREE SEPARATE DECISIONS, and that is why it
+     stands. The weekend mark is a hairline in the body and dimmed TEXT in the
+     band. The bus column is a rule in the body and nothing in the band. The
+     roster's name column is the same, in the same words. A header band is its
+     own surface, closed on all four sides by its own colour, and every line
+     that crosses into it is a line dividing something already divided.
+
+     THE ORIGINAL COMMENT HERE WAS ALSO WRONG, and is recorded rather than
+     quietly dropped. It read: "THE HEADER BAND STAYS OPEN AT THE CORNER. The
+     body keeps its divider, where it separates bus identity from trip content."
+     The body did NOT keep its divider -- `.sch-row-head` lost its rule later
+     that same 2026-09-07 -- so it described a line that had not existed for
+     four days. Its first sentence is the one that survived all of this. */
   padding-inline: var(--rux-spacing-02);
   /* THE COLUMN'S FLOOR, SET ON BOTH ITS CELLS. The track is still
      `max-content`, so a bus number wider than the floor still widens the column
@@ -373,17 +403,41 @@
      hiding what passes behind it. Its right border is what separates it, and
      that is unchanged. */
   background: var(--rux-layer);
-  /* NO VERTICAL RULE HERE EITHER, 2026-09-07. The corner's went first; this one
-     is its other half, and leaving it made the line start abruptly below the
-     header band instead of running the frame's whole height. Carbon's table has
-     no vertical rules anywhere, which is where this board is now headed.
+  /* THE VERTICAL RULE IS BACK, 2026-09-11, AND THE ENTRY THAT REMOVED IT CALLED
+     THIS EXACTLY. It said: "If it reads badly, this one line comes back and the
+     corner's with it -- they are a pair." It read badly, rux asked for it, and
+     both have come back.
 
-     WHAT IT COST, AND IT IS NOT NOTHING. This column is sticky and paints
-     `--rux-layer`, the same surface the tracks paint, so when the week is wider
-     than the pane and the board scrolls sideways, bars now pass UNDER an
-     invisible edge rather than a drawn one. At the 8.5rem day floor that is a
-     real week, not a hypothetical. If it reads badly, this one line comes back
-     and the corner's with it -- they are a pair. */
+     WHAT THE COST TURNED OUT TO BE, MEASURED. The removal already named the
+     risk -- this column is sticky and paints `--rux-layer`, the same surface
+     the tracks paint, so a scrolled board sends bars under an invisible edge.
+     Driven at 900px, where the week overflows by 516: NINE bars sit under this
+     column at once, the head reads `rgb(38,38,38)` and the track reads
+     `rgba(0,0,0,0)` over the identical `--rux-layer`, and neither cell carried
+     a border or a shadow. Nothing marked the boundary at all. The header made
+     it plainest: "Wed 9" clipped to "ed 9" against no edge, a word cut in half
+     by something the eye could not see.
+
+     AND CARBON HAS NO ANSWER TO COPY HERE. `rux--data-table--sticky-header`
+     compiles a sticky header ROW; there is no sticky or frozen COLUMN in the
+     data table and no guidance page for one. So this is the app's own surface,
+     which is what `sch-` is for, and the instrument is the plainest available:
+     the same 1px `border-subtle-01` the row rules already draw, so the frame
+     closes in the token it is already made of rather than in a new one.
+
+     THIS IS NOT THE DAY RULES. Those were six lines making the board a grid,
+     removed 2026-09-07. This is one line where identity meets content, on the
+     one edge that content actually slides under.
+
+     AND IT STOPS AT THE HEADER BAND, which is where the 2026-09-07 note was
+     wrong. It said the two were "a pair" and that leaving the corner's out
+     "made the line start abruptly below the header band instead of running the
+     frame's whole height". Both halves were restored on that reasoning and rux
+     rejected it on sight -- the band is its own surface and a rule through it
+     divides something already divided. `.sch-corner` carries the full account.
+     The body is the only place any of this board's three vertical marks now
+     appears. */
+  border-inline-end: 1px solid var(--rux-border-subtle-01);
   /* SUPERSEDED 2026-09-07 BY THE RULE ABOVE -- KEPT BECAUSE IT IS STILL THE
      RIGHT ARGUMENT ABOUT THE SURFACE IT WAS WRITTEN FOR. It read:
 
@@ -487,14 +541,31 @@ button.sch-row-head__num {
 }
 .sch-row-head__kit svg { display: block; }
 .sch-row-head__oos { color: var(--rux-support-warning); display: inline-flex; }
-/* NOT layer-accent any more: that is the header band's surface since the
-   header lifted, and two accent bands at opposite ends of the grid read as
-   two headers. The hover step is a lift the header does not use. */
-/* THE FRAME'S SURFACE, LIKE EVERY OTHER ROW HEAD. It had its own step, which
-   made the one cell in the sticky column that is not the column's colour --
-   the row is already told apart by its italic label and by the tint on its
-   track, which is where a row's own identity belongs. */
-.sch-row--unassigned .sch-row-head { background: var(--rux-layer); }
+/* NOT layer-accent: that is the header band's surface since the header lifted,
+   and two accent bands at opposite ends of the grid read as two headers. The
+   hover step is a lift the header does not use. */
+/* THE HEAD MATCHES ITS OWN TRACK AGAIN, 2026-09-11, ON RUX'S CALL -- and this
+   cell has now been both, so both arguments are kept rather than one deleted.
+
+   IT READ: "THE FRAME'S SURFACE, LIKE EVERY OTHER ROW HEAD. It had its own
+   step, which made the one cell in the sticky column that is not the column's
+   colour -- the row is already told apart by its italic label and by the tint
+   on its track, which is where a row's own identity belongs." That is a real
+   argument and it is about the COLUMN: the sticky bus column should read as one
+   strip, and a cell that breaks its colour breaks that.
+
+   WHAT OVERRULES IT IS THAT THE ROW IS THE UNIT HERE. Unassigned is not a bus,
+   and its track is tinted precisely to say so; leaving the head on the frame's
+   surface split that one row into two colours across the divider, which is the
+   seam a reader crosses when they ask which row this is. rux looked at it
+   rendered and asked for them to match. The column loses its single colour in
+   exactly one row, which is the row that is not a bus.
+
+   THE RULES STILL HAVE TO READ ON IT, which is the thing this change could
+   break and does not: `border-subtle-01` is measured against `layer-hover-01`
+   in all eight themes below the fold in docs/log.md, and it is the same token
+   the track beside it already draws its own bottom rule in. */
+.sch-row--unassigned .sch-row-head { background: var(--rux-layer-hover-01); }
 .sch-row--unassigned .sch-row-head__num {
   /* ALWAYS TWO LINES. Left to wrap on its own the label is 53px on one line
      and sets the column's width single-handed -- wider than the bus numbers
@@ -514,7 +585,32 @@ button.sch-row-head__num {
   grid-column: span var(--sch-days);
   min-block-size: calc(var(--sch-gap-clear) + var(--sch-lanes, 1) * var(--sch-bar-h) + (var(--sch-lanes, 1) - 1) * var(--sch-lane-gap) + var(--sch-gap));
   border-block-end: 1px solid var(--rux-border-subtle-01);
+  /* THE DAY RULES. `--sch-day-rules` is the stop list, written by sch-data.js
+     once per render, and `--sch-day-rule` is what those 1px stops are drawn in.
+
+     A BACKGROUND, SO IT NEEDS NO STACKING ORDER. `background-image` paints
+     above this element's own `background-color` -- which is how it survives the
+     Unassigned row's tint -- and below every child, so bars (z-index 1) and
+     out-of-service stripes cover it without anything being declared. */
+  background-image: linear-gradient(90deg, var(--sch-day-rules));
 }
+/* ONE TOKEN, AND THE SAME ONE ON EVERY ROW, which a FILL could not manage.
+
+   THE FILL THIS REPLACED NEEDED TWO. `.sch-row--unassigned .sch-track` is
+   `--rux-layer-hover-01`, and `layer-hover-01` and `layer-accent-01` are the
+   SAME COLOUR in two of the eight themes -- ant-dark #1f1f1f and spotify
+   #242424 -- so a filled band had to pay a different token on that row or go
+   invisible in exactly those two. A hairline has no such problem: it is not a
+   surface, so it does not have to differ from the surface it sits on by a step
+   of the same scale, and `border-subtle-01` is already proven legible on both
+   of these backgrounds -- it is what `.sch-track` draws its own bottom rule in,
+   on every row and in every theme.
+
+   AND IT IS THE SAME TOKEN AND WIDTH THE RULES HAD BEFORE THEY WERE REMOVED,
+   which is what makes this a restoration rather than a new thing: the version
+   that went on 2026-09-07 was 1px `border-subtle-01` at a period of one day,
+   and the last commit carrying it is 47d3903. */
+.sch-track { --sch-day-rule: var(--rux-border-subtle-01); }
 
 /* NO DAY RULES IN THE BODY, TRIED 2026-09-07 AT RUX'S ASK. Carbon's data
    table draws horizontal rules and no vertical ones, because there a column is
@@ -1431,11 +1527,36 @@ button.sch-row-head__num {
    rule be what it always claimed to be. */
 .sch-aside .sch--avail {
   --sch-head-w: minmax(0, 1fr);
-  /* THE DAY COLUMN IS THE ROW'S SIZE AGAIN, rejoined 2026-09-08 after one day
-     apart. The split existed so the head could hold three letters; the head
-     holds two now and fits, so the cell is a 24x24 square and the two axes of
-     this grid are one number again. */
-  --sch-day-track: var(--rux-layout-size-height-xs);
+  /* THE TWO AXES SPLIT AGAIN, 2026-09-11, FOR A REASON THE OLD SPLIT DID NOT
+     HAVE. This was 24x24 and rejoined on 2026-09-08 with: "The split existed so
+     the head could hold three letters; the head holds two now and fits, so the
+     cell is a 24x24 square and the two axes of this grid are one number again."
+     That is still true of the HEAD -- "We" is 18.4px and clears 24 -- so
+     nothing here is reverting it. The new reason is the mark itself: a 24px
+     column is a thin mark to read a week off, and rux asked whether there was
+     room for the next size.
+
+     THERE IS, AND THE MEASUREMENT IS WHY IT IS WIDTH ONLY. The aside is a fixed
+     20rem = 320px, and `--sch-head-w: minmax(0, 1fr)` above makes the name
+     column the remainder -- so every pixel the days take comes off the names.
+     At 32 the days take 224 and the names get 96.
+
+     WHICH COST THE NAME PADDING, AND A FIRST READING OF THIS WAS WRONG. The
+     probe that sized this said the name column came to 108px with nothing
+     truncating -- but 108 was the symptom of an overflow, not a fit: the grid
+     had sized to its content and run 12px past the pane. Pinned to the pane it
+     is 96, and at `spacing-05` of padding the two longest names -- "Vicente
+     Solar" at 105px and "Prudenciano" at 101 -- would have ellipsed. The
+     padding is `spacing-03` here now, which takes the widest to 89 and clears
+     96 with room; `.sch-avail__grid` carries the overflow half of the fix.
+
+     HEIGHT IS THE EXPENSIVE AXIS AND IS DELIBERATELY UNTOUCHED. `--sch-avail-h`
+     stays xs. Measured at 1440x950: all 40 drivers fit at 24px tall and 35 of
+     40 at 32px, so a square would have cost five drivers below the fold --
+     which is the exact currency the 2026-09-08 decision was settled in, after
+     this number turned 24, 32, 24, 32, 24. Widening does not re-open it, and
+     that is the whole case for doing one axis and not both. */
+  --sch-day-track: var(--rux-layout-size-height-sm);
   /* FILLS WHAT THE HEAD LEAVES. sch.js gives the ASIDE the board's height; this
      takes the remainder under the head. `max-block-size: none` lifts the base
      `.sch` cap, which is a viewport expression and would otherwise re-cap this
@@ -1444,7 +1565,25 @@ button.sch-row-head__num {
   min-block-size: 0;
   max-block-size: none;
 }
-.sch-avail__grid { align-content: start; }
+/* THIS GRID IS ITS PANE'S WIDTH, NEVER ITS CONTENT'S -- and it has to say so
+   itself, because it carries `.sch-grid` too and that class is
+   `inline-size: max-content` for the BOARD's sake: seven day columns that must
+   be allowed to total more than the pane and scroll, which is what makes the
+   bus column stick correctly.
+
+   THE ROSTER IS THE OPPOSITE CASE AND INHERITED THE WRONG HALF. Its seven
+   columns are a fixed token width and always fit, so nothing here ever needs to
+   overflow -- but `max-content` let the NAME column refuse to shrink, and
+   `--sch-head-w: minmax(0, 1fr)` could not do its job against a box already
+   sized to content. Caught by measuring after widening the cells to 32: the
+   grid computed 332.195px inside a 320px pane and the roster gained a 12px
+   horizontal scroll that nothing asked for. At 24px it had been hidden, since
+   108 + 168 came in under 320 and the `min-inline-size: 100%` floor won.
+
+   `inline-size: 100%` pins it, the day columns take their 224, and the name
+   column takes the remainder and ellipses -- which is what the note on
+   `--sch-head-w` above always claimed happened. */
+.sch-avail__grid { align-content: start; inline-size: 100%; }
 .sch-avail__days,
 .sch-avail__row { display: contents; }
 
@@ -1533,7 +1672,21 @@ button.sch-row-head__num {
    where the day name is secondary and only the date is primary. If that reads
    as an inconsistency rather than a distinction, the fix is to take BOTH
    grids' bands to the table header type together, not this one alone. */
-.sch-avail__name { padding-inline: var(--rux-spacing-05); }
+/* THE NAME COLUMN'S RULE, 2026-09-11, AND IT IS THE SAME PAIR THE BOARD HAS.
+   This grid is built the same way as the schedule beside it: a sticky identity
+   column painting `--rux-layer`, the same surface the cells beside it sit on,
+   with rows passing under it when the pane scrolls sideways -- the comment on
+   the sticky rule above already says "rows scroll under it sideways". So it had
+   the same fault and it takes the same fix: one 1px `border-subtle-01` where
+   identity meets content, on the name cell and on the `Driver` heading both, so
+   the line runs the grid's whole height rather than starting below its header.
+
+   AND IT STOPS AT THE HEADER ROW, exactly as the board's does.
+   `.sch-avail__day--head` is this grid's corner and briefly carried a matching
+   rule; rux rejected both at once -- "doesnt cross into header" -- and the two
+   grids move together as they must, since they share seven day columns and sit
+   one above the other. The band is its own surface in both. */
+.sch-avail__name { padding-inline: var(--rux-spacing-03); border-inline-end: 1px solid var(--rux-border-subtle-01); }
 /* The type moved up to the header ROW, where it covers the day letters too.
    What is left for this cell is set below, after the reset that would beat it. */
 
@@ -1582,6 +1735,30 @@ button.sch-row-head__num {
    with nothing in it. Busy and off are Carbon's own tag tints, the same
    palette the trip bar uses, so the two grids read as one system. */
 .sch-avail__cell { padding-inline: 0; overflow: hidden; }
+/* THE DAY RULES, CARRIED INTO THE ROSTER so the grid does not stop at the
+   board's bottom edge. The two panes share seven columns and sit one above the
+   other; ruling only the board would put the landmark on half the height of the
+   thing being counted.
+
+   PURE CSS HERE AND PAINTED STOPS THERE, because the two panes are built
+   differently and neither should be bent to match the other. A roster cell is a
+   real grid cell with a column of its own, so the rule is its inline start edge
+   and `data-day` already says which cell is first; a board track is ONE element
+   spanning all seven days, so there is no edge to hang a border on and the
+   positions have to be painted. Same token, same width, same pixel.
+
+   NOT ON THE FIRST COLUMN: that edge is the name column's own rule, drawn by
+   `.sch-avail__name`, and a border here as well would double it.
+
+   AND NEVER IN THE HEADER ROW -- this selector names `__cell`, which only body
+   rows use, so `.sch-avail__days` is untouched by construction. Both bands stay
+   clean, which is the rule rux set: no vertical line enters a header.
+
+   WHAT THIS REPLACED WAS A WEEKEND-ONLY BOUNDARY, one line where the weekend
+   met a weekday. With every day ruled, that line is no longer a mark -- it is
+   one of six identical ones -- so the class is gone and the weekend's only
+   remaining mark is the dimmed text in the band. */
+.sch-avail__cell:not([data-day="0"]) { border-inline-start: 1px solid var(--rux-border-subtle-01); }
 .sch-avail__cell--busy {
   background: var(--rux-tag-background-blue);
   color: var(--rux-tag-color-blue);
@@ -1603,6 +1780,13 @@ button.sch-row-head__num {
 /* The selected trip's day, so "who is free THEN" is answered without
    counting columns. The old board did this by highlighting the row for the
    trip's date and it is worth keeping in both layouts. */
+/* THE ROSTER'S DAY LETTERS DIM, they do not band -- exactly what
+   `.sch-day--weekend` does to the board's day names. Both header bands are
+   already their own surface and cutting notches into either would break a
+   band that reads as one unit; the tint belongs in the body, where the empty
+   row that cannot be counted actually is. Placed above `--on-day` so a
+   selected weekend column still takes the brighter colour. */
+.sch-avail__day--weekend { color: var(--rux-text-placeholder); }
 .sch-avail__cell--on-day { box-shadow: inset 0 0 0 1px var(--rux-border-interactive); }
 .sch-avail__day--on-day { color: var(--rux-text-primary); box-shadow: inset 0 -2px 0 var(--rux-border-interactive); }
 
@@ -1862,4 +2046,91 @@ button.sch-row-head__num {
      `flex: 0 1 auto` at every width now, so the toolbar is one row everywhere
      and this block no longer says anything about the layout of it. */
   .sch-toolbar__lg-only { display: none; }
+}
+
+/* ── THE TOAST, AND ITS PLACEMENT IS OURS BECAUSE CARBON SHIPS NONE ─────────
+   `rux--toast-notification` and `rux--actionable-notification--toast` are
+   compiled, and between them they set an 18rem width, `flex-wrap` and a drop
+   shadow -- the card's APPEARANCE. Neither carries `position`, `inset` or a
+   z-index, so where a toast goes is the consumer's decision every time. This
+   is that decision, and it is an `sch-` rule for exactly the reason AGENTS.md
+   gives: it is a surface Carbon does not ship, so it is this app's own.
+
+   WHY THIS EXISTS AT ALL is in index.html beside the element: `#sch-status` is
+   in normal flow above the grid, so a message there pushes the board down and
+   pulls it back up. rux saw a move shove the whole table.
+
+   BOTTOM RIGHT IS NOT CARBON'S PLACEMENT, AND THE DEPARTURE IS DELIBERATE.
+   Carbon specifies exactly one, in `components/notification/usage.mdx`: "Toast
+   notifications slide in and out from the TOP RIGHT of the screen. They stack
+   with $spacing-03 in-between." Bottom right appears nowhere in its docs, and
+   neither does bottom centre.
+
+   IT WAS MEASURED AGAINST ALL THREE BEFORE BEING KEPT, at 1440x950 with a
+   288px card and a 16px gutter. Top right -- Carbon's own -- lands on
+   `.sch-toolbar` and its icon buttons: the week chevrons, the date picker, the
+   drivers toggle and the overflow. Those are present and interactive at ALL
+   times. Bottom centre lands on `.sch-bar` -- trip bars, data rather than
+   controls. Bottom right lands on empty `.sch-track`, and the one control it
+   can reach is the panel's action bar, which exists only while the panel is
+   open and which the rule below lifts clear of.
+
+   So the departure buys covering nothing instead of covering the toolbar, and
+   that is the whole of its justification. If this app's toolbar ever moves off
+   the top right, Carbon's placement becomes the right one and this should go
+   back to it. `docs/log.md` carries the measurements. Judged by rux.
+
+   THE OVERLAP WITH THE PANEL'S FOOTER IS MEASURED AND NAMED RATHER THAN
+   DESIGNED AROUND. `.rux--side-panel` is on the right and
+   its action bar -- Cancel, Reset, Save -- sits at its bottom edge, which is
+   the same corner. The toast is lifted clear of it rather than moved to the
+   other side, because the other side is where the board's own content starts
+   and a card there covers bus rows instead of three buttons that are only
+   present while the panel is open. See docs/log.md for the numbers.
+
+   ABOVE THE PANEL, NOT UNDER IT. The panel is the highest thing this page
+   draws; a toast reporting the save you just pressed cannot sit behind the
+   button you pressed. */
+.sch-toast {
+  position: fixed;
+  inset-block-end: var(--rux-spacing-05);
+  inset-inline-end: var(--rux-spacing-05);
+  z-index: 9000;
+  display: flex;
+  justify-content: flex-end;
+}
+/* A NARROW WINDOW HAS NO ROOM FOR A CARD BESIDE ANYTHING, so below md it spans
+   the width it is given, minus the same gutter on both sides. The 18rem
+   minimum Carbon sets would otherwise decide the width on a 375px phone and
+   leave the card hanging off one edge. */
+@media (max-width: 41.98rem) {
+  .sch-toast { inset-inline: var(--rux-spacing-05); }
+  .sch-toast > * { min-inline-size: 0; inline-size: 100%; max-inline-size: none; }
+}
+
+/* LIFTED CLEAR OF THE PANEL'S ACTION BAR WHILE THE PANEL IS OPEN. Measured at
+   1440x950 with a trip open: the bar -- Cancel, Reset, Save -- occupies y
+   869-918 and x 1072-1392, and a toast at the default 16px inset has its box
+   at y 854-934 over x 1136-1424. It covered Save.
+
+   MOVED UP RATHER THAN ACROSS, because the other bottom corner is where the
+   board's own rows are. Three buttons are only in that corner while the panel
+   is open; bus rows are always in the other one, and a card that covers data
+   every time beats one that covers controls sometimes only if you never press
+   the controls.
+
+   THE SUM IS THE PANEL'S OWN GEOMETRY, and it is spelled out because the token
+   that would carry it -- `--rux--side-panel--actions-height` -- is a
+   Carbon-internal double-dash variable scoped to the panel, so it does not
+   resolve out here: 48px of condensed action bar, the 32px the panel sits off
+   the bottom of the page, and the same 16px gutter the toast keeps everywhere
+   else.
+
+   `:has()` RATHER THAN A CLASS THIS FILE WOULD HAVE TO KEEP IN SYNC. The panel
+   is `#sch-panel` and its open state IS `[hidden]` -- sch-data.js sets nothing
+   else -- so the stylesheet can read it directly and there is no second source
+   of truth to drift. rux.css compiles 221 `:has()` rules of its own, so it is
+   already a baseline for any page loading it. */
+body:has(#sch-panel:not([hidden])) .sch-toast {
+  inset-block-end: calc(var(--rux-spacing-09) + var(--rux-spacing-07) + var(--rux-spacing-05));
 }

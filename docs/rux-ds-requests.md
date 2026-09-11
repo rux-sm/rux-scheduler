@@ -14,6 +14,44 @@ with the tag that carried it.
 
 ---
 
+## Open — a toast is compiled with no way to place it, 2026-09-11
+
+**Asked for:** a positioned region for toast notifications — a compiled
+`rux--toast-region` or equivalent, carrying the `position: fixed`, the inset,
+the stacking and the z-index that Carbon's guidance describes but its CSS does
+not ship. Whatever shape rux-ds prefers; the point is that it exists once.
+
+**Why:** `rux--toast-notification` and `rux--actionable-notification--toast` are
+both compiled, and between them they set an 18rem width, `flex-wrap` and a drop
+shadow — the card's APPEARANCE and nothing else. Neither carries `position`,
+`inset`, `z-index` or any stacking rule. So the first thing every consumer that
+wants a toast must do is invent where toasts go, and the second is invent how
+two of them sit together.
+
+**AND CARBON'S OWN GUIDANCE IS SPECIFIC ABOUT BOTH**, which is what makes this a
+gap rather than a deliberate omission.
+`carbon-website/src/pages/components/notification/usage.mdx`, vendored in this
+very repository, says: "Toast notifications slide in and out from the top right
+of the screen. They stack with `$spacing-03` in-between. New toast notifications
+should appear at the top of the list, with older notifications being pushed down
+until they are dismissed." That is a placement, a gap token and a stacking
+order — three compilable facts, none of them compiled.
+
+**WHAT THIS APP DID INSTEAD, so the cost is concrete.** `sch.css` owns
+`.sch-toast`: fixed, a gutter, a z-index, a below-md override because the 18rem
+minimum would otherwise decide a 375px phone's layout, and a `:has()` rule
+lifting it clear of the side panel's action bar. None of that is scheduler
+business and all of it will be rewritten, differently, by the next app that
+wants a toast. **This app also placed it BOTTOM right rather than top**, and that
+part is genuinely ours: measured at 1440×950, Carbon's top-right lands on this
+board's toolbar buttons. A shipped region should make its default placement
+overridable rather than assume nobody has chrome in that corner.
+
+**Not blocking.** The local rule works and is commented. This is a request to
+stop every consumer paying for it separately.
+
+---
+
 ## Open — a toggle's tap target is under both platforms' minimums, 2026-09-11
 
 **Asked for:** a toggle whose interactive surface meets 44px (iOS) / 48px

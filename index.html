@@ -1032,6 +1032,25 @@
        room beside it instead of letting it float over the grid. -->
 </main>
 
+<!-- WHAT A TOAST IS FOR HERE, AND WHY IT IS NOT `#sch-status`. That region sits
+     ABOVE the board in normal flow, so anything appearing in it pushes the
+     grid down and pulls it back up again -- rux saw a move shove the whole
+     table. Reserving the space permanently would cost a band above a board
+     whose height sch.js already computes and contests.
+
+     THE SPLIT IS NOT "TRANSIENT VS NOT", IT IS WHAT THE MESSAGE IS ABOUT.
+     `#sch-status` keeps the three that describe the BOARD -- loading, "Nothing
+     this week", and a week that would not load. Those belong in the flow they
+     interrupt: they stand in for the grid rather than commenting on it, and
+     moving it is honest. Everything that reports what a PERSON just did -- a
+     move and its undo, a save, a cancel, a trip taken off its bus -- lands
+     here instead, over the page, moving nothing.
+
+     EMPTY AND `hidden` UNTIL SOMETHING IS SAID; sch-data.js fills it. It is
+     outside `<main>` because it is fixed to the viewport and belongs to no
+     region of the page. -->
+<div id="sch-toast" class="sch-toast" role="status" aria-live="polite" hidden></div>
+
 <!-- The behaviour layer. The kernel loads FIRST; the others delegate to it. -->
 <script src="/rux-ds/js/overlay.js"></script>
 <script src="/rux-ds/js/popover.js"></script>

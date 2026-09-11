@@ -41,6 +41,7 @@
   const gridEl = document.getElementById('sch-grid');
   const schEl = document.getElementById('sch');
   const statusEl = document.getElementById('sch-status');
+  const toastEl = document.getElementById('sch-toast');
   /* TWO ELEMENTS, AND KEEPING THEM APART IS LOAD-BEARING. `rangeEl` is the
      BUTTON -- what `data-rux-open` goes on and what the overlay anchors to --
      and `rangeTextEl` is the span inside it that holds the week. They were one
@@ -69,6 +70,12 @@
      Sunday-first is simply `day`. */
   let weekStartsSunday = false;
   const mondayOf = d => addDays(d, -(weekStartsSunday ? d.getDay() : (d.getDay() + 6) % 7));
+  /* WHICH DAYS ARE THE WEEKEND, ASKED OF THE DATE AND NOT OF THE COLUMN.
+     Here rather than at either call site because the board and the driver
+     roster both mark it and they must never disagree -- and because the
+     column index is the wrong question: `weekStartsSunday` moves the weekend
+     to columns 0 and 6, which is not a run of columns at all. */
+  const isWeekend = d => d.getDay() === 0 || d.getDay() === 6;
   // Math.round, because a span crossing a daylight-saving change is 23 or 25
   // hours and integer division would drop or add a day.
   const daysBetween = (a, b) => Math.round((b - a) / DAY);
@@ -152,24 +159,195 @@
     warning: { cls: 'rux--inline-notification rux--inline-notification--warning', icon: '#i-warning--filled' },
   };
 
-  function say(kind, title, subtitle) {
+  /* THE SAME FOUR KINDS AGAIN, AS THE ACTIONABLE COMPONENT. Carbon ships a
+     second notification for the case where the notice OFFERS something --
+     `actionable-notification` -- and `say` grows a fourth argument rather than
+     the board growing a second status region. Written out in full for the same
+     reason `NOTE` is: check-classes reads the source and cannot see through an
+     interpolation. */
+  const ACTION_NOTE = {
+    error: { cls: 'rux--actionable-notification rux--actionable-notification--error', icon: '#i-error--filled' },
+    info: { cls: 'rux--actionable-notification rux--actionable-notification--info', icon: '#i-information--filled' },
+    success: { cls: 'rux--actionable-notification rux--actionable-notification--success', icon: '#i-checkmark--filled' },
+    warning: { cls: 'rux--actionable-notification rux--actionable-notification--warning', icon: '#i-warning--filled' },
+  };
+
+  /* `action` IS OPTIONAL AND CHANGES THE COMPONENT, not just the contents.
+     Without it nothing about this function moves: the same inline notification
+     it has always built. With it the markup is Carbon's actionable one, taken
+     from `carbon-react-dom.json`'s `components-notifications-actionable--inline`
+     -- `__focus-wrapper` around `__details` and `__button-wrapper`, the text in
+     a `__content` the inline notification does not have, and the ICON keeping
+     `rux--inline-notification__icon`, which is what the capture does rather
+     than an oversight here.
+
+     TWO THINGS IN THAT CAPTURE ARE DELIBERATELY NOT COPIED. Carbon puts
+     `role="alertdialog"` on the root and wraps it in two visually-hidden focus
+     sentinels, which together TRAP the keyboard until the notice is dealt
+     with. That is right for a notification demanding a decision and wrong for
+     a board: `#sch-status` is already `role="status" aria-live="polite"`, the
+     move has already happened, and the offer is a courtesy. So the text is
+     announced, the button is in the tab order after it, and nothing is
+     captured. The close button is dropped for the same reason -- the next
+     render clears this region on its own. */
+  /* ONE BUILDER FOR BOTH ROOMS. `say` puts it above the board and `toast` puts
+     it over the page; what goes INSIDE is the same decision either way, so it
+     is made once here.
+
+     `action` CHANGES THE COMPONENT, not just the contents. Without one this is
+     Carbon's inline notification, unchanged from what this file has always
+     built. With one it is the actionable notification, taken from
+     `carbon-react-dom.json`'s `components-notifications-actionable--inline` --
+     `__focus-wrapper` around the details and the button, the text in a
+     `__content` the inline notification has no equivalent of, and the ICON
+     keeping `rux--inline-notification__icon`, which is what the capture does
+     rather than an oversight here.
+
+     TWO THINGS IN THAT CAPTURE ARE DELIBERATELY NOT COPIED. Carbon puts
+     `role="alertdialog"` on the root and wraps it in two visually-hidden focus
+     sentinels, which together TRAP the keyboard until the notice is dealt with.
+     That is right for a notification demanding a decision and wrong for a
+     board: the move has already happened and the offer is a courtesy. Both
+     regions are `role="status" aria-live="polite"`, so the text is announced,
+     the button follows it in the tab order, and nothing is captured. The close
+     button is dropped for the same reason -- the next message clears the slot. */
+  const TOAST_NOTE = {
+    error: { cls: 'rux--toast-notification rux--toast-notification--error', icon: '#i-error--filled' },
+    info: { cls: 'rux--toast-notification rux--toast-notification--info', icon: '#i-information--filled' },
+    success: { cls: 'rux--toast-notification rux--toast-notification--success', icon: '#i-checkmark--filled' },
+    warning: { cls: 'rux--toast-notification rux--toast-notification--warning', icon: '#i-warning--filled' },
+  };
+
+  function note(kind, title, subtitle, action, asToast) {
+    /* A PLAIN TOAST IS CARBON'S TOAST COMPONENT, NOT THE INLINE ONE FLOATED.
+       It was the inline one with `--low-contrast` for a round, and that has no
+       width of its own: measured in the corner, a short "Move undone" came to
+       383px and a real error message to 559px, with the container stretched to
+       1119 of the viewport's 1440. `toast-notification` sets `inline-size:
+       18rem` itself, which is the same 18rem the actionable `--toast` variant
+       carries -- so both shapes are Carbon's own figure and this file invents
+       no width.
+
+       ITS STRUCTURE IS FLATTER THAN THE INLINE ONE and is taken from
+       `carbon-react-dom.json`'s `components-notifications-toast--default`: the
+       icon is a DIRECT child rather than living inside a `__details`, and
+       `__details` holds the title and subtitle instead of a
+       `__text-wrapper`. Copying the inline arrangement here would put Carbon's
+       own padding on the wrong boxes. */
+    if (!action && asToast) {
+      const spec = TOAST_NOTE[kind] ?? TOAST_NOTE.info;
+      const box = el('div', spec.cls);
+      box.setAttribute('role', 'status');
+      const icon = svgUse(spec.icon, '20', '0 0 32 32');
+      icon.setAttribute('class', 'rux--toast-notification__icon');
+      const details = el('div', 'rux--toast-notification__details');
+      details.append(
+        el('div', 'rux--toast-notification__title', title),
+        el('div', 'rux--toast-notification__subtitle', subtitle),
+      );
+      box.append(icon, details, closeButton('rux--toast-notification'));
+      return box;
+    }
+    if (!action) {
+      const spec = NOTE[kind] ?? NOTE.info;
+      const box = el('div', spec.cls);
+      box.setAttribute('role', 'status');
+      const details = el('div', 'rux--inline-notification__details');
+      const icon = svgUse(spec.icon, '20', '0 0 32 32');
+      icon.setAttribute('class', 'rux--inline-notification__icon');
+      const wrap = el('div', 'rux--inline-notification__text-wrapper');
+      wrap.append(
+        el('div', 'rux--inline-notification__title', title),
+        el('div', 'rux--inline-notification__subtitle', subtitle),
+      );
+      details.append(icon, wrap);
+      box.appendChild(details);
+      return box;
+    }
+    const spec = ACTION_NOTE[kind] ?? ACTION_NOTE.info;
+    const box = el('div', spec.cls + (asToast ? ' rux--actionable-notification--toast' : ''));
+    box.setAttribute('role', 'status');
+    const focus = el('div', 'rux--actionable-notification__focus-wrapper');
+    const details = el('div', 'rux--actionable-notification__details');
+    const icon = svgUse(spec.icon, '20', '0 0 32 32');
+    icon.setAttribute('class', 'rux--inline-notification__icon');
+    const wrap = el('div', 'rux--actionable-notification__text-wrapper');
+    const content = el('div', 'rux--actionable-notification__content');
+    content.append(
+      el('div', 'rux--actionable-notification__title', title),
+      el('div', 'rux--actionable-notification__subtitle', subtitle),
+    );
+    wrap.appendChild(content);
+    details.append(icon, wrap);
+    const buttons = el('div', 'rux--actionable-notification__button-wrapper');
+    const btn = el('button', 'rux--actionable-notification__action-button rux--btn rux--btn--sm rux--layout--size-sm rux--btn--ghost', action.label);
+    btn.type = 'button';
+    btn.addEventListener('click', action.onClick);
+    buttons.appendChild(btn);
+    focus.append(details, buttons);
+    box.appendChild(focus);
+    if (asToast) box.appendChild(closeButton('rux--actionable-notification'));
+    return box;
+  }
+
+  /* A TOAST CAN BE DISMISSED AND THE ONE ABOVE THE BOARD CANNOT, which is the
+     one behavioural difference between the two rooms. `say`'s region is cleared
+     by the next render -- it describes the board, and when the board changes
+     the description is spent. A toast is cleared by nothing: it floats over the
+     page and the next render does not touch it, which is exactly why the undo
+     survives a re-read, and equally why it would otherwise sit there for good.
+     So it carries Carbon's own close button. Written out in full per variant
+     because check-classes cannot see through an interpolation. */
+  const CLOSE = {
+    'rux--actionable-notification': { btn: 'rux--actionable-notification__close-button', icon: 'rux--actionable-notification__close-icon' },
+    'rux--toast-notification': { btn: 'rux--toast-notification__close-button', icon: 'rux--toast-notification__close-icon' },
+  };
+  function closeButton(base) {
+    const spec = CLOSE[base];
+    const b = el('button', spec.btn);
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Close notification');
+    const svg = svgUse('#i-close', '20', '0 0 32 32');
+    svg.setAttribute('class', spec.icon);
+    b.appendChild(svg);
+    b.addEventListener('click', () => toast(null));
+    return b;
+  }
+
+  /* ABOVE THE BOARD, IN FLOW. Three call sites only, and all three describe the
+     BOARD rather than something a person did: loading, nothing this week, and a
+     week that would not load. Those stand in for the grid, so pushing it is
+     honest. Everything else goes to `toast`. */
+  function say(kind, title, subtitle, action) {
     statusEl.replaceChildren();
     if (!kind) { statusEl.hidden = true; return; }
     statusEl.hidden = false;
-    const spec = NOTE[kind] ?? NOTE.info;
-    const note = el('div', spec.cls);
-    note.setAttribute('role', 'status');
-    const details = el('div', 'rux--inline-notification__details');
-    const icon = svgUse(spec.icon, '20', '0 0 32 32');
-    icon.setAttribute('class', 'rux--inline-notification__icon');
-    const wrap = el('div', 'rux--inline-notification__text-wrapper');
-    wrap.append(
-      el('div', 'rux--inline-notification__title', title),
-      el('div', 'rux--inline-notification__subtitle', subtitle),
-    );
-    details.append(icon, wrap);
-    note.appendChild(details);
-    statusEl.appendChild(note);
+    statusEl.appendChild(note(kind, title, subtitle, action, false));
+  }
+
+  /* ── SAYING IT OVER THE PAGE INSTEAD OF ABOVE THE BOARD ───────────────────
+     `say` writes into `#sch-status`, which is in normal flow above the grid, so
+     every message it shows pushes the board down and every one it clears pulls
+     it back. For the three messages that describe the BOARD -- loading, nothing
+     this week, a week that would not load -- that is correct: they stand in for
+     the grid. For the thirteen that report what a person just did it is a jolt,
+     and rux asked for somewhere else.
+
+     SAME BUILDER, DIFFERENT ROOM. `note()` makes the element for both; this
+     adds Carbon's `--toast` modifier, which is what sizes it to 18rem and gives
+     it the shadow a floating card needs. The placement is this app's own, in
+     sch.css: Carbon ships the toast's APPEARANCE and no position at all.
+
+     IT REPLACES RATHER THAN STACKS, exactly as `say` does. One slot means the
+     last thing you did is the thing on screen, and a second move drops the
+     first move's undo -- which is the right depth, since only the last move is
+     undoable. */
+  function toast(kind, title, subtitle, action) {
+    if (!toastEl) { say(kind, title, subtitle, action); return; }
+    toastEl.replaceChildren();
+    if (!kind) { toastEl.hidden = true; return; }
+    toastEl.hidden = false;
+    toastEl.appendChild(note(kind, title, subtitle, action, true));
   }
 
   // -- reading --------------------------------------------------------------
@@ -506,10 +684,25 @@
     // replaces it.
     const today = iso(new Date());
     let todayCell = null;
+    /* THE WEEKEND IS READ OFF THE DATE, NOT OFF THE COLUMN INDEX, 2026-09-11.
+       This was `i >= 5`, which is only Saturday and Sunday while the week
+       starts on Monday. `weekStartsSunday` is a saved view option -- the menu's
+       "Start on Sunday" -- and with it on, columns 5 and 6 are FRIDAY and
+       SATURDAY: the board dimmed the wrong two days and called Sunday a
+       weekday. Measured before the fix, on a Sunday-first week: index 5 = Fri,
+       index 6 = Sat, while the actual weekend sits at indices 0 and 6.
+
+       AND NOTHING DOWNSTREAM MAY TREAT THE WEEKEND AS A RUN OF COLUMNS, even
+       now that nothing downstream uses it. Sunday-first puts the two days at
+       OPPOSITE ENDS of the week. The columns were collected here for a band and
+       then for a boundary hairline; both are gone, the body draws a rule at
+       every day now, and the weekend's only mark is the dimmed text this line
+       sets. The warning stays because the next thing to mark the weekend will
+       need it. */
     for (let i = 0; i < 7; i++) {
       const d = addDays(weekStart, i);
       const cell = el('div', 'sch-day');
-      if (i >= 5) cell.classList.add('sch-day--weekend');
+      if (isWeekend(d)) cell.classList.add('sch-day--weekend');
       if (iso(d) === today) { cell.classList.add('sch-day--today'); cell.setAttribute('aria-current', 'date'); todayCell = cell; }
       cell.append(
         document.createTextNode(d.toLocaleDateString(undefined, { weekday: 'short' })),
@@ -517,6 +710,52 @@
       );
       gridEl.appendChild(cell);
     }
+
+    /* THE DAY RULES ARE BACK, 2026-09-11, ON RUX'S CALL AND AFTER TWO
+       INTERMEDIATE ANSWERS THAT ARE NOW SUPERSEDED. The board has carried "no
+       weekend tint, so an empty row still cannot be counted" since 2026-09-07,
+       when six vertical day rules were REMOVED at rux's own ask. This pass
+       first answered it with a weekend fill, which read as the header band
+       bleeding down the board; then with a hairline at the weekend boundary
+       only. rux has now asked for the full set back, with the day labels
+       centred over them: "lets add the vertical lines back and center the
+       dates?"
+
+       WHICH SUBSUMES THE WEEKEND HAIRLINE RATHER THAN JOINING IT. Six rules
+       answer the counting problem directly -- an empty row has a landmark every
+       column, not one at the week's end -- so a line at the weekend boundary is
+       no longer a mark, it is one of six identical ones. The weekend keeps the
+       dimmed header text it has always had and nothing else in the body. If it
+       needs to be distinguishable again, that is a heavier rule or a fill and a
+       separate decision; it is not this.
+
+       THE BOUNDARIES ARE THE SIX INTERNAL ONES, 1 THROUGH 6. Column 0 is the
+       week's left edge, which the bus column's own rule already draws, and
+       column 7 is its right edge, which the pane draws. A line on either would
+       double something. That is the same rule the removed version used -- its
+       comment recorded it as "inset one day from the start so it fell on days 1
+       to 6 and neither edge" -- reached here by naming the boundaries rather
+       than by insetting a repeat, so the edges are explicit instead of implied.
+
+       STILL A BACKGROUND AND STILL PER TRACK, for the reasons the note on
+       `--sch-day-rule` in sch.css gives: `background-image` sits above the
+       row's own `background-color` and below every child, and `var()` inside a
+       custom property resolves where that property is COMPUTED, so the stops
+       have to meet the colour on the element that owns both. Both were learned
+       the hard way earlier today and neither changes. */
+    const ruleCols = [1, 2, 3, 4, 5, 6];
+    const dayRuleStops = (() => {
+      const parts = [];
+      let prev = '0';
+      for (const i of ruleCols) {
+        const at = `${i * 100 / 7}%`;
+        parts.push(`transparent ${prev} calc(${at} - 1px)`);
+        parts.push(`var(--sch-day-rule) calc(${at} - 1px) ${at}`);
+        prev = at;
+      }
+      parts.push(`transparent ${prev} 100%`);
+      return parts.join(', ');
+    })();
 
     const oosByBus = new Map();
     for (const w of oos) { if (!oosByBus.has(w.bus_id)) oosByBus.set(w.bus_id, []); oosByBus.get(w.bus_id).push(w); }
@@ -624,6 +863,8 @@
 
       const track = el('div', 'sch-track');
       track.style.setProperty('--sch-lanes', lanes);
+      // The day rules. Per track, for the reason the note above gives.
+      track.style.setProperty('--sch-day-rules', dayRuleStops);
       if (r.bus) track.dataset.busId = r.bus.id; else track.dataset.unassigned = 'true';
       for (const w of windows) {
         const place = clip(w.start_date, w.end_date, weekStart, weekEnd);
@@ -757,6 +998,59 @@
     if (error) throw new Error(error.message);
   }
 
+  /* WHAT THE ROW IS CALLED, for a message about a bus that may no longer be on
+     screen. `null` is the Unassigned row, which has no number to give. */
+  function busLabel(busId) {
+    if (!busId) return 'Unassigned';
+    const row = gridEl.querySelector(`.sch-track[data-bus-id="${CSS.escape(String(busId))}"]`);
+    const num = row?.closest('.sch-row')?.querySelector('.sch-row-head__num')?.textContent?.trim();
+    return num ? `bus ${num}` : 'its previous bus';
+  }
+
+  /* ── UNDOING A MOVE ───────────────────────────────────────────────────────
+     docs/log.md asked for this on 2026-09-07 and three times since: "No undo
+     on a bus move." It also said where it would come from -- "the write to
+     reverse it is the one `moveToBus` already makes" -- and that is exactly
+     what this is. One column, written back to the value the drag closure had
+     already captured before it moved.
+
+     `null` NEEDS NO SPECIAL CASE. A bar dragged OFF the Unassigned row has
+     `fromBus === null`, and `moveToBus(id, null)` is the same write the
+     "Take off its bus" action already makes.
+
+     ONE STEP, AND NO TIMER. `say` is a single slot: the next message or the
+     next render replaces whatever is in it, so a second move drops the first
+     move's offer and only the last move is undoable -- which is the right
+     depth for a board where the truth is the database and not a stack held in
+     this page. Nothing expires on a clock either. A notice that vanishes while
+     a dispatcher is reading it is a trap, and this one costs nothing to leave
+     standing.
+
+     AND THE UNDO ITSELF OFFERS NO UNDO. Pressing it ends on a plain
+     notification with no action, so the pair cannot be ping-ponged; going back
+     again is another drag. */
+  function offerUndo(assignmentId, backTo, label) {
+    toast('success', 'Trip moved', `Undo puts it back on ${label}.`, {
+      label: 'Undo',
+      onClick: async () => {
+        toast('info', 'Putting the trip back…', `Moving it to ${label}.`);
+        try {
+          schEl.setAttribute('aria-busy', 'true');
+          gridEl.classList.add('sch-grid--busy');
+          await moveToBus(assignmentId, backTo);
+        } catch (e) {
+          toast('error', 'Could not put that trip back', String(e && e.message ? e.message : e));
+          return;
+        } finally {
+          schEl.removeAttribute('aria-busy');
+          gridEl.classList.remove('sch-grid--busy');
+        }
+        await show();
+        toast('success', 'Move undone', `The trip is back on ${label}.`);
+      },
+    });
+  }
+
   function installDrag(bar) {
     if (!bar.dataset.assignmentId) return;   // an unfilled slot owns no row to move
     bar.addEventListener('pointerdown', down => {
@@ -817,17 +1111,36 @@
 
         const toBus = target ? (target.dataset.busId ?? null) : fromBus;
         if (!target || toBus === fromBus) return;
+        /* HELD AS VALUES, NOT AS THE ELEMENTS THEY CAME OFF. `show()` below
+           replaces every bar in the grid, so `bar` is detached by the time the
+           undo can be pressed and its dataset is gone with it. */
+        const assignmentId = bar.dataset.assignmentId;
+        const backTo = fromBus;
+        const label = busLabel(fromBus);
+        let failed = null;
         try {
           schEl.setAttribute('aria-busy', 'true');
           gridEl.classList.add('sch-grid--busy');
-          await moveToBus(bar.dataset.assignmentId, toBus);
+          await moveToBus(assignmentId, toBus);
         } catch (e) {
-          say('error', 'Could not move that trip', String(e && e.message ? e.message : e));
+          failed = String(e && e.message ? e.message : e);
         } finally {
           schEl.removeAttribute('aria-busy');
           gridEl.classList.remove('sch-grid--busy');
         }
-        show();   // read it back, rather than trusting the move landed
+        /* AWAITED SO THE MESSAGE DESCRIBES A BOARD THAT IS ALREADY CORRECT.
+           These go to `toast` now, which `render` does not clear, so neither
+           one would be destroyed by the re-read as it was when both lived in
+           `#sch-status` -- surviving is no longer what the ordering buys. What
+           it buys is that the undo is not offered, and a failure is not
+           reported, against a grid still showing the pre-move week. The
+           failure is still carried down as a string rather than spoken in the
+           `catch`, for the same reason. The board is re-read either way: a move
+           that threw may still have landed, and the only honest thing on screen
+           is what the server says. */
+        await show();   // read it back, rather than trusting the move landed
+        if (failed) toast('error', 'Could not move that trip', failed);
+        else offerUndo(assignmentId, backTo, label);
       };
 
       const move = ev => {
@@ -3773,6 +4086,13 @@
     availRows = rows;
     availGrid.textContent = '';
 
+    /* THE ROSTER'S DAY RULES ARE PURE CSS, unlike the board's. Its cells are
+       real grid cells with a column each, so the rule is simply an inline-start
+       border on every cell but the first and `data-day` already says which that
+       is; nothing has to be computed here. The board has one element spanning
+       all seven days and no edges to hang a border on, which is why only it
+       needs stops painted. */
+
     const head = el('div', 'sch-avail__days');
     head.appendChild(el('div', 'sch-avail__day sch-avail__day--head', 'Driver'));
     for (let i = 0; i < 7; i++) {
@@ -3797,6 +4117,9 @@
          English ones. Spread and not `.slice(2)`: the unit is a code point. */
       const short = d.toLocaleDateString(undefined, { weekday: 'short' });
       const cell = el('div', 'sch-avail__day', [...short].slice(0, 2).join(''));
+      // The band dims its weekend TEXT and draws no vertical line, exactly as
+      // the board's day header does. The boundary rule is the body's alone.
+      if (isWeekend(d)) cell.classList.add('sch-avail__day--weekend');
       cell.dataset.day = String(i);
       head.appendChild(cell);
     }
@@ -3804,7 +4127,40 @@
 
     for (const row of rows) {
       const r = el('div', 'sch-avail__row');
-      r.appendChild(el('div', 'sch-avail__name', row.driver.short_name || row.driver.name || 'Driver'));
+      /* THE FULL NAME GOES ON THE CELL'S TITLE, 2026-09-11, AND IT IS NOT A
+         TOOLTIP REPEATING WHAT IS ON SCREEN. This cell renders `short_name`
+         when there is one -- "Cortinas", "All Valley" -- so the long form is
+         information the column is actively dropping, not a restatement of it.
+         The busy cell beside it has carried `driver.name` for exactly this
+         reason since it was written.
+
+         IT ANSWERS THE DUPLICATE NAMES docs/log.md has carried since
+         2026-09-07: "two Bennys, two Ernestos ... make the roster ambiguous in
+         the one pane meant to resolve it". Both pairs are in today's fleet, the
+         full names are already fetched, and nothing was using them.
+
+         AND THE COLUMN IS NARROWER THAN IT WAS -- 96px against 152 since the
+         day cells went to 32 -- which is the same argument `.sch-row-head`
+         makes on the board, where capacity and type moved to the title so the
+         column could be narrow and a hover could still answer which bus it is.
+         Today's widest name clears 96 by 7px; the next longer one will not, and
+         then this is what makes the ellipsis recoverable.
+
+         ONLY WHEN IT ADDS SOMETHING. Where `short_name` and `name` are the same
+         string a title would duplicate the text under it, which is noise on
+         screen and, in some readers, the name announced twice. Same shape as
+         the `if (day.off || busy)` guard on the cell beside it.
+
+         WHAT IT DOES NOT DO, SO NOBODY READS MORE INTO IT: `title` is hover
+         only. On a non-interactive div it is not keyboard reachable and not
+         reliably announced, so this makes an ambiguous or clipped name
+         RECOVERABLE by mouse and does not make the column accessible. Telling
+         two Bennys apart without a mouse needs something in the cell itself,
+         which is a design change and not this. */
+      const shown = row.driver.short_name || row.driver.name || 'Driver';
+      const nameEl = el('div', 'sch-avail__name', shown);
+      if (row.driver.name && row.driver.name !== shown) nameEl.title = row.driver.name;
+      r.appendChild(nameEl);
       row.days.forEach((day, i) => {
         const busy = day.trips.length > 0;
         const cls = day.off ? 'sch-avail__cell sch-avail__cell--off'
@@ -4077,7 +4433,7 @@
     const id = editing.id;
     const creating = editing.creating;
     panelSave.disabled = true;
-    say('info', creating ? 'Creating the trip…' : 'Saving the trip…');
+    toast('info', creating ? 'Creating the trip…' : 'Saving the trip…');
     try {
       // CREATE WRITES EVERY FIELD, not the diff: there is no row to diff
       // against. `bus_count` is set to 1 rather than left null, because it is
@@ -4231,7 +4587,7 @@
           .insert({ trip_id: made.id, bus_id: wantBus, leg: 'outbound', position: 0 }).then(r => r));
         if (aErr) {
           await show();
-          say('warning', 'The trip was created without its bus.',
+          toast('warning', 'The trip was created without its bus.',
             `It is in the Unassigned row and can be dragged onto one. ${aErr.message}`);
           return;
         }
@@ -4239,10 +4595,10 @@
       // READ IT BACK rather than trusting the write, as the drag does. The
       // render replaces every bar, so the panel closes with it.
       await show();
-      if (creating) say('success', wantBus ? 'Trip created on its bus.' : 'Trip created. It is in the Unassigned row until it has a bus.');
-      else say('success', `Saved ${Object.keys(patch).length} change${Object.keys(patch).length === 1 ? '' : 's'}.`);
+      if (creating) toast('success', wantBus ? 'Trip created on its bus.' : 'Trip created. It is in the Unassigned row until it has a bus.');
+      else toast('success', `Saved ${Object.keys(patch).length} change${Object.keys(patch).length === 1 ? '' : 's'}.`);
     } catch (e) {
-      say('error', `The trip was not ${creating ? 'created' : 'saved'}. ${e.message}`);
+      toast('error', `The trip was not ${creating ? 'created' : 'saved'}. ${e.message}`);
       panelSave.disabled = false;
     }
   });
@@ -4374,16 +4730,16 @@
     if (item.id === 'sch-bar-menu-unassign') {
       const assignmentId = bar.dataset.assignmentId;
       if (!assignmentId) return;
-      say('info', 'Taking the trip off its bus…');
+      toast('info', 'Taking the trip off its bus…');
       try {
         // The same write the drag makes for a drop on the Unassigned row.
         const { error } = await withTimeout(
           client.from('trip_assignments').update({ bus_id: null }).eq('id', assignmentId).then(r => r));
         if (error) throw new Error(error.message);
         await show();
-        say('success', 'Taken off its bus. It is in the Unassigned row.');
+        toast('success', 'Taken off its bus. It is in the Unassigned row.');
       } catch (err) {
-        say('error', `The trip was not moved. ${err.message}`);
+        toast('error', `The trip was not moved. ${err.message}`);
       }
     }
   });
@@ -4421,16 +4777,16 @@
     const reason = document.getElementById('sch-cancel-reason').value.trim();
     window.Rux?.modal?.close?.('sch-cancel-modal');
     cancelling = null;
-    say('info', 'Cancelling the trip…');
+    toast('info', 'Cancelling the trip…');
     try {
       const patch = { cancelled_at: new Date().toISOString() };
       if (reason) patch.cancellation_reason = reason;
       const { error } = await withTimeout(client.from('trips').update(patch).eq('id', id).then(r => r));
       if (error) throw new Error(error.message);
       await show();
-      say('success', 'Trip cancelled. It is off the schedule and still on the trips list.');
+      toast('success', 'Trip cancelled. It is off the schedule and still on the trips list.');
     } catch (e) {
-      say('error', `The trip was not cancelled. ${e.message}`);
+      toast('error', `The trip was not cancelled. ${e.message}`);
     }
   });
 
@@ -4586,6 +4942,7 @@
       if (!picked || Number.isNaN(picked.getTime())) return;
       const next = mondayOf(picked);
       if (shown && iso(next) === iso(shown)) return;   // same week, nothing to redraw
+      toast(null);
       cursor = next;
       show();
     });
@@ -4615,10 +4972,15 @@
     syncExpanded();
   }
 
-  const go = days => { cursor = addDays(cursor, days); show(); };
+  /* CHANGING THE WEEK DROPS THE TOAST. An undo offered for a move on THIS week
+     names a bus that is about to leave the screen, and the offer would still
+     work -- it goes by assignment id -- which is worse than if it did not: a
+     press would silently move a trip the board is no longer showing. Every
+     other message here is spent the moment the week under it changes. */
+  const go = days => { toast(null); cursor = addDays(cursor, days); show(); };
   document.getElementById('sch-prev')?.addEventListener('click', () => go(-7));
   document.getElementById('sch-next')?.addEventListener('click', () => go(7));
-  document.getElementById('sch-today')?.addEventListener('click', () => { cursor = mondayOf(new Date()); show(); });
+  document.getElementById('sch-today')?.addEventListener('click', () => { toast(null); cursor = mondayOf(new Date()); show(); });
 
   // /account.js opens the session asynchronously and these tables do not need
   // one, so the first paint does not wait for it; the client is whichever

@@ -4,6 +4,661 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-11 (seventh pass) - the No bus head takes its own track's colour, and
+the divider between them pays for it.** rux: "let make the No bus header match
+the track color."
+
+**THIS CELL HAS NOW BEEN BOTH, so both arguments are kept.** It was
+`--rux-layer-hover-01`, the track's tint; it was changed to `--rux-layer` on the
+grounds that the sticky bus column should read as one strip and this was "the
+one cell in the sticky column that is not the column's colour", with the row
+already told apart by its italic label and its track. That argument is about the
+COLUMN. What overrules it is that the ROW is the unit being read here: Unassigned
+is not a bus, its track is tinted precisely to say so, and leaving the head on
+the frame's surface split that one row into two colours across the very divider
+a reader crosses to ask which row this is. The column loses its single colour in
+exactly one row, and it is the row that is not a bus.
+
+**AND THE DIVIDER GOES NEARLY INVISIBLE ON THAT ROW IN ONE THEME, which is the
+cost and is measured rather than left to be found.** The head's
+`border-inline-end` is `border-subtle-01`, and matching the head to the track
+puts the same colour on both sides of it. Contrast of the rule against the
+surface it now sits on, all nine themes, rule-on-No-bus against
+rule-on-a-normal-row:
+
+    white 1.39 / 1.55    g10 1.08 / 1.32     g90 1.85 / 2.30
+    g100  1.62 / 1.94    geist 1.25 / 1.31   linear 1.30 / 1.41
+    rux   1.39 / 1.55    ant-dark 1.25 / 1.40  spotify 1.23 / 1.41
+
+**g10 IS THE ONE THAT MATTERS: 1.08 is not a line.** Every other theme loses
+between 0.06 and 0.45 and stays where the rule already was -- this is a subtle
+border by design and reads between 1.2 and 2.3 everywhere, including on normal
+rows. g10 alone drops to where the divider effectively is not drawn, so on that
+theme the No bus row reads as one unbroken strip from the label to the end of
+the week.
+
+**WHICH MAY BE THE POINT RATHER THAN A DEFECT, and is left standing on that
+reading.** The change asked for is that the head and its track be one thing; a
+divider that disappears between them is that request taken to its conclusion,
+and the italic "No bus" label still separates identity from content. It is
+recorded here rather than fixed because fixing it means a heavier token on one
+row in one theme, which is a rule with an exception in it.
+
+**AND g10 WAS THEN LOOKED AT, WHICH IS HOW IT SHOULD HAVE BEEN SETTLED.** rux
+accepted the change on sight -- "look ok to me" -- and the one theme neither of
+us had actually rendered was opened afterwards rather than left as a ratio. The
+divider is not drawn there, exactly as 1.08 predicted, and the No bus row reads
+as one unbroken grey strip against the white rows above it. That is the request
+taken to its conclusion rather than a defect: the row is one thing, which is
+what was asked for, and the italic "No bus" label still separates identity from
+content. No `border-strong-01` exception, and none wanted.
+
+**NOT DONE.** The remaining seven themes were measured and not rendered for this
+particular row; g10 was the only one whose number put it in doubt, so it is the
+only one that was opened. `docs/gate-coverage.md` is still at `52efa52` and has
+seen none of today's seven passes.
+
+**2026-09-11 (sixth pass) - the day rules are back at every boundary and the
+labels are centred over them, which retires two answers this same day gave.**
+rux: "lets add the vertical lines back and center the dates?" Both together,
+which is the only order in which either works.
+
+**THIS IS THE THIRD ANSWER TO ONE OPEN ITEM, and the first two are now gone.**
+"No weekend tint, so an empty row still cannot be counted" has been open since
+2026-09-07 -- the day the six vertical day rules were REMOVED, at rux's own ask,
+because they made the board a grid where Carbon's data table draws none. Today
+it was answered first with a weekend FILL, which rux rejected on sight for
+reading as the header band bleeding down the board; then with a single HAIRLINE
+at the weekend boundary. Both are deleted. The rules answer the counting problem
+at its source: an empty row now has a landmark at every column rather than one
+at the week's end.
+
+**AND THE WEEKEND LOSES ITS BODY MARK ENTIRELY, which is a consequence worth
+stating rather than discovering later.** With six identical rules, a line at the
+weekend boundary is not a mark -- it is one of six. So the weekend is dimmed
+TEXT in the header band and nothing at all below it. `isWeekend` survives for
+that one job. If the weekend needs to be distinguishable again it wants a
+heavier rule or a fill, and that is a separate decision.
+
+**SIX BOUNDARIES, 1 THROUGH 6, NAMED RATHER THAN REPEATED.** Column 0 is the
+week's left edge, already drawn by the bus column's own rule; column 7 is the
+right edge, drawn by the pane. A line on either doubles something. The removed
+version reached the same place by insetting a `repeating-linear-gradient` "one
+day from the start so it fell on days 1 to 6 and neither edge"; naming the
+boundaries makes the edges explicit instead of implied. Same token and same
+width as the version that went: 1px `border-subtle-01`, last carried at
+`47d3903`.
+
+**THE CENTRING DEPENDED ON THE RULES AND COULD NOT HAVE COME FIRST.** Asked on
+its own earlier today, the answer was no, and the measurement was the argument:
+every label sat 12px from its column's left edge and every bar's text sat at the
+same 12px -- 431, 570, 709, 848, 987, 1126, 1265 against bar text at 431, 710,
+848, 987, 1265, identical to the pixel. With no vertical rules, that shared line
+was the ONLY thing saying where a column began. Now the boundary is drawn, the
+label is free of the job, and centring costs nothing. Measured after: all seven
+labels within 1px of their column's centre.
+
+**THE ROSTER TOOK THE SAME GRID, and it needed no JavaScript at all.** Its cells
+are real grid cells with a column each, so the rule is an inline-start border on
+every cell but the first and `data-day` already says which that is --
+`.sch-avail__cell:not([data-day="0"])`. The board has one element spanning all
+seven days and no edge to hang a border on, which is the only reason it paints
+stops. The weekend-boundary class and the per-render computation that fed it are
+both deleted.
+
+**HEADER BANDS STAY CLEAN, asserted rather than assumed.** rux's rule from
+earlier today -- "doesnt cross into header" -- holds through this: every one of
+the corner, the seven day cells and the roster's eight header cells reads zero
+inline borders and no background image. The rules start below the band in both
+grids.
+
+**VERIFIED AT 1440x950.** Rules paint at 14.2857 / 28.5714 / 42.8571 / 57.1429 /
+71.4286 / 85.7143 percent, which is 139 / 278 / 417 / 556 / 695 / 834px, against
+column edges at 139 / 278 / 417 / 556 / 695 / 834. Exact in all six. 240 ruled
+cells in the roster, first column excluded, `node tools/check.mjs` passes at
+classes 359 and tokens 89.
+
+**NOT DONE.** Not re-measured at 375 or with the week overflowing, where the
+rules are painted against a `max-content` track -- the geometry is the same one
+the weekend hairline was checked at, but this is more lines and was not re-run.
+The bar arithmetic is still untouched: `--sch-gap` 4px and `--sch-gap-clear` 3px
+differ by the one pixel the old day rule ate, and sch.css has carried a note
+since 2026-09-07 saying that if the rules stay gone the two should be collapsed.
+They are not gone any more, so that note is now moot rather than pending, and
+nothing was changed either way. And the weekend's body mark is gone by design,
+recorded above so it is not rediscovered as a regression.
+
+**2026-09-11 - two answers from rux, one closing a defect's remaining half and
+one declining a change.**
+
+**THE DUPLICATE DRIVERS WAIT FOR THE DRIVER PAGE.** rux: "the duplicate rule
+will have to be fixed when the driver page is added." The entry below leaves
+three pairs -- Benny, Ernesto, Vasquez -- half resolved, because in each the
+second driver's recorded `name` IS the short label and there is no longer form
+to put in a title. That is a data gap in `drivers`, the rows are authored
+elsewhere, and nothing here should invent a surname. **So it is no longer an
+open item for this app**: it is a thing the driver page will own when
+`screen-inventory.md` gets to it. The title stays as the best this pane can do
+until then.
+
+**THE DAY LABELS STAY START-ALIGNED, and the measurement is the argument.** rux
+asked: "does it make sense to center the Tue 8 dates horizontally on the
+schedule?" Measured at 1440x950, every day label sits 12px from its column's
+left edge and every bar's text sits at the same 12px -- labels at 431, 570, 709,
+848, 987, 1126, 1265 and bar text at 431, 710, 848, 987, 1265, identical to the
+pixel. That shared vertical line is not decoration: **this board draws no
+vertical rules between days**, six having gone on 2026-09-07 and only two
+remaining, neither of them a day boundary. The label's left edge IS what says
+where a column starts, and centring would delete that cue on five of seven
+columns.
+
+**AND A BAR IS A SPAN ANCHORED TO ITS START DAY**, not a value centred in a
+cell -- it draws from that day's left edge outward. A centred header over a
+left-anchored span points at the middle of nothing, some 50px right of the thing
+it names.
+
+**THE ROSTER DOES THE OPPOSITE AND IS RIGHT TO**, which is worth writing down so
+the two are not "fixed" into agreement later. Its day letters are centred
+because its content is a 32px square mark filling the cell. Centred label over
+centred mark; start label over start-anchored span. Different content shape,
+different rule.
+
+**WHAT WOULD CHANGE IT:** per-day vertical rules coming back, since then the
+rule marks the boundary and the label is free to float. Not proposed.
+
+**2026-09-11 (fifth pass) - the driver name cell carries its full name, and it
+resolves the duplicate drivers only halfway.** rux asked for the title and for
+the reasoning first.
+
+**IT IS NOT A TOOLTIP REPEATING THE CELL.** `drawAvailability` renders
+`short_name || name`, so the column shows "Cortinas", "All Valley", "Andy" --
+the long form is information it is actively dropping, not a restatement. The
+busy cell beside it has carried `driver.name` since it was written, for the same
+reason. Measured after: 34 of 40 cells take a title and none of the 34 duplicates
+its own text.
+
+**THE COLUMN IS ALSO NARROWER THAN IT WAS**, 96px against 152 since the day
+cells went to 32 in the pass below, which is the argument `.sch-row-head` makes
+on the board: capacity and type moved to the title so the column could be narrow
+and a hover could still answer which bus it is. Today's widest name clears 96 by
+7px; the next longer one will not, and this is what makes that ellipsis
+recoverable.
+
+**ONLY WHERE IT ADDS SOMETHING.** Six drivers have `name` equal to `short_name`
+and take no title, because a tooltip duplicating the text under it is noise on
+screen and, in some readers, the name announced twice. Same shape as the
+`if (day.off || busy)` guard beside it.
+
+**AND THE DUPLICATE-DRIVER DEFECT IS ONLY HALF ANSWERED, WHICH WAS CLAIMED MORE
+STRONGLY THAN IT DESERVED BEFORE IT WAS MEASURED.** docs/log.md has carried
+"two Bennys, two Ernestos ... make the roster ambiguous in the one pane meant to
+resolve it" since 2026-09-07, and this was offered as the answer to it. Driven:
+there are THREE duplicated labels, not two -- Benny, Ernesto and Vasquez -- and
+in every pair exactly ONE half gets a title:
+
+    Benny     (none)              Benny     Baudelio Morales
+    Ernesto   Ernesto Flores      Ernesto   (none)
+    Vasquez   Jose Vasquez        Vasquez   (none)
+
+The untitled half of each pair has `name` equal to `short_name` in the database:
+that driver's recorded full name IS "Benny". So the pair is now distinguishable
+only by one of them having a tooltip and the other having none, which is a
+distinction by absence and a poor one. **The remaining half is a data gap in
+`drivers`, not a rule this app can write** -- the rows are authored elsewhere,
+and nothing here should invent a surname.
+
+**WHAT THIS DOES NOT DO, AND IT IS WORTH BEING PLAIN.** `title` is hover only.
+On a non-interactive div it is not keyboard reachable and not reliably
+announced, so this makes an ambiguous or clipped name RECOVERABLE BY MOUSE and
+does not make the column accessible. Telling two Bennys apart without a mouse
+still needs something in the cell itself.
+
+**NOT DONE.** The data half above -- three pairs, three drivers with no distinct
+full name recorded. No `title` on the board's own bar driver line, which renders
+the same `short_name || name` and has the same gap; only the roster was asked
+for. And nothing gates against the title regressing: `check.mjs` cannot see an
+attribute built at runtime, which is the same hole `docs/log.md` recorded for
+`svgUse` on 2026-09-08.
+
+**2026-09-11 (fourth pass) - the roster's day cells are 32 wide and still 24
+tall, and the reading that justified the width was wrong.** rux: "does the grid
+have enough horizontal space to make squares the next size up? or should i just
+widen them? or 32x32?"
+
+**THE ANSWER WAS YES TO WIDTH AND NO TO HEIGHT, and the two axes cost different
+things.** The aside is a fixed 20rem = 320px and `--sch-head-w: minmax(0, 1fr)`
+makes the name column the remainder, so every pixel the days take comes off the
+names: seven columns at 32 take 224 and leave 96. Height is the expensive axis
+-- `--sch-avail-h` is untouched at xs, because measured at 1440x950 the roster
+shows every one of 40 drivers at 24px tall and 35 at 32px, and driver count is
+the exact currency the 2026-09-08 decision was settled in after this number
+turned 24, 32, 24, 32, 24. Widening does not reopen it. Only 24, 32 and 40 were
+ever candidates: `--rux-layout-size-height-*` ships xs/sm/md and 30 would have
+been an invented size.
+
+**THE PROBE THAT SIZED IT REPORTED A FIT THAT WAS AN OVERFLOW, and rux was told
+the wrong number before it was caught.** It measured the name column at 108px
+with nothing truncating, and that was offered as "no name truncates and the
+padding does not need touching". Both halves were false. `.sch-avail__grid`
+carries `.sch-grid` as well, and `.sch-grid` is `inline-size: max-content` --
+which the BOARD needs, so its seven columns can total more than the pane and
+scroll under a sticky bus column. The roster inherited the wrong half: its
+columns are a fixed token width and always fit, but `max-content` let the name
+column refuse to shrink, and `minmax(0, 1fr)` cannot do its job against a box
+already sized to content. The 108 was the name column's own content width, and
+the grid had run to **332.195px inside a 320px pane** -- a 12px horizontal
+scroll on the roster that nothing asked for.
+
+**IT HAD BEEN HIDING AT 24px.** 108 + 168 = 276, under 320, so the
+`min-inline-size: 100%` floor won and the column stretched to 152. Widening the
+days pushed the total past the pane and the latent fault surfaced. The note on
+`--sch-head-w` had claimed since 2026-09-08 that a long name "would ellipse
+rather than push the squares out of the panel"; it could not, and nothing had
+tested it because nothing had made the sum exceed the pane.
+
+**FIXED IN TWO PLACES, AND THE SECOND ONE IS WHAT THE FIRST COST.**
+`.sch-avail__grid` is `inline-size: 100%` now, so the grid is its pane and the
+name column takes the true remainder of 96. At `spacing-05` of padding that
+ellipses the two longest names -- "Vicente Solar" at 105px and "Prudenciano" at
+101 -- and the name cell carries no `title`, so a truncated driver would be
+unrecoverable. The padding is `spacing-03`, which takes the widest to 89 and
+clears 96.
+
+**VERIFIED AFTER, on the pinned grid rather than the overflowing one.** Template
+`96px 32px x7` = 320 against a 320px pane, horizontal overflow **0**, zero of 40
+names truncated, cells 32x24, row height unchanged so driver visibility is
+unchanged, and the board's own grid still sized independently. The header band
+still carries no vertical rule and the name column still carries its own.
+
+**NOT DONE.** The overlay below md sets both axes to sm and is untouched, so the
+phone still has 32x32 squares -- correct there, and not re-measured against this
+change. The name cell still has no `title`, so the ellipsis remains a real loss
+if a longer driver name is ever added; 96px is 7px of headroom over today's
+widest, which is thin. `docs/gate-coverage.md` is still at `52efa52`.
+
+**2026-09-11 (third pass) - the bus column's vertical rule is back, and the
+entry that removed it had already written the condition for its return.** rux:
+"should we add a vertical border back beetween bus column and monday/sunday
+column?" Yes, and the file said so first.
+
+**THE REMOVAL CALLED THIS EXACTLY.** `.sch-row-head`'s comment, written
+2026-09-07: "WHAT IT COST, AND IT IS NOT NOTHING. This column is sticky and
+paints `--rux-layer`, the same surface the tracks paint, so when the week is
+wider than the pane and the board scrolls sideways, bars now pass UNDER an
+invisible edge rather than a drawn one. At the 8.5rem day floor that is a real
+week, not a hypothetical. **If it reads badly, this one line comes back and the
+corner's with it -- they are a pair.**" It read badly. Both came back.
+
+**MEASURED BEFORE TOUCHING IT, at 900px where the week overflows by 516px.**
+NINE bars sat under the sticky column at once. The head computes
+`rgb(38,38,38)` and the track `rgba(0,0,0,0)` over the identical `--rux-layer`,
+and neither the head nor the corner carried a border or a box-shadow -- so there
+was no surface change, no line and no shadow marking the boundary. Nothing at
+all. The header showed it plainest: **"Wed 9" clipped to "ed 9"**, a word cut in
+half by an edge the eye cannot see.
+
+**AND THE CORNER'S COMMENT HAD BEEN WRONG FOR FOUR DAYS.** It read "THE HEADER
+BAND STAYS OPEN AT THE CORNER. **The body keeps its divider**, where it
+separates bus identity from trip content." The body did not keep its divider --
+`.sch-row-head` lost its rule later the SAME DAY -- so that sentence described a
+line that had not existed since 2026-09-07. It is corrected in place rather than
+deleted, with what it used to say kept. This is the second stale claim this
+week's passes have found in a comment describing a neighbour rather than itself.
+
+**ITS OBJECTION WAS ALSO SPENT.** "Competed with the active day rule" was true
+when the header carried vertical rules and today was marked down its side; the
+header's rules went 2026-09-06 and today is an underline (`inset 0 -2px`) now.
+There was no vertical line left to compete with.
+
+**CARBON HAS NO STICKY COLUMN TO COPY.** `rux--data-table--sticky-header`
+compiles a sticky header ROW; there is no frozen or sticky COLUMN in the data
+table and no guidance page for one. So the instrument is the app's own, and it
+is the plainest available: the same 1px `border-subtle-01` the row rules already
+draw, on `.sch-corner` and `.sch-row-head` both, so the frame closes in the
+token it is already made of.
+
+**THIS IS NOT THE DAY RULES, and the board now carries exactly two vertical
+lines on purpose.** Six made it a lattice and went 2026-09-07. What stands is
+one where identity meets content -- the only edge content actually slides under
+-- and one at the weekend boundary from the pass below. Different jobs,
+different places, same token.
+
+**VERIFIED AFTER.** Corner and head right edges both at 80px, so the line runs
+the frame's whole height with no step where the bands meet. Every day column
+still 136px -- the 1px the column gained did not redistribute -- and the weekend
+hairline still paints at 680 against Saturday's header cell at 680. No
+horizontal page scroll. `node tools/check.mjs` passes, classes 359, tokens 89.
+
+**AND THE ROSTER TOOK THE SAME PAIR, asked for in the same breath.** rux: "lets
+add a vertical border also to right of driver name column in mini grid in
+assigments". It is the same fault for the same reason -- `.sch-avail__name` is
+sticky, paints `--rux-layer`, and the rule above it in sch.css already said
+"rows scroll under it sideways" -- so it takes the same 1px `border-subtle-01`,
+and `.sch-avail__day--head` carries the other half because it is that grid's
+corner, sticky in both axes exactly as `.sch-corner` is. Measured after: name
+and heading edges both at 200px, so the line runs the grid's whole height with
+no step; the board's own pair both at 419. Same token in both panes, read live
+as #6f6f6f in g90.
+
+**AND THEN BOTH HEADER HALVES CAME BACK OUT, WHICH IS THE VERSION THAT
+SHIPPED.** rux, on the render: "i dont want these vertical border to be applied
+on the header row. similar rule to weekend border. doesnt cross into header."
+The 2026-09-07 note called the corner and the body rule "a pair" and warned that
+leaving the corner's out would make the line "start abruptly below the header
+band instead of running the frame's whole height". That was the reasoning both
+halves were restored on, and it was wrong: a header band is its own surface,
+closed on four sides by its own colour, and a rule crossing into it divides
+something already divided. Starting below the band is not abrupt, it is the
+band ending.
+
+**WHICH COLLAPSES THREE SEPARATE DECISIONS INTO ONE RULE: no vertical line
+enters a header band, anywhere on this page.** The weekend is a hairline in the
+body and dimmed TEXT in the band. The bus column is a rule in the body and
+nothing in the band. The roster's name column is the same. Three marks, one
+principle, and it was arrived at by rux looking at the third one rather than by
+anything here.
+
+**AND IT CAUGHT A FOURTH CASE THIS SESSION HAD ALREADY SHIPPED WRONG.**
+Verifying the removal meant checking every header cell in both grids rather than
+the two just changed -- and `.sch-avail__day--boundary` turned up, the WEEKEND
+boundary, drawing a vertical line in the roster's header band since the pass
+below. The board's header had only ever dimmed its weekend text, so the two
+bands had been saying the weekend differently and nobody had looked. The class
+is gone from sch.css and from `drawAvailability`. Asserted after: all 16 header
+cells across both grids, zero vertical borders and zero background images among
+them, while both bands still dim Sat/Sun and Sa/Su.
+
+**THE TWO GRIDS HAD TO MOVE TOGETHER.** They share seven day columns and sit one
+above the other, so closing one frame and leaving the other open would have made
+a matched pair look like two different components -- the same argument that put
+the weekend boundary in both.
+
+**NOT DONE.** The rule is permanent rather than appearing only once the board
+scrolls, which is what a shadow on a sticky column would do and what several
+data grids outside Carbon use; that was not built, because the divider does a
+second job -- separating identity from content -- that holds at every width and
+would be lost by a rule that came and went. Not re-measured against
+`check-spacing`; `docs/gate-coverage.md` is still at `52efa52`.
+
+**2026-09-11 (second pass) - the band became a line and the notification left
+the flow, both because rux looked at the first version and said so.** "not sure
+it looks ok for weekend tint to match header color. also the status
+notification shifts the entire table. are tehre other optiosn for its
+placement?" Two faults, and the first one is mine twice over: I chose the token
+and I measured everything about it EXCEPT what it sat next to.
+
+**THE FILL WAS `--rux-layer-accent-01`, WHICH IS THE HEADER BAND'S OWN TOKEN.**
+So two filled weekend columns read as the header bleeding down the board rather
+than as the weekend -- an inverted L of header colour. The entry below records
+measuring that fill against the ROW SURFACE in all eight themes and against the
+header in none of them, which is how a token identical to the thing above it
+passed a nine-row check.
+
+**AND THE SMALLER STEP ONLY HALF-ANSWERS IT.** `layer-hover-01` is between
+layer-01 and the header's accent-01 in most themes -- but measured, hover-01
+EQUALS accent-01 in ant-dark (#1f1f1f) and spotify (#242424), the same two
+themes whose collapse the entry below already turned on. So the obvious fix
+would have left the band header-coloured in exactly those two and nowhere else.
+`--rux-background` clears both tests in all nine and was offered; rux chose the
+third option instead.
+
+**SO THE WEEKEND IS A BOUNDARY NOW, NOT A SURFACE.** One hairline per
+weekday-to-weekend change, `border-subtle-01` at 1px -- the token and width
+`.sch-track` already draws its own bottom rule in, so no theme question arises
+at all. Monday-first that is one line before Saturday; Sunday-first the weekend
+sits at BOTH ENDS of the week, so the changes are at columns 1 and 6 and two
+lines bracket it. Column 0 can never be a boundary: the pane's edge is already
+there. Measured at 1440: the rule paints at 935px and Saturday's header cell
+starts at 935px.
+
+**WHAT THIS IS NOT IS THE DAY RULES COMING BACK.** Six vertical rules went on
+2026-09-07 at rux's ask because they made the board a grid and Carbon's data
+table draws none. One or two mark a boundary. The lattice was the objection,
+not the line.
+
+**AND THE PAIRING FELL OUT.** A fill needed two tokens because it is a SURFACE
+and had to differ from the surface under it by a step of the same scale, which
+ant-dark and spotify could not supply twice. A hairline does not, so
+`.sch-row--unassigned .sch-track` loses its override and there is one rule for
+every row.
+
+**THE NOTIFICATION SHIFTED THE BOARD BECAUSE IT WAS IN THE FLOW ABOVE IT**, and
+the fix is not one region moving but two regions splitting. Of the sixteen
+`say()` call sites, three describe the BOARD -- loading, "Nothing this week", a
+week that would not load -- and those stay in `#sch-status`, where pushing the
+grid is honest because they stand in for it. The other thirteen report what a
+PERSON just did, and those go to `#sch-toast`: fixed, bottom right, over the
+page. Measured after a real move: the board moved **0px**.
+
+**CARBON SHIPS THE TOAST'S APPEARANCE AND NO PLACEMENT AT ALL.**
+`rux--toast-notification` and `rux--actionable-notification--toast` set 18rem,
+`flex-wrap` and a shadow between them, and not one of `position`, `inset` or
+`z-index`. So where a toast goes is the consumer's, every time, and
+`.sch-toast` in sch.css is this app's answer.
+
+**IT COVERED SAVE, WHICH WAS MEASURED RATHER THAN GUESSED AT.** The side panel
+is on the right and its action bar -- Cancel, Reset, Save -- is at its bottom
+edge, the same corner a bottom-right toast wants. Measured at 1440x950 with a
+trip open: the bar at y 869-918 over x 1072-1392, the toast at y 854-934 over x
+1136-1424. Overlapping. It is lifted while the panel is open -- 48px of
+condensed action bar, the 32px the panel sits off the page bottom, and the same
+16px gutter -- which puts it at y 714-854, a 15px gap above the bar, and
+`elementFromPoint` at Save's centre returns Save. Lifted rather than moved to
+the other corner because that corner has bus rows in it always, and this one
+has three buttons in it only while the panel is open.
+
+**`:has()` RATHER THAN A CLASS TO KEEP IN SYNC.** The panel's open state IS
+`[hidden]` and sch-data.js sets nothing else, so `body:has(#sch-panel:not([hidden]))`
+reads it directly with no second source of truth. rux.css compiles 221 `:has()`
+rules of its own, so it is already a baseline for any page loading it.
+
+**AND BOTTOM RIGHT IS NOT CARBON'S PLACEMENT, WHICH WAS CHECKED AFTERWARDS
+RATHER THAN BEFORE.** rux asked what Carbon normally does and whether bottom
+centre was an option. Carbon's own source is vendored in rux-ds, and
+`carbon-website/src/pages/components/notification/usage.mdx` specifies exactly
+one: "Toast notifications slide in and out from the TOP RIGHT of the screen.
+They stack with $spacing-03 in-between. New toast notifications should appear at
+the top of the list, with older notifications being pushed down until they are
+dismissed." Inline goes at the top of the primary content area or beside what it
+refers to; callout goes near its element. **Bottom centre appears nowhere, and
+neither does bottom right** -- grepped across `usage.mdx` and `style.mdx`. So
+this app was already departing and the only question was which departure.
+
+**MEASURED ACROSS ALL THREE, at 1440x950 with a 288px card and a 16px gutter.**
+Top right -- Carbon's own -- covers `.sch-toolbar` and its icon buttons, the
+week chevrons and date picker and drivers toggle and overflow, which are present
+and interactive at every moment. Bottom centre covers `.sch-bar` and
+`.sch-bar__row`: trip bars, data rather than controls. Bottom right covers empty
+`.sch-track`, and the only control it can reach is the panel's action bar, which
+exists only while the panel is open and is already lifted clear of. Carbon's
+placement is the WORST of the three here, for a reason particular to this app
+and not to the guidance. rux kept bottom right on that evidence; sch.css carries
+the reasoning beside the rule, including what would make Carbon's placement
+right again.
+
+**AND CARBON BACKS THE DISMISSAL ALREADY BUILT.** Toasts "persist by default",
+may be coded to dismiss after five seconds, and should always carry a close
+button "because toast notifications cover content on the screen". For ACTIONABLE
+toasts it warns specifically to leave enough time "to interact with the button
+without the toast closing too soon" -- which is the argument against a timer on
+an Undo, arrived at here independently and confirmed by the source afterwards.
+
+**A PLAIN TOAST WAS THE INLINE NOTIFICATION FLOATED, AND IT SPRAWLED.** Caught
+by measuring the corner rather than by looking at the happy path: an inline
+notification has no width of its own, so "Move undone" came to 383px and a real
+foreign-key error to **559px**, stretching the container to 1119 of the
+viewport's 1440. It is `rux--toast-notification` now -- Carbon's own component
+for this, which sets `inline-size: 18rem` itself, the same figure the actionable
+`--toast` carries -- so both shapes take Carbon's number and this file invents
+no width. Its structure is flatter and was taken from the capture rather than
+assumed: the icon is a DIRECT child and `__details` holds the title and
+subtitle, where the inline one nests both inside a `__text-wrapper`. Re-measured
+after: **288px**. Below md it fills the width minus the gutters instead, since
+18rem would otherwise decide a 375px phone's layout; measured 16 to 359 in a
+375 viewport with no horizontal page scroll.
+
+**A TOAST CAN BE DISMISSED AND THE ONE ABOVE THE BOARD CANNOT**, which is the
+one behavioural difference between the rooms. `say`'s region is cleared by the
+next render; nothing clears a toast -- which is exactly why the undo now
+survives a re-read without depending on call ordering, and equally why it would
+otherwise sit there for good. So it carries Carbon's close button, and changing
+the week clears it: an undo naming a bus that has left the screen would still
+WORK, going by assignment id, which is worse than if it did not.
+
+**THE `await show()` ORDERING IS KEPT AND ITS REASON HAS CHANGED**, so the
+comment was rewritten rather than left standing. It used to be the only thing
+stopping `render()`'s `say(null)` destroying the offer. With the toast in its
+own region that is no longer what it buys; what it buys now is that the undo is
+not offered, and a failure not reported, against a grid still showing the
+pre-move week.
+
+**DRIVEN AGAIN, BOTH BRANCHES, NET ZERO.** The same assignment `5ba30a12`
+moved 218 -> 763 and undone, with the toast surviving the re-read and the
+closing message carrying no action; then the failure path with a target
+rewritten to a UUID no bus has, which the foreign key refused, leaving the trip
+on 218 and the error in a 288px toast. The database is where it started.
+
+**NOT DONE.** The lift is measured at one size with one panel variant --
+`--condensed-actions`, whose action bar is 48px; the non-condensed 4rem variant
+would need 16px more and nothing here reads which is in play, because the token
+that would say so is Carbon-internal and does not resolve outside the panel.
+Two toasts cannot stack: the second replaces the first, which is right for
+undo and unexamined for a save landing on top of a cancel. No timer, by
+decision, so a toast waits for the next action, the close button or a week
+change. And `docs/gate-coverage.md` is still at `52efa52` and has now not seen
+a background, a fixed region, or three notification components.
+
+**2026-09-11 - the weekend is a band and a move can be undone, and the first
+of those found a bug in a preference nobody had toggled.** Both items are the
+oldest thing on `node tools/open.mjs`: "No undo on a bus move. No weekend tint,
+so an empty row still cannot be counted", written 2026-09-07 and repeated in
+three entries since.
+
+**THE WEEKEND TEST WAS WRONG, AND ONLY UNDER A SETTING THAT SHIPS.** The header
+loop said `if (i >= 5)`, which is Saturday and Sunday only while the week starts
+on Monday. "Start on Sunday" is a real saved view option -- `view.sunday`,
+`weekStartsSunday` -- and evaluated on a Sunday-first week in the page, indices
+5 and 6 are **Friday and Saturday**, while the actual weekend sits at indices
+**0 and 6**. So with that preference on, the board dimmed Friday, called Sunday
+a weekday, and had done since the preference was built. It is now
+`isWeekend(d)`, one rule beside the other date helpers, asked of `getDay()` and
+never of the column. Measured after: Sunday-first dims Sun 6 and Sat 12, and the
+band paints two stripes at 0-14.29% and 85.71-100%.
+
+**WHICH IS ALSO WHY THE BAND IS NOT `start: 5, span: 2`.** Sunday-first puts the
+weekend at OPPOSITE ENDS of the week, so it is not a run of columns and nothing
+may treat it as one.
+
+**THE BAND IS A BACKGROUND ON THE TRACK, AND IT HAD TO BE, TWICE OVER.** It is
+one `linear-gradient` of seven segments -- every day named, weekdays explicitly
+`transparent` -- because a gradient INTERPOLATES between the end of one stop and
+the start of the next, so naming only the two weekend days blends fill into fill
+across the midweek gap and paints the whole track solid. And it is on
+`.sch-track` rather than `.sch-grid` for the reason sch.css already records for
+the now-line: a percentage of the grid is a percentage of its containing block,
+not of its seven columns. Measured at 1440: band starts at 935px, Saturday's
+header cell starts at 935px. At 375, where the grid is `max-content` at 984
+inside a 375 pane, 680 and 816 against header cells at 680 and 816.
+
+**AND SETTING IT ON THE GRID FAILED IN TOTAL SILENCE, which is the thing worth
+keeping.** Written first as one property on `#sch-grid` left to inherit -- the
+obvious way -- the band never appeared: no console error, `background-image:
+none`, and the property reading back EMPTY from `getComputedStyle` while the
+inline style plainly held it. `var()` inside a custom property is substituted
+where that property is COMPUTED, not where it is used. `--sch-weekend` names
+`var(--sch-weekend-fill)`, which is declared on `.sch-track` and nowhere above
+it, so computing it on the grid had nothing to substitute and the declaration
+went guaranteed-invalid -- and an invalid custom property inherits as invalid.
+Proved both ways on the served page before changing anything: identical stops on
+the grid gave `none`, on the track gave the full gradient. It also means the
+pairing below could never have worked from the grid, since one colour would have
+been frozen for every row.
+
+**TWO TOKENS, BECAUSE TWO SURFACES, AND THIS ONE WAS MEASURED BEFORE IT WAS
+WRITTEN.** `.sch-row--unassigned .sch-track` is already `--rux-layer-hover-01`,
+and **`layer-hover-01` and `layer-accent-01` are the same colour in two of the
+eight themes** -- ant-dark #1f1f1f and spotify #242424. A single band token would
+have been invisible on that row in exactly those two and nowhere else. The
+Unassigned row pays `--rux-layer-active-01` instead. Read live in all eight
+afterwards, band against the surface under it: white #e0e0e0/#f4f4f4, g10
+#e0e0e0/#ffffff, g90 #525252/#393939, g100 #393939/#262626, geist #1a1a1a/#0a0a0a,
+linear #202029/#141419, ant-dark #1f1f1f/#141414, spotify #242424/#181818, and on
+the Unassigned row ant-dark #303030/#1f1f1f and spotify #333333/#242424. Every
+one distinct.
+
+**THE BODY BANDS AND THE HEADERS DIM, which was rux's call between three
+options.** The roster takes the same mark -- `.sch-avail__cell--weekend`, placed
+BEFORE `--busy` and `--off` so those keep their tag tints and only a FREE
+weekend cell bands -- because the two panes share seven columns and banding only
+the board puts the landmark on half the height being counted. Neither header
+band is touched: both are already their own surface and cutting notches into
+them would break a band that reads as one unit.
+
+**THIS IS NOT THE DAY RULES COMING BACK.** They were removed 2026-09-07 at rux's
+ask and sch.css keeps the paste. Two bands are a different instrument answering
+the question that removal left open -- which sch.css itself framed: "if it
+fails, it fails on an empty row and not on a busy one."
+
+**UNDO IS THE WRITE THE MOVE ALREADY MAKES**, as the 2026-09-07 entry said it
+would be: `moveToBus` with the `fromBus` the drag closure had already captured.
+`fromBus === null` needs no special case, being the same write "Take off its
+bus" makes. `say` grew a fourth argument and builds Carbon's
+`actionable-notification` when one is passed, from
+`carbon-react-dom.json`'s `components-notifications-actionable--inline` --
+`__focus-wrapper`, `__content`, and the icon keeping
+`rux--inline-notification__icon`, which is what the capture does. **Carbon's
+`role="alertdialog"` and its two focus sentinels are deliberately not copied**:
+together they TRAP the keyboard, which is right for a notice demanding a
+decision and wrong for a board where the move has already happened.
+`#sch-status` stays `role="status" aria-live="polite"`.
+
+**AND IT HAS TO BE RAISED AFTER THE RE-READ, which is the whole of the wiring.**
+`show()` re-reads the week and `render()` ends with `say(null)`, so an offer
+raised before that line is destroyed by the very re-read that confirms the move.
+`finish()` now awaits `show()` and offers the undo after it. One step and no
+timer: `say` is a single slot, so a second move drops the first's offer and only
+the last move is undoable, and nothing expires on a clock.
+
+**AND AWAITING `show()` BROKE THE FAILURE MESSAGE, WHICH THIS PASS THEN FIXED.**
+The `catch` said its piece where it caught -- and `render()`'s `say(null)` then
+wiped it. That was already true before today, but `show()` was UNAWAITED, so it
+was a race the message sometimes won: the intermittent kind. Awaiting it made
+the loss certain, which is how it was noticed. The failure is carried down as a
+string now and spoken after the re-read, beside the undo it replaces. The board
+is re-read either way, because a move that threw may still have landed and the
+only honest thing on screen is what the server says.
+
+**THE FAILURE PATH WAS DRIVEN TOO, AND IT WROTE NOTHING.** A drop was aimed at
+a track whose `data-bus-id` was rewritten in the page to a UUID no bus has, so
+the foreign key refused the update and no row could change. The trip stayed on
+218, the message read `Could not move that trip / insert or update on table
+"trip_assignments" violates foreign key constraint
+"trip_assignments_bus_id_fkey"`, it SURVIVED the re-read, and no undo was
+offered. Both branches are now exercised and the database is untouched by
+either.
+
+**DRIVEN ON THE PRODUCTION DATABASE, on rux's explicit say-so.** Assignment
+`5ba30a12` ("Paragon Casino", Sunday only) dragged bus 218 -> 763, chosen
+because 763's Sunday was free so the drop was clean rather than a warning. The
+target track lit `sch-track--drop`; after the re-read the bar was on 763 and the
+undo offer had SURVIVED that re-read, naming bus 218. Pressing it put the trip
+back on 218, confirmed by the re-read, and left a plain
+`rux--inline-notification--success` with no action on it -- so the pair cannot be
+ping-ponged. The database ends where it started; net zero change.
+
+**NOT DONE.** Both moves were driven with synthetic pointer events against the
+real code, not with a hand on a mouse, and never on a touch device -- the
+TOUCH_HOLD path is untouched here and still unexercised on hardware. No undo for cancel,
+save or create: those write many rows and their reversal is not one call, and
+nothing here builds a history deeper than one step. The band assumes seven equal
+day columns, which `--sch-days` and the grid template both guarantee today and
+neither enforces. `check-spacing` and the rest of rux-ds's browser gates were NOT
+re-run -- `docs/gate-coverage.md` was last swept 2026-09-08 at `52efa52` and this
+pass adds a background and a notification component it has not seen. And the
+header of `sch-data.js` still opens "READ ONLY ... nothing here writes", which
+stopped being true when the drag landed and is now doubly untrue; it is named on
+`tools/open.mjs` and left for its own pass rather than folded into this one.
+
 **2026-09-11 - the Billing tab answers the question it is for, and three of
 its faults were found by measuring rather than by looking.** rux: "still not
 happy with the design and workflow of the billing tab", then "im open to
