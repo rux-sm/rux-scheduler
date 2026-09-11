@@ -463,7 +463,60 @@
              read as one table, which it is not. -->
           <div class="sch-frame">
           <div class="sch-toolbar">
-            <!-- ORDER: MOVE, THEN READ, THEN ACT. The two arrows are neighbours
+            <!-- ORDER, REWRITTEN 2026-09-11 ON RUX'S SKETCH:
+                 `Datepicker |        < > [today] [Driver] [+]`.
+                 The week reads first and every control sits right. What this
+                 replaces argued the opposite -- "The label sits straight after
+                 the controls that change it, and NEVER before them: 'August 31
+                 - September 6, 2026' is wider than 'September 7 - 13, 2026', so
+                 anything after it in the flow would slide sideways as the week
+                 changes, moving the very buttons being clicked."
+
+                 THAT OBJECTION IS REAL AND THE SPACER ANSWERS IT. The buttons
+                 are not "after the label in the flow" in the sense that
+                 mattered: `.sch-toolbar__spacer` is `flex: 1` between them, so
+                 a wider week eats the spacer and the controls stay pinned to
+                 the right edge. Measured across a narrow week and a wide one,
+                 they do not move. Without the spacer the old note would still
+                 be right.
+
+                 DOM ORDER IS NOW READING ORDER, which it was not: the label
+                 was painted first by `order: -1` while three buttons preceded
+                 it in the markup, so tab order reached the paging controls
+                 before the thing they page. -->
+            <!-- THE WEEK IS ITS OWN ROW AND ITS OWN CONTROL, 2026-09-11.
+                 `docs/screen-inventory.md` says so twice -- section 1 lists the
+                 toolbar as "previous, today, next, the week range as a
+                 date-picker trigger", and section 7: "Jump to a date -> the week
+                 label becomes a date-picker trigger. A permanent mini calendar
+                 spends standing space on an occasional action." This is that
+                 control. It was already a row of its own below `md`; it is one at
+                 every width now, so the toolbar below it has a single job -- act
+                 on the board -- and the row above says which week.
+
+                 THE PICKER ITSELF IS BUILT BY sch-data.js and appended here, the
+                 same way the trip editor's date fields are. `data-rux-open` is
+                 set there too, so this button carries no reference to an id that
+                 does not exist until script runs. -->
+            <div class="sch-toolbar__weekrow" id="sch-weekrow">
+              <h2 class="sch-toolbar__range rux--type-heading-compact-02">
+                <!-- A HEADING THAT IS ALSO A TRIGGER, which Carbon has no
+                     component for, so it is this app's own and carries only
+                     --rux-* tokens. The accessible name is the week itself:
+                     js/date-picker.js's header makes that the consumer's
+                     contract when the input is hidden -- "the trigger must
+                     carry the value the input holds". -->
+                <button type="button" class="sch-weekbtn" id="sch-range" aria-haspopup="dialog" aria-expanded="false"><span id="sch-range-text">&nbsp;</span><svg class="sch-weekbtn__caret" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-caret--down"/></svg></button>
+              </h2>
+            </div>
+            <!-- New trip sits after the spacer, below. It was absent rather than
+                 disabled until 2026-09-06, because a disabled primary button was
+                 the most prominent thing on the page and did nothing. -->
+            <div class="sch-toolbar__spacer"></div>
+            <!-- MOVE, THEN ACT. The two arrows are neighbours because paging
+                 back and forth is the most repeated gesture here and Today
+                 between them put a 70px hop between the pair. -->
+            <!-- (superseded note kept above) ORDER: MOVE, THEN READ, THEN ACT. The two arrows are neighbours
                  because paging back and forth is the most repeated gesture here and
                  Today between them put a 70px hop between the pair. The label sits
                  straight after the controls that change it, and NEVER before them:
@@ -472,30 +525,37 @@
                  week changes, moving the very buttons being clicked. New trip is
                  pushed right, which is Carbon's own place for a primary action and
                  keeps creating a trip clear of the paging controls. -->
-            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-prev" aria-label="Previous week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
-            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-next" aria-label="Next week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
-            <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-md" id="sch-today">Today</button>
-            <h2 class="sch-toolbar__range rux--type-heading-compact-02" id="sch-range">&nbsp;</h2>
-            <!-- New trip sits after the spacer, below. It was absent rather than
-                 disabled until 2026-09-06, because a disabled primary button was
-                 the most prominent thing on the page and did nothing. -->
-            <div class="sch-toolbar__spacer"></div>
-          <button type="button" class="rux--btn rux--btn--ghost rux--layout--size-md" id="sch-avail-toggle" aria-pressed="false">Drivers</button>
+            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-lg" id="sch-prev" aria-label="Previous week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
+            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-lg" id="sch-next" aria-label="Next week"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-chevron--right"/></svg></button>
+            <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-lg sch-toolbar__lg-only" id="sch-today" aria-label="Today"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-calendar"/></svg></button>
+            
+            
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-lg sch-toolbar__lg-only" id="sch-avail-toggle" aria-pressed="false" aria-label="Drivers"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-user--multiple"/></svg></button>
             <!-- VIEW OPTIONS. screen-inventory.md section 7 left four of these
                homeless when the specimen's menu went: they change how the board
                DRAWS rather than what it holds, which is a menu's job and not a
                toolbar's. Only the two that exist are here -- a control for a
                mode this grid cannot draw would be a lie. -->
-          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-view-trigger" aria-label="View options" aria-haspopup="menu" aria-expanded="false"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg></button>
-            <!-- BACK, AND NOT DISABLED THIS TIME. The comment above promised it
-                 for the day the editor could make a trip, which is today: dates
-                 were the only thing standing in the way, and a trip with a start
-                 date and no bus lands in the Unassigned row. Primary and
-                 rightmost, which is Carbon's place for the one action that
-                 creates something. -->
-            <button type="button" class="rux--btn rux--btn--primary rux--layout--size-md" id="sch-new-trip">New trip
-              <svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg>
-            </button>
+          <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-lg" id="sch-view-trigger" aria-label="More" aria-haspopup="menu" aria-expanded="false"><svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-overflow-menu--vertical"/></svg></button>
+            <!-- `New trip` USED TO SIT HERE AND IS IN THE MENU ABOVE, at every
+                 width since 2026-09-11, on rux's call. The note it replaces read:
+                 "Primary and rightmost, which is Carbon's place for the one
+                 action that creates something." That is Carbon's place for a
+                 primary action and this board does not have one -- the trip is
+                 created where it belongs, by right-clicking the cell that says
+                 which bus and which day, and `New trip here` prefills both. A
+                 blank form reached from the toolbar is the fallback, not the
+                 path, so it reads as a menu item. rux, who dispatches this
+                 board: "almost never do we enter a trip with no bus or date
+                 available" -- so the blank path is a rare occasion, not a
+                 standing case, and does not earn a permanent control.
+
+                 WHAT THAT TRADES, stated because the toolbar now has no primary
+                 and no blue in it at all: creating a trip is one press further
+                 away and less discoverable. rux's argument is that the board is
+                 read far more than it is added to, and the prefilled path is
+                 better anyway. docs/log.md carries the two facts that keep the
+                 menu item from being dropped entirely. -->
           </div>
             <div class="sch" id="sch" role="region" aria-label="Week schedule" hidden>
               <div class="sch-grid" id="sch-grid"></div>
@@ -515,7 +575,7 @@
           <div class="sch-aside" id="sch-aside" hidden>
             <div class="sch-aside__head">
               <span class="sch-aside__title">Driver availability</span>
-              <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-md" id="sch-avail-close" aria-label="Hide driver availability">
+              <button type="button" class="rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-lg" id="sch-avail-close" aria-label="Hide driver availability">
                 <svg class="rux--btn__icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg>
               </button>
             </div>
@@ -588,7 +648,18 @@
              that measured and may shorten the label to fit; the alternative
              was keeping the hand-rolled flex to avoid it, which is paying an
              override to not use the component. -->
-        <div class="rux--tabs rux--tabs--contained rux--tabs--full-width rux--layout--size-md">
+        <!-- `size-sm`, 32px, 2026-09-11 on rux's call, SO THE PANEL'S SECOND BAND
+             MATCHES THE TWO GRIDS'. The three region heads have been one 48px band
+             since earlier today; this is the band under it, and the schedule's day
+             header and the roster's column header are both 32. At `md` this strip
+             was 40 and the panel's content started 8px below the grids'.
+
+             32 IS INSIDE WHAT CARBON'S TABS ACCEPT, not a floor being broken.
+             `.rux--tabs` clamps its height between `sm` and `lg` (rux.css:25252),
+             so `sm` is the bottom of its own range rather than a size forced on
+             it, and Carbon compiles `.rux--tabs...rux--layout--size-sm` itself for
+             the vertical variant. -->
+        <div class="rux--tabs rux--tabs--contained rux--tabs--full-width rux--layout--size-sm">
           <button type="button" class="rux--tab--overflow-nav-button rux--tab--overflow-nav-button--previous rux--tab--overflow-nav-button--hidden" aria-hidden="true" tabindex="-1"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-chevron--left"/></svg></button>
           <div class="rux--tab--list" role="tablist" aria-label="Trip">
             <button id="sch-tab-details" class="rux--tabs__nav-item rux--tabs__nav-link rux--tabs__nav-item--selected" role="tab" type="button" aria-selected="true" aria-controls="sch-panel-details" tabindex="0">
@@ -707,26 +778,95 @@
        FLAT, NOT GROUPED. `rux--menu-item-group` is compiled and nests a second
        `ul`, which is more structure than two blocks of items need and more than
        the menu module is known here to walk. A divider says the same thing. -->
-  <ul class="rux--menu rux--menu--sm rux--menu--open rux--menu--shown rux--menu--with-selectable-items" id="sch-view-menu" role="menu" tabindex="-1" hidden>
+  <ul class="rux--menu rux--menu--sm rux--menu--open rux--menu--shown rux--menu--with-icons rux--menu--with-selectable-items" id="sch-view-menu" role="menu" tabindex="-1" hidden>
+    <!-- NEW TRIP LIVES HERE BELOW md, 2026-09-11 on rux's call: "mobile is for
+         quick references anyway". The board is read on a phone far more than it
+         is added to, so the one WRITING action is demoted and the reading
+         controls -- page, today, drivers, view -- stay on the row.
+
+         IT IS NOT REDUNDANT ON THE DESKTOP, WHICH IS WHY IT ONLY MOVES HERE.
+         Right-clicking a cell prefills the bus and the day (`cellMenuAt` in
+         sch-data.js) and is the better path when you know both -- but the
+         Unassigned row is HIDDEN when empty (sch-data.js:786 reveals it, :812
+         hides it again), so on a quiet week there is no cell to right-click for
+         a trip that has a date and no bus yet. That is the intake case, and
+         this button is its only door.
+
+         AND THE TOUCH PATH IS UNVERIFIED, which is the other half. sch-data.js:733
+         claims only that "Android fires `contextmenu` at about the moment a hold
+         completes"; iOS Safari does not, and no long-press handler exists here
+         yet. Until one does, this menu item is the ONLY way to create a trip on
+         an iPhone -- so it is demoted, never removed. Long-press is on the list.
+
+         AN ACTION IN A MENU OF CHECKBOXES is why the divider follows it and why
+         the trigger is renamed below md: a button labelled "View options" that
+         also creates a trip is mislabelled, so sch.js calls it "More" there. -->
+    <li class="rux--menu-item" role="menuitem" tabindex="0" id="sch-menu-new-trip">
+      <!-- AN EMPTY SELECTION SLOT, and it is not decoration. This menu is
+           `--with-selectable-items`, where Carbon reserves the first column
+           for the checkmark on EVERY row; a row without the div lays out
+           wrong -- measured, this label came out 16px wide and ellipsised to
+           "N.." while the checkbox rows beside it were 140. An action row
+           keeps the column and leaves it empty. -->
+      <div class="rux--menu-item__selection-icon"></div>
+      
+      <div class="rux--menu-item__icon"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-add"/></svg></div>
+      <div class="rux--menu-item__label">New trip</div>
+    </li>
+    <!-- TODAY AND DRIVERS JOIN NEW TRIP BELOW md, 2026-09-11 on rux's call, so
+         the whole toolbar is one row on a phone: the week, a spacer, and
+         `< > (more)`. Both are `sch-menu-item--sm-only`; their toolbar buttons
+         are `sch-toolbar__lg-only`, so exactly one of each pair is ever in the
+         document's accessibility tree.
+
+         DRIVERS IS A CHECKBOX AND TODAY IS NOT, because one is a toggle and the
+         other is an action. `data-act` rather than `data-row`/`data-view` is
+         what keeps Drivers OUT of `applyView`'s sync loop: that loop reads
+         `view[key]`, and an unknown key is `undefined`, which would silently
+         uncheck this row every time any other option changed. -->
+    <li class="rux--menu-item sch-menu-item--sm-only" role="menuitem" tabindex="0" id="sch-menu-today">
+      <!-- AN EMPTY SELECTION SLOT, and it is not decoration. This menu is
+           `--with-selectable-items`, where Carbon reserves the first column
+           for the checkmark on EVERY row; a row without the div lays out
+           wrong -- measured, this label came out 16px wide and ellipsised to
+           "N.." while the checkbox rows beside it were 140. An action row
+           keeps the column and leaves it empty. -->
+      <div class="rux--menu-item__selection-icon"></div>
+      
+      <div class="rux--menu-item__icon"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-calendar"/></svg></div>
+      <div class="rux--menu-item__label">Today</div>
+    </li>
+    <li class="rux--menu-item sch-menu-item--sm-only" role="menuitemcheckbox" aria-checked="false" tabindex="0" data-act="drivers" id="sch-menu-drivers">
+      <div class="rux--menu-item__selection-icon"></div>
+      
+      <div class="rux--menu-item__icon"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-user--multiple"/></svg></div>
+      <div class="rux--menu-item__label">Driver availability</div>
+    </li>
+    <li class="rux--menu-item-divider" role="separator"></li>
     <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="true" tabindex="0" data-row="client">
       <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__icon"></div>
       <div class="rux--menu-item__label">Customer</div>
     </li>
     <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="true" tabindex="0" data-row="time">
       <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__icon"></div>
       <div class="rux--menu-item__label">Times</div>
     </li>
     <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="true" tabindex="0" data-row="reqs">
       <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__icon"></div>
       <div class="rux--menu-item__label">Requirements</div>
     </li>
     <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="true" tabindex="0" data-row="drivers">
       <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__icon"></div>
       <div class="rux--menu-item__label">Drivers on the bar</div>
     </li>
     <li class="rux--menu-item-divider" role="separator"></li>
     <li class="rux--menu-item" role="menuitemcheckbox" aria-checked="false" tabindex="0" data-view="sunday">
       <div class="rux--menu-item__selection-icon"></div>
+      <div class="rux--menu-item__icon"></div>
       <div class="rux--menu-item__label">Start week on Sunday</div>
     </li>
   </ul>

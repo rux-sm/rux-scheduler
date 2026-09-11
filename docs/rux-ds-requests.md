@@ -1,3 +1,7 @@
+---
+exchange: {kind: requests, from: rux-scheduler, to: rux-ds}
+---
+
 # Requests to rux-ds
 
 What this app has asked the design system for, and why. `AGENTS.md`: a missing
@@ -7,6 +11,78 @@ the next time it comes up, and so what was declined stays declined for a reason.
 
 Open requests are listed first. A request that lands is moved to **Settled**
 with the tag that carried it.
+
+---
+
+## Open — `date-picker.js` says a `hidden` input needs no CSS, and it does, 2026-09-11
+
+**Asked for:** either a rule that lets `hidden` work on
+`.rux--date-picker__input`, or a correction to the module header that says a
+consumer must hide it themselves.
+
+**Why:** `js/date-picker.js`'s header states, under "THE INPUT MAY BE `hidden`,
+AND THAT NEEDS NO CSS — measured, not reasoned": *"Writing `hidden` on
+`.rux--date-picker__input` computes `display: none` and a 0x0 box on the built
+page."* That paragraph names this app as the consumer that asked for it.
+
+**MEASURED HERE, AND IT IS THE OPPOSITE.** On the scheduler's week picker the
+input carries the `hidden` attribute, computes **`display: block`** and boxes
+at **288×40**. Enumerating every rule in every sheet that matches the element
+and sets `display` returns exactly one: `.rux--date-picker__input
+{ display: block }` in `css/rux.css` — a single class at **normal** priority.
+An author declaration beats a UA declaration regardless of specificity, so the
+UA's `[hidden]` never gets a say.
+
+**The header's own correction note is also wrong.** It says the UA sheet
+declares `[hidden] { display: none !important }` and that this is why the
+CALENDAR container needs detaching. If that were so, an important UA
+declaration would beat this normal author one and the input WOULD be hidden.
+The detach design is still right for the other reason the note gives — React
+mounts the container only while open — but the `!important` claim cannot
+explain both behaviours at once.
+
+**Worked around locally** in `rux-overrides.css`:
+`#sch-week-picker .rux--date-picker-container { display: none }`, scoped by id
+so the trip editor's visible date fields are untouched. A consumer that follows
+the header literally gets 40px of empty row and a visible ISO date beside a
+formatted one — which is the exact thing the header says the hidden input
+exists to prevent.
+
+---
+
+## Open — the side panel's close button has no `lg` size, 2026-09-11
+
+**Asked for:** a compiled `.rux--side-panel .rux--btn--lg.rux--side-panel__close-button`
+at `3rem`, alongside the `--md` that already exists.
+
+**Why:** Carbon compiles exactly two sizes for that control —
+`.rux--side-panel .rux--btn.rux--side-panel__close-button` at 2rem
+(`css/rux.css:24069`) and `.rux--side-panel .rux--btn--md.rux--side-panel__close-button`
+at 2.5rem (`css/rux.css:24089`). There is no `lg`. Every other button in this
+app is now `rux--layout--size-lg`, 48px, because that is Carbon's own default
+for `.rux--btn` and what `.rux--table-toolbar` is at every density — so the
+panel's close is the **one control on the page still at 40**, and it is the
+control that dismisses a panel which is full-screen below `42rem`.
+
+**MEASURED IN THIS APP:** with the trip editor open at 375×812 the close is
+40×40 against 48×48 for the toolbar's six buttons and the roster's close. It
+sits inside a 48px header band, so the band is not the constraint; the missing
+variant is.
+
+**WORKED AROUND LOCALLY SINCE, AND THIS PARAGRAPH USED TO SAY THE OPPOSITE.**
+It read: "Not worked around locally. A rule in this app's `rux-overrides.css`
+could pin 3rem at Carbon's own specificity, and that is deliberately not done
+… `AGENTS.md` — a missing rule is a request, never a local rule." rux asked
+for the button to be the right size the same day, so the rule exists:
+`.rux--side-panel .rux--btn--md.rux--side-panel__close-button` at
+`--rux-layout-size-height-lg`, at Carbon's own (0,3,0) specificity.
+
+**The request is not withdrawn by that.** The cost the old paragraph named is
+real and is now being paid — this is the only control on the page whose size
+comes from a stylesheet instead of from its class — and `rux--btn--lg` cannot
+be used instead because it is not compiled anywhere in `rux.css` (0
+occurrences, against 6 for `--md`), so putting it in the markup would be
+inventing a class. A compiled `lg` variant upstream removes the local rule.
 
 ---
 

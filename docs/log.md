@@ -4,6 +4,803 @@ Every dated pass and answered decision, newest first. `AGENTS.md` is the
 policy; `docs/backend-inventory.md` and `docs/screen-inventory.md` are the
 two inventories the rebuild starts from.
 
+**2026-09-11 - the overflow menu carries icons, and Carbon had the shape
+already.** rux, from the phone: "what about the overflow items having the icons
+for driver + and today?" They do, and it took no invention at all.
+
+**`--with-icons` AND `--with-selectable-items` ARE MEANT TO COMBINE.** rux.css
+compiles the pair explicitly:
+`.rux--menu--with-icons.rux--menu--with-selectable-items > .rux--menu-item`
+takes `grid-template-columns: 1rem 1rem 1fr max-content` (rux.css:10427),
+against `1rem 1fr max-content` for either class alone. So a menu holding both
+checkable rows and icon rows is a case Carbon sized for.
+
+**AND THE SLOT ORDER CAME FROM THE CAPTURE RATHER THAN A GUESS, which mattered
+because neither column is assigned by `grid-column` -- the children fill in DOM
+order, so the wrong order puts the checkmark in the icon column.**
+`components-menu--default` in `docs/carbon-react-dom.json` is itself
+`--with-icons --with-selectable-items`, and every one of its items carries all
+four slots in the order `__selection-icon`, `__icon`, `__label`, `__shortcut`.
+That is what this menu now matches.
+
+**EVERY ROW KEEPS BOTH COLUMNS, filled or not** -- the same rule that fixed the
+16px "N.." label an hour ago, now applied to the second column as well. The
+three action rows carry their toolbar glyph (`add`, `calendar`,
+`user--multiple`), so the menu row and the button it replaces below `md` are
+visibly the same control; the five toggles leave the icon column empty and keep
+the checkmark in the selection column.
+
+**MEASURED.** At 375 with all ten rows: selection slot at x=163, icon slot at
+187, label at 211 and 140 wide on EVERY row, nothing clipped; the menu is 228
+wide, 147 to 375, inside the display, and the document stays 375. At 1440 the
+menu holds New trip -- with its `+` -- and the five view options, labels all at
+1228, box 1164 to 1392 under its trigger. `node tools/check.mjs` exits 0.
+
+**2026-09-11 - the phone's toolbar is one row: the week, a spacer, `< >` and
+More.** rux's layout, verbatim: `[date picker]      < > [overflow]`, with
+`Today` and `Drivers` hidden in the overflow below `md` only. The week row that
+had been stacked above the controls since earlier today is gone, and **the
+board gets the 48px back: the pane is 716 at 375x812 against 668.**
+
+**IT FITS WITH ROOM.** `< >` and More are 144px; the week wants 181, or 213 on
+a two-month span like "Aug 31 - Sep 6, 2026" -- 325 and 357 of a 375 display.
+Below about 357 the week is what gives way, which is the base rule's own
+argument and why it carries `min-inline-size: 0`. Measured: week 181 at x=0,
+spacer 50, the three controls at 231 / 279 / 327 ending exactly on 375, nothing
+truncated.
+
+**AND IT UNCOVERED A MENU BUG THAT WAS ALWAYS THERE.** `popMenuAt` pinned a
+menu's left edge to the click and clamped nothing, so any menu opened near the
+right edge ran off the page. It showed here because the overflow trigger moved
+to x=327 and the menu opened at 327 and ran to 510 with every label cut -- but
+**a right-click in Sunday's column would always have done the same.** It clamps
+to the page's right edge now, shifted rather than flipped, which keeps the menu
+under the thing that opened it. Measured after: 171 to 375, inside. The block
+axis is deliberately not clamped -- the page grows and scrolls there, which
+loses nothing.
+
+**AND A SECOND ONE THAT MY OWN CSS HAD BEEN HIDING.** The two new rows were
+`display: none` by default with `display: flex` inside the max-width block --
+`flex` being a value guessed for a Carbon component whose display this file has
+no business choosing. It looked right, which was the problem: it MASKED the
+real fault on the sibling row that had no such override. In a
+`--with-selectable-items` menu Carbon reserves the first column for the
+checkmark on EVERY row, and a row without a `__selection-icon` div lays out
+wrong -- `New trip`'s label measured **16px** and rendered "N..", against 140
+for the checkbox rows beside it. Both action rows carry an empty selection slot
+now, and the visibility rule hides at `min-width: 42rem` instead of forcing a
+display at the width the row is used. All ten rows measure labX 211, labW 140,
+none clipped.
+
+**DRIVERS IS A CHECKBOX THAT IS NOT A VIEW OPTION**, so it carries `data-act`
+rather than `data-row`/`data-view` and `applyView` skips it -- that loop reads
+`view[key]`, and an unknown key is `undefined`, which would have silently
+unchecked the row every time any other option changed. Its state is kept by
+`placeAvailability`, beside the toolbar button's `aria-pressed`, because only
+that function knows what is ON SCREEN: the editor can yield the roster without
+anyone pressing anything.
+
+**MEASURED.** At 375: toolbar 48 and one row, pane 716, menu reads New trip /
+Today / Driver availability / divider / the four row toggles / divider / Start
+week on Sunday. `Today` from the menu returns the week and closes the menu;
+`Driver availability` opens the roster and the row shows its checkmark with
+`aria-checked` true. Document 375. At 1440: the toolbar is the week at 48 plus
+five controls at 1152 / 1200 / 1248 / 1296 / 1344 -- `Today` and `Drivers` are
+buttons again -- the menu holds only New trip and the view options, and its box
+is 1188 to 1392, under its trigger. Toolbar 48, pane 790.
+`node tools/check.mjs` exits 0.
+
+**2026-09-11 - `New trip` leaves the toolbar entirely, at every width.** rux
+extended the call an hour after the mobile one, and then gave the reason that
+matters: *"almost never do we enter a trip with no bus or date available. it's
+that rare occasion happens well add new trip from overflow."*
+
+**WHICH CORRECTS THE WEIGHT I PUT ON MY OWN ARGUMENT.** The entry below keeps
+the button out of the bin by two facts, and presents the first as decisive: the
+Unassigned row is hidden when empty, so on a quiet week there is no cell to
+right-click for a trip with a date and no bus -- "that is the intake case, and
+this button is its only door." The fact is right and the framing was not. rux
+dispatches this board: a trip with neither bus nor date is RARE, not a standing
+case, so it does not earn a permanent control in the toolbar. It earns a menu
+item, which is what it now has at every width. The second fact -- no long-press
+on iOS, so the menu item is currently the only create path on an iPhone -- is
+unaffected and is still why the item exists rather than nothing.
+
+**SO THE BOARD HAS NO PRIMARY BUTTON AND NO BLUE IN ITS TOOLBAR.** Five ghost
+icons, right-aligned: page back, page forward, today, drivers, more. The trip
+is created where the intent already is -- right-click the cell, and
+`New trip here` prefills the bus and the day from it. The blank form is the
+fallback and now reads like one. What it trades is discoverability, and that is
+rux's call on rux's board.
+
+**IT ALSO EMPTIED sch.js's LAST WIDTH-DEPENDENT BEHAVIOUR, the fourth time in a
+day.** `fitToolbar` began as two class swaps by width; the 48px module took the
+size half, icon-only `Today`/`Drivers` took most of the rest, hiding `New trip`
+below md took `.sch-toolbar__label`, and moving it into the menu took the last
+job -- renaming the trigger to "More" -- because the markup can just say "More"
+now. The block is a comment where a handler was: nothing in that file responds
+to width any more, and being able to find that stated is worth the lines.
+
+**MEASURED.** At 1440: the toolbar holds the week at x=48 and five 48px
+controls at 1152 / 1200 / 1248 / 1296 / 1344, `#sch-new-trip` does not exist,
+the trigger announces "More", the menu reads New trip / divider / Customer /
+Times / Requirements / Drivers on the bar / divider / Start week on Sunday, and
+pressing New trip opens the editor titled "New trip" with the shown week's
+Monday in the start date. Toolbar 48, pane 790, document 1440.
+`node tools/check.mjs` exits 0.
+
+**2026-09-11 - `New trip` leaves the mobile toolbar for the overflow menu.**
+rux: "mobile is for quick references anyway ... its not that primary and
+probably wont be used to open the actual editor that often". Below `md` the row
+keeps every READING control -- page back, page forward, today, drivers, view --
+and the one WRITING action moves into the menu. Five 48px squares, 240 of a 375
+display. Desktop is untouched: the button is still there, still labelled, still
+the blue primary at 135x48.
+
+**THE PROMPT FOR IT WAS A BETTER QUESTION THAN THE ANSWER I FIRST GAVE:** is
+the button redundant, when right-clicking a cell already opens a trip there?
+Largely yes, and the code says why -- the cell menu sets
+`cellMenuAt = { startDate, busId }` from the cell and calls
+`openCreate(cellMenuAt)`, so the bus and the day are answered before the panel
+opens. The toolbar's is `openCreate()` with no argument, a blank form.
+
+**TWO THINGS STOP IT BEING REMOVED RATHER THAN DEMOTED, and both are measured
+from this repository rather than argued.** The Unassigned row is HIDDEN when
+empty -- `sch-data.js:786` reveals it for a drag and `:812` hides it again --
+so on a quiet week there is no cell to right-click for a trip that has a date
+and no bus yet, which is the intake case. And the touch path is UNVERIFIED:
+`sch-data.js:733` claims only that "Android fires `contextmenu` at about the
+moment a hold completes", iOS Safari does not, and no long-press handler exists
+here. **So on an iPhone this menu item is currently the only way to create a
+trip at all.** Demoted, never removed. rux has long-press on the list.
+
+**AN ACTION IN A MENU OF CHECKBOXES, handled rather than ignored.** The item
+takes `role="menuitem"` among five `menuitemcheckbox`es with a divider under
+it, which is a shape Carbon's menu supports. And the trigger is renamed: a
+button labelled "View options" that also creates a trip is mislabelled, so
+sch.js sets `aria-label` to "More" below `md`. That rename is now the ONLY
+thing that function does.
+
+**WHICH IS THE THIRD TIME THIS PASS HAS EMPTIED IT.** `fitToolbar` began as two
+class swaps -- icon-only by width, and `size-md`/`size-lg` by width. The module
+went to 48 everywhere, so the size swap went; `Today` and `Drivers` became
+icon-only at every width, so most of the other went; and `New trip` is hidden
+below `md` rather than squared off, so the last of it went with
+`.sch-toolbar__label`, which is deleted. What is left is a `matchMedia` that
+renames one control, which is the one thing CSS cannot say.
+
+**MEASURED.** At 375: toolbar row two holds five controls at 0 / 48 / 96 / 144
+/ 192, the New trip button computes `display: none`, the menu item computes
+`display: flex`, the trigger announces "More", and the menu reads New trip /
+divider / Customer / Times / Requirements / Drivers on the bar / divider /
+Start week on Sunday. The menu box is 192 to 375 -- inside the viewport -- and
+the document stays 375 wide with it open. Pressing the item closes the menu and
+opens the editor titled "New trip" with the shown week's Monday already in the
+start date. At 1440: New trip 135x48 at x=1257 reading "New trip", the menu
+item `display: none`, the trigger "View options", the menu back to its six view
+options with no extra divider, toolbar 48, pane 790.
+`node tools/check.mjs` exits 0.
+
+**NOT DONE, AND ONE OF THESE IS LOAD-BEARING.** No long-press handler, so the
+cell menu -- the prefilled and better create path -- is mouse-only on iOS and
+this demotion rests on the menu item being reachable. Nothing was tested on
+real hardware. And `New trip` on the desktop toolbar was NOT demoted; the same
+argument would apply there, but there is 789px of spare row and no reason to
+hide a labelled primary Carbon's own table toolbar would keep.
+
+**2026-09-11 - the toolbar is one row again, the week first.** rux sketched it:
+`Datepicker |        < > [today] [Driver] [+]`. The week reads at the left, a
+spacer, then every control pinned right. **The 48px the entry below spent on a
+second row is returned: the pane is 790 again at 1440x950.**
+
+**THE ORDER WAS ARGUED AGAINST ONCE AND THE SPACER IS WHY IT IS SAFE NOW.**
+index.html's note said the label "sits straight after the controls that change
+it, and NEVER before them: 'August 31 - September 6, 2026' is wider than
+'September 7 - 13, 2026', so anything after it in the flow would slide sideways
+as the week changes, moving the very buttons being clicked." That is a real
+failure and it does not happen here, because `.sch-toolbar__spacer` is `flex: 1`
+between them: a wider week eats the spacer. **Measured rather than asserted** --
+paging from "Sep 7 - 13, 2026" to "Aug 31 - Sep 6, 2026" grows the week from
+181px to 213, and all six button positions are BYTE-IDENTICAL at 1017 / 1065 /
+1113 / 1161 / 1209 / 1257. Without the spacer the old note would still be right.
+
+**THE MARKUP MOVED, NOT JUST THE PAINT ORDER.** The week was drawn first by
+`order: -1` while three buttons preceded it in the DOM, so tab order reached the
+paging controls before the thing they page. It is first in the markup now and
+`order` is gone; DOM order is reading order.
+
+**BELOW md IT IS STILL TWO ROWS, and that is arithmetic rather than taste.**
+Six 48px controls are 288 of a 375 display, leaving 87px for a week that wants
+181 -- "Sep 7 - 1..." -- so one row there costs the label most of itself. The
+full-width basis is now the ONLY thing the media block says about this row; the
+band, the centring and the 16px inset are base rules that hold at every width.
+
+**MEASURED.** At 1440: week at x=48 and 181 wide, spacer 789, the six controls
+from 1017 to 1392, toolbar 48, pane 790, document width 1440; the calendar still
+opens under the label at x=48, y=128, 288 wide. At 375: week row full width at
+y=48 and untruncated, the six controls on the second row at y=96 spanning 0 to
+288, toolbar 96, calendar at x=0 inside the viewport, document width 375.
+`node tools/check.mjs` exits 0.
+
+**2026-09-11 - the week label is the date picker, on its own row at every
+width.** `docs/screen-inventory.md` has said this twice since 2026-09-06 --
+section 1 lists the toolbar as "previous, today, next, the week range as a
+date-picker trigger", section 7 rejects a permanent mini calendar because it
+"spends standing space on an occasional action" -- and it is built.
+
+**rux-ds BUILT THE HARD HALF FOR THIS APP ALREADY, which is the reason this
+took a rule rather than a module.** `js/date-picker.js`'s header records
+`data-rux-open` arriving on 2026-09-08 "asked for by rux-scheduler, whose week
+label is the control that should jump the calendar and sits in a toolbar far
+from the picker", and the hidden input the same way: "a toolbar reading 'Sep 7
+- 13, 2026' beside a `2026-09-07` field is one week displayed twice". Nothing
+here is invented; this is the consumer half of a contract already written.
+
+**THE ROW WAS PERMANENT FOR ABOUT AN HOUR AND IS NOT ANY MORE -- corrected
+below, same day, and the 48px is back.** This paragraph read: "THE ROW IS
+PERMANENT AND IT COSTS 48px OF BOARD. Measured at 1440x950: the pane goes 790
+to 742, 8.3 bus rows to 7.8." True as built. rux then sketched the toolbar back
+onto one line -- `Datepicker |        < > [today] [Driver] [+]` -- and the
+board has its 790 back. What survives the change is everything about the week
+being a CONTROL rather than a label; only where it sits changed. The
+below-md row stayed, for the reason the next entry gives.
+
+**AND `flex-wrap: nowrap` HAD TO GO, WHICH THE OLD NOTE ON IT PREDICTED.** It
+read "IT DOES NOT STACK ... three rows of chrome above a board whose whole
+argument is vertical room". That fear was of wrapping ACCIDENTALLY -- a long
+label pushing the actions onto a third row. The wrap is on purpose and in one
+place: `.sch-toolbar__weekrow` takes a full-width basis BELOW md and nowhere
+else, so there are exactly two rows there by construction and one above. Left
+at `nowrap` the full-width basis could not wrap at all and every button
+overflowed the toolbar's box, measured at y=100 under a toolbar ending at 88.
+
+**THE CONTRACT THE HEADER STATES ABOUT `hidden` DOES NOT HOLD, and that is the
+find of the pass.** It says writing `hidden` on `.rux--date-picker__input`
+"computes `display: none` and a 0x0 box on the built page -- measured, not
+reasoned". Measured here: the attribute is set, the input computes
+`display: block` and boxes at **288x40**, and enumerating every rule in every
+sheet that matches it and sets `display` returns exactly one --
+`.rux--date-picker__input { display: block }` in `rux.css`, ONE CLASS at NORMAL
+priority. An author declaration beats a UA declaration whatever its
+specificity, so `[hidden]` never gets a say. **The header's own correction note
+cannot be right either**: it claims the UA sheet declares
+`[hidden] { display: none !important }`, and an important UA declaration would
+beat this normal author one and hide the input. Filed; worked around with
+`#sch-week-picker .rux--date-picker-container { display: none }`, scoped by id
+so the trip editor's four visible date fields are untouched.
+
+**`aria-expanded` IS THE CONSUMER'S, and left alone it lied.** The module reads
+`data-rux-open`, makes the opener the overlay anchor and the focus destination,
+and says nothing about the opener's STATE -- correctly, since it did not write
+that element. So the button announced `false` the whole time the calendar was
+open. It is kept in step by a `MutationObserver` on the picker root's child
+list, which is not a signal borrowed for the purpose: Carbon ships no closed
+state for the calendar, so the module DETACHES the container on close, and its
+presence is exactly what open means.
+
+**THE CARET IS A `<use>`, AFTER A FIRST VERSION THAT WAS NOT.** The trigger
+needed a disclosure mark that is not a calendar -- `Today` already carries the
+calendar glyph, and the two mean different things. It was first drawn with
+`mask: var(--sch-caret)`, which invents a `--sch-*` variable holding a URL
+(AGENTS.md allows those "a count or a position only") and puts an icon on the
+page `check.mjs` cannot see, since the gate resolves `<use href>` and knows
+nothing about masks. It is `#i-caret--down` from the inlined sprite now.
+
+**AND SPLITTING THE TEXT OUT OF THE BUTTON WAS NOT OPTIONAL.** `setRange`
+writes `textContent`; on a button that also holds the caret `<use>` that
+deletes the svg on the first render. `rangeEl` is the button -- what carries
+`data-rux-open` and what the overlay anchors to -- and `rangeTextEl` is the
+span inside it.
+
+**MEASURED, on the live project.** At 1440: week row 48, toolbar 96, all six
+buttons on one line at y=128, pane 742, document width 1440. Open -> calendar
+288x348 under the label, September 2026, the 7th selected because `setRange`
+feeds the hidden input, `aria-expanded` true. Pick the 21st -> "Sep 21 - 27,
+2026", 11 bars from the real week, calendar closed, `aria-expanded` false. Pick
+WEDNESDAY the 23rd -> the same week, which is `mondayOf` doing the only thing a
+pick means. Re-pick the 25th, the same week again -> no redraw at all, 11 bars
+before and after and the busy class never set. `Today` -> back to Sep 7 - 13
+with the input in step. At 375: row 48, toolbar 96, trigger 181x48 at x=0,
+calendar 288 wide at x=0 inside the viewport, document width 375.
+`node tools/check.mjs` exits 0.
+
+**NOT DONE.** No keyboard pass on the trigger beyond what the module gives --
+Escape and outside-press close come from `overlay.js` and were not exercised by
+hand here. The Sunday-start preference is honoured by construction, since the
+pick goes through `mondayOf`, but was not toggled and re-tested. And `Today`
+still carries the calendar glyph beside a control that opens a calendar; the
+caret distinguishes them, and whether `Today` should go back to a word is
+rux's call, not settled here.
+
+**2026-09-11 - the panel's close is 48, and Today and Drivers are icons at
+every width.** Three of rux's calls in one pass.
+
+**THE CLOSE BUTTON TAKES A RULE, WHICH THE ENTRY BELOW SAID IT WOULD NOT.**
+That entry filed the missing size upstream and wrote "Not worked around
+locally", with a reason: every other button's size here comes from a compiled
+class, and one set by a stylesheet would be the odd one out. rux asked for the
+right size anyway, so the rule exists and the cost is now being paid rather
+than avoided. `docs/rux-ds-requests.md` has been corrected where it claimed
+otherwise; the request itself stands, because a compiled `lg` upstream is what
+removes this rule.
+
+**`rux--btn--lg` WAS THE OBVIOUS ANSWER AND IS NOT AVAILABLE.** It is not
+compiled ANYWHERE in `rux.css` -- 0 occurrences against 6 for `--md` -- so
+putting it in the markup would be inventing a class, which `check.mjs` catches
+and `AGENTS.md` forbids. The markup keeps `rux--btn--md` and
+`rux--overrides.css` sizes it at Carbon's own (0,3,0) specificity, matching the
+shape of Carbon's own two rules for that button (rux.css:24069 and 24089).
+
+**TODAY AND DRIVERS ARE ICON-ONLY ON THE DESKTOP TOO**, which retires
+`.sch-toolbar__glyph` entirely. That class existed so the two could be words at
+one width and icons at another; with one answer at every width each carries a
+plain `rux--btn__icon` and `rux--btn--icon-only` in the markup and no rule
+decides anything. `New trip` is the only button left with a word to lose, so
+`.sch-toolbar__label` and sch.js's `fitToolbar` now serve exactly one element.
+
+**IT ALSO BOUGHT THE TOOLBAR 92px.** `Today` was 70 wide and `Drivers` 78;
+both are 48 now, and that space goes to the week label's row and to the board.
+
+**ONE THING WORTH WATCHING, NOT A FAULT.** `Today` is the `calendar` glyph
+because it is the closest of the sprite's forty; Carbon's own today-mark is not
+among them. `docs/screen-inventory.md` section 7 plans the WEEK LABEL as a
+date-picker trigger, and when that lands there will be two calendar-ish
+controls in one toolbar, one meaning "jump to today" and one "pick a date".
+Worth deciding then whether this one changes glyph or goes back to a word.
+
+**MEASURED.** At 1440: the six toolbar buttons 48x48 except `New trip` at
+135x48; panel close 48x48 sitting exactly in the 48px header band (80->128) and
+flush with the panel's right edge at 1392, inside it; week label 125; toolbar
+48; document width 1440. At 375: all six toolbar buttons 48x48 icon-only,
+close 48x48, header 48, document width 375. `node tools/check.mjs` exits 0.
+
+**2026-09-11 - the panel's tab strip is 32, and the three regions now agree on
+BOTH bands.** rux: "make the panel tab strip 32 so it matches". It does. The
+schedule's day header and the roster's column header are both 32 and the tab
+strip was 40, so the panel's content started 8px below the grids'. All three
+second bands are 128->160 now, as the three heads above them are 80->128.
+
+**THE SIZE CLASS ALONE DID NOT DO IT, AND CHASING THAT IS WHERE THE TIME
+WENT.** `rux--layout--size-sm` on `.rux--tabs` took the LABEL's line box from
+40 to 32 and set the component's `min-block-size` to 32, and the strip stayed
+40. Probing down through list, nav-item and nav-link found no Carbon rule
+holding 40: padding and borders are 0 and nothing in `rux.css` sets a height on
+them. **It was this app's own rule.** `#sch-panel-body .rux--tabs` has carried
+`block-size: calc(var(--rux-layout-size-height-md) + var(--rux-spacing-05))`
+since 2026-09-10 -- the band plus the sticky gap, written so scrolling content
+passes under the strip instead of touching it. One token, `md` to `sm`.
+
+**AND THE 2026-09-10 ENTRY EXPLAINS WHY ONE TOKEN IS ENOUGH.** Its own note
+says the nav items STRETCH to the content box, which is why padding alone came
+out of the tabs rather than below them. That stretch is what makes this work:
+the box became 32 and the buttons followed with no rule of their own.
+
+**BOTH HALVES ARE STILL NEEDED.** The markup keeps `rux--layout--size-sm` --
+without it the label's line box stays 40 and overflows a 32px strip -- and the
+calc sets the box. 32 is the floor of the range Carbon's tabs clamp themselves
+to (`sm` to `lg`, rux.css:25252), so this is the bottom of the component's own
+range rather than a size forced past it, and Carbon compiles
+`.rux--tabs...rux--layout--size-sm` itself for the vertical variant.
+
+**THE 16px GAP IS UNTOUCHED.** It still sits below the band, so the fix rux
+asked for on 2026-09-10 -- `Round trip` cutting itself in half on the strip's
+edge while scrolling -- still holds. The tabs component is 48 total now (32 +
+16) where it was 56.
+
+**MEASURED.** At 1920 and 1440: head bands 80->128 all three at 48, second
+bands 128->160 all three at 32, tab 80x32, all four labels -- Details, Billing,
+Fleet, Schedule -- untruncated. At 375: header 48->96, strip 96->128, tabs
+block 96->144, first field at 168, tabs 94x32 and none truncated, document
+width 375. `node tools/check.mjs` exits 0.
+
+**2026-09-11 - the control module is 48 at every width, and a note in sch.css
+was the thing that had to be disproved first.** rux asked for a review of the
+three surfaces, then, offered a below-md-only touch-target fix: "should we
+change actual size instead so it work best for both desktop and mobile?" Yes,
+and the evidence is Carbon's.
+
+**TWO FACTS OUT OF `rux.css`, NOT OUT OF PREFERENCE.** `.rux--table-toolbar`
+REDEFINES `--rux-layout-size-height-md` to `3rem` and clamps its height
+between `lg` and `lg` (13160-13179): **a Carbon table toolbar is 48px at every
+size class it accepts, and there is no density at which it is 40.** And a bare
+`.rux--btn` resolves its clamp to `var(--rux-layout-size-height, ...-lg)`, so
+48 is Carbon's DEFAULT button and `md` was a downgrade from it. The shell's own
+header actions in index.html have been `size-lg` since the page was scaffolded.
+
+**WHICH FALSIFIES THE STATED REASON FOR 40.** `.sch-toolbar`'s note of
+2026-09-10 reads: 40px of band holding 40px of control "is what Carbon's own
+table toolbar is at any density". It is not, and the whole of that day's
+decision rested on it. The note is left standing with the correction under it
+rather than rewritten.
+
+**SO IT IS NOT A MOBILE SIZE APPLIED EVERYWHERE.** The three region head bands
+and all seven ordinary buttons are `size-lg` in the markup at every width. It
+also clears iOS's 44 and Android's 48, which the 2026-09-10 note conceded 40
+did not.
+
+**AND THE BREAKPOINT SWAP IN sch.js IS GONE.** `fitToolbar` did two things;
+half of it existed only because the module was 40 on a desktop and wanted 48 on
+a phone. One size needs no `matchMedia`. What remains there is the word/glyph
+swap, which is genuinely about width.
+
+**WHAT DID NOT MOVE, EACH FOR A REASON READ OUT OF THE SAME FILE.** Form
+fields stay 40: `.rux--text-input` and `.rux--select-input` fall back to `md`,
+so 40 IS Carbon's default there and raising them would be the mirror of the
+mistake being corrected. The tab strip stays 40 for the same reason --
+`.rux--tabs` falls back to `md`. Both grids' column-header bands stay 32 and no
+row density is touched: Carbon lets a table's rows go dense and refuses to let
+its toolbar follow, which is exactly the decoupling `.sch-toolbar`'s note
+worried about, answered by Carbon itself.
+
+**THE ONE CONTROL LEFT AT 40 IS THE PANEL'S CLOSE, AND IT IS CAPPED BY CARBON.**
+Only two sizes are compiled for it -- 2rem base and 2.5rem `--md`
+(`rux.css:24069` and `24089`); there is no `lg`. A local rule could pin 3rem
+and deliberately does not: every other button's size here is a compiled class,
+and one button sized by a stylesheet instead would be the odd one out in a
+different way. Filed in `docs/rux-ds-requests.md`.
+
+**WHAT THE REVIEW FOUND BEFORE THAT, INCLUDING TWO THINGS I NEARLY REPORTED AS
+DEFECTS AND WHICH ARE NOT.** The panel's head looked misaligned because I
+measured `.rux--side-panel__title`, a 28px text block, instead of
+`.rux--side-panel__header`, the band: all three heads were 80->120 at 40px and
+are now 80->128 at 48, aligned to the pixel. And the panel title's `heading-03`
+against the other two titles' `heading-compact-02` is the 2026-09-10 call
+already in HEAD -- table chrome versus a form label -- not drift. Both were
+checked against the file before being written up, which is the only reason they
+are in this paragraph rather than in a fix.
+
+**STILL OPEN AND NOT DONE.** The panel's tab strip is 40 and both column-header
+bands are 32, so the panel's content starts 8px below the grids' -- the FIRST
+band was deliberately unified and the second never has been. Left as a
+question, not a fix, because a tab strip is not a column header. And there is
+no scroll lock behind the full-screen overlays below md: `body` overflow stays
+`visible` and the board still scrolls behind the panel. Low severity -- the
+overlay is opaque and its own content captures the drag -- and it is a touch
+behaviour this session cannot test, so it is named rather than guessed at.
+
+**MEASURED AFTER.** At 1920 with all three regions open: head bands 80->128,
+all three 48px; column heads 128->160, both 32px; buttons prev/roster-close
+48x48, Today 70x48, Drivers 78x48, New trip 135x48; panel close 40x40; fields
+40; the board lost 8px once, 848 to 840, because the three heads sit side by
+side rather than stacked. At 375: every toolbar button 48x48 icon-only, label
+band 48, toolbar 96, roster head 48 and its close 48x48, document width 375.
+`node tools/check.mjs` exits 0.
+
+**2026-09-11 - the phone, and the fact that made every fault on it the same
+fault.** rux asked how the scheduler works on mobile. It does not, and the
+reason is one line long: `grep '@media' sch.css rux-overrides.css index.html`
+returned NOTHING, while `rux.css` compiles 654 of them at sm 320 / md 672 /
+lg 1056 / xlg 1312 / max 1584. A board whose three regions are each sized for
+a desktop row, laid out on a 375px screen. Everything below follows from that
+and was measured at 375x812 against the live project, not read off the code.
+
+**THE PAGE OVERFLOWED BY 107px AND TOOK THE SHELL'S OWN CONTROLS WITH IT.**
+`.sch-toolbar` is `flex-wrap: nowrap` over seven controls that cannot give
+way; its irreducible width is 434px with the week label already shrunk to
+zero, so with the page's 64px of padding the PAGE overflows below a 499px
+viewport. The shell header is `position: fixed` at `inline-size: 100%` and
+resolved that against the widened ICB: **Account at x=387 and App switcher at
+x=435 on a 375px display**, both off the screen and unreachable without
+scrolling the whole page sideways. The stylesheet's own rule -- "One row,
+always; what gives way is the label" -- is true to about 500px and false
+below it, and the label giving way to nothing is what made the failure silent.
+
+**THE STICKY BUS COLUMN DETACHED, AND IT IS THE NOW-LINE BUG AGAIN.**
+`.sch-grid` was `min-inline-size: 100%`, so the grid BOX was the pane's 279px
+while its seven columns totalled 984 -- and a sticky grid cell is clamped to
+its own box. Measured: the column held to `scrollLeft` 247 (279 less its own
+32) and was then dragged one pixel per pixel, 458px off the left edge at the
+end of the week. **From Wednesday on, nothing said which bus a row was.**
+docs/log.md's 2026-09-06 entry states this exact cause -- "a grid container is
+only as wide as its own containing block" -- and fixed it for the line drawn
+ON the grid while leaving the grid itself. It hid on a desktop window because
+the whole overflow there is 136px, well inside the clamp; on a phone it is 705.
+
+**AND EITHER COMPANION DELETED THE BOARD.** `.sch-trip` is `flex: 0 0 20rem`
+with `min-inline-size: 20rem` and `.sch-aside` the same 20rem: one of them is
+already wider than the whole 343px row. Measured, opening either put
+`.sch-frame` and `.sch` at **0px wide** with the region pushed past the right
+edge -- tapping a trip did not shrink the schedule, it removed it. The note on
+`.sch-trip` that says "it does not shrink at all now -- the schedule absorbs
+instead" is right about a desktop and is the direct cause here.
+
+**WHAT WAS BUILT, AND CARBON HAD ALREADY WRITTEN MOST OF IT.**
+
+- `.sch-grid` is `inline-size: max-content` over the 100% floor. Where the week
+  fits, max-content is under 100%, the floor wins and the `1fr` tracks divide
+  the pane exactly as before; where it does not, the box is its columns and the
+  sticky cell has room to travel. Measured at 1440 before and after: pane 1344,
+  grid 1344, all seven day columns on the same x, all 22 bars unmoved.
+- **The editor goes back to being Carbon's.** rux-overrides.css's un-fixing
+  block is now scoped to `min-width: 42rem`, so below it Carbon's own
+  `position: fixed`, z-index 9000, `inset-block-start: 3rem` stand on their
+  own. That is not a number chosen here: `.rux--side-panel` turns
+  `max-inline-size: 75vw` on at exactly 42rem, so the component itself stops
+  expecting to be a column there. `--rux-side-panel-modified-size: 100%` is
+  Carbon's own documented hook and makes the sm panel full width.
+- **Two things the scoping alone did not give.** The shadow rule was scoped
+  with it -- below md the panel IS above something, so Carbon's elevation is
+  telling the truth. And the panel needed `inset-inline: 0`: Carbon's base
+  rule carries no inline inset, the anchor lives on the `--right-placement`
+  class, and index.html removes that deliberately. Without it the panel came
+  out fixed, 375 wide, **at x=663, entirely off the screen** -- found by
+  measuring, not visible in the first screenshot because the board beside it
+  looked correct.
+- The roster is this app's own with no Carbon under it, so it gets the same
+  geometry by hand, at z-index 8999 -- one below the panel, so a trip opened
+  over the roster is in front during the frame before `openPanel` closes it.
+- **The toolbar stacks below md, which is a deliberate exception to its own
+  rule.** The label goes first and full width; the six controls sit under it as
+  48px squares, 32 to 343 in a 343px row. The label stops being the thing that
+  pays -- "Sep 7 - 13, 20..." truncated becomes "Sep 7 - 13, 2026" whole -- and
+  the buttons no longer move when the week changes, which is the concern
+  index.html raises for putting the label after its own controls.
+- **48px is Carbon's `size-lg` and the swap is sch.js's**, because a media
+  query cannot add a class and the alternative was writing icon-only's geometry
+  onto `.rux--btn` in a media block, which is reimplementing a compiled variant
+  in order to reach it. sch.css's own note on the 40px toolbar called it "still
+  under iOS's 44 and Android's 48"; below md these are touch targets and
+  nothing else, so they take Carbon's own 48. The roster's close button is in
+  the same set -- once the roster is an overlay, that x is the only way back.
+- The page gutter goes to 1rem below md. **Corrected to 0 an hour later; see
+  the block below.**
+
+**THE GUTTER WAS WRONG AND RUX ASKED THE QUESTION THAT FOUND IT: "on mobile
+should the calendar reach the edges inline?"** It should, and the first version
+of this pass set 1rem. **1rem is Carbon's md value used at sm.** The steps are
+`--rux-grid-margin` 0 below 42rem, 1rem from 42rem, 1.5rem from 99rem -- so
+Carbon's number at THIS width is zero, and the paragraph justifying 1rem cited
+those very steps while landing on the wrong one of them. The reason given, "the
+board needs an edge to read against", was a preference written as a derivation.
+
+**IT IS ALSO WRONG ON ITS OWN TERMS.** The board is a horizontally scrolling
+surface whose next day column is always cut off; a margin around it draws a
+boundary where the week does not end, while flush lets the content slide under
+the display edge, which is what a scroll pane should look like. And it left the
+page disagreeing with itself: the editor and the roster are both full-bleed
+below md by the rules above, so the board was the only region not reaching the
+edge. Nothing on this page wanted the margin -- `.rux--content` holds one
+full-width data surface and a heading that exists in the outline and is never
+drawn, so there is no prose whose measure a gutter would protect.
+
+**AND THERE WERE TWO INSETS, WHICH ONLY MEASURING FOUND.** Zeroing
+`.rux--content`'s padding moved the board 16px, not 32: `.rux--css-grid-column`
+carries `margin-inline` of `calc(var(--rux-grid-gutter) / 2)` = 1rem a side.
+That margin is the gutter BETWEEN columns and this grid has one column spanning
+all of them, with nothing either side to be separated from. Carbon's knob for
+it is `--rux-grid-gutter`; `--narrow` zeroes only the start and `--condensed`
+takes it to 1px, so neither says what is meant. **The divergence is that half,
+not the first**: Carbon holds the gutter at 2rem at every width, whereas the
+`.rux--content` change now BRINGS that flat 2rem into line with the grid margin
+Carbon itself declares at this width. The note in rux-overrides.css said the
+opposite when it set 1rem and now says this.
+
+**THE LABEL NEEDED AN INSET THE BUTTONS DID NOT.** Bled to the edges, the week
+label sat hard against the bezel -- fine for a button, which is a box you aim
+at, wrong for type. It takes 16px, and not for air: the paging chevron below it
+is a 48px square holding a 16px icon, so its glyph starts at exactly 16 and the
+label's first character lands on it. Measured after: label text x=16, chevron
+glyph x=16. The buttons stay flush, which is what Carbon's table toolbar does
+with its controls and the reason `.sch-toolbar` has no inline padding at all.
+
+**MEASURED AFTER THE CORRECTION, 375x812:** `.rux--content`, the grid column,
+`.sch-page`, `.sch-toolbar` and `.sch` all at x=0 and 375 wide; document scroll
+width still 375; the pane 375 instead of 311, so **2.52 day columns of seven
+are visible instead of 2.05**; the bus column still at offset 0 at the new
+maximum scroll of 609. At 1440 nothing moved: gutter still 2rem, content
+padding still 32px, board at x=48 and 1344 wide, the seven day columns on
+83 / 270 / 457 / 644 / 831 / 1018 / 1205 -- the same pixels as the baseline
+snapshotted before any of this.
+
+**AND THE BLOCK PADDING WAS THE SAME MISTAKE, ONE QUESTION LATER: "is that
+gap above the calendar intended?"** It was not. The gutter fix zeroed
+`padding-inline` only, and its note said so on purpose -- "INLINE ONLY: the
+block padding is separation from the shell header above and the end of the page
+below, and neither changes with width". Measured, that left the board reaching
+three display edges and stopping 32px short of the fourth, with another 32px
+under it: header bottom 48, toolbar top 80. A full-bleed object hanging below
+the header rather than meeting it, which is the seam rux saw.
+
+**IT WAS NOT SEPARATION FROM THE HEADER EITHER.** The shell header is its own
+dark surface and the toolbar band below it is `--rux-layer`; they are different
+colours in all eight themes, so the surfaces already draw that edge and the
+32px was drawing it twice. On a phone it is also expensive in a way it is not
+on a desktop -- 64px of an 812px viewport where one bus row is 95px, so the two
+gaps cost two thirds of a row each. `.rux--content` is `padding: 0` below md
+now. sch.js needed nothing: `fitHeight` reads this element's computed
+`paddingBottom` and subtracts it, so the pane took the room back on its own.
+
+**MEASURED AFTER, 375x812:** gap above the toolbar 0 and below the board 0;
+the toolbar starts at 48, directly under the header, and the pane runs 126 to
+812, the full bottom of the viewport. Pane height 686 against 622 before.
+`elementFromPoint` finds trip bars at y=620 and y=700 and `.sch-track` at 780
+and 805, so the board really does reach the bottom edge. At 1440 nothing moved
+again: content padding still 32px, toolbar at 48,80 and 1344 wide, the same
+seven day columns.
+
+**THE ROSTER'S ROWS GO xs TO sm BELOW md, AND md WAS ASKED FOR AND MISSES BY
+0.2px.** rux: "i can increase the driver assignments table rows to something a
+bit better? md?" The aside's own rule joins `--sch-day-track` to the row
+height, so a day cell is a square and raising the row raises the cell -- seven
+of them at 40 take 280 of a 375 screen and leave the name column 107, which is
+75 inside its padding.
+
+**THE LONGEST NAME IS 75.2px.** Measured across all 40 drivers with a Range on
+the text node, because `scrollWidth` reports ZERO overflow on an ellipsised
+grid cell and said every size was fine -- the same class of mistake as the
+2026-09-06 probe that measured names in the browser's fallback serif. So md
+clips "Vicente Solar" today and clips anything longer worse, on the one column
+in that grid with something to say. sm leaves 119 and nothing clips.
+
+**AND THE COST IN DRIVERS IS WHAT EVERY PREVIOUS TURN OF THIS NUMBER WAS
+ABOUT.** In the 716px overlay: 29 rows at xs, 22 at sm, 17 at md. md spends 12
+of 40 on a surface whose whole job while it is open is scanning the roster.
+sm is the step that was asked for without either cost.
+
+**THE DESKTOP NUMBER IS NOT REOPENED.** `.sch--avail` stays xs above the
+breakpoint. This log records that value turning 24, 32, 24, 32 and settling on
+24 with an argument about a companion pane competing with the BOARD for
+height -- none of which is true of a full-width overlay, which is why the two
+can differ without touching that decision. Measured at 1440 after: roster rows
+24, cells 24x24, name column 152, aside 320 at x=48 with the board at 384.
+Measured at 375 after: rows 32, cells 32x32, name column 151 with a 119 content
+box, nothing clipped, 22 of 40 visible, document scroll width still 375.
+
+**THE WEEK LABEL BECOMES A BAND, NOT A STRIP.** rux, looking at the stacked
+toolbar: "the title on the schedule on mobile ... make it match the New Trip
+size better?" It was `padding-block: spacing-02` around a 22px line -- 30px of
+label over a 48px row of controls, so the page's only VISIBLE title was thinner
+than the buttons beneath it and pinched between them and the shell header. It
+takes `size-lg` now, the same 48 the controls take, and the toolbar reads as
+two equal bands. Costs 18px: 78px of toolbar becomes 96, and the pane 686 to
+668.
+
+**THE TYPE DID NOT CHANGE, AND THE ROSTER IS THE REASON.** `.sch-aside__title`
+is heading-compact-02 in a head of exactly this height, and this log records
+that type being picked so the two regions' heads match each other rather than
+their own subordinates. The week label is the schedule's head; same band, same
+type. Raising it would have made the schedule's title outrank the roster's for
+no reason but width, and would have broken the ladder under it -- 16px title,
+16px bus number, 14px day.
+
+**AND THE FIRST WAY I CENTRED IT SILENTLY BROKE THE TRUNCATION.**
+`display: flex` with `align-items: center` centres perfectly and makes the text
+an ANONYMOUS FLEX ITEM, and `text-overflow` applies to the box holding the
+text, not to a flex container -- so a long range is hard-clipped with no
+ellipsis. That is precisely what the base rule exists to prevent: "a truncated
+'September 7 - 13, 20...' still says which week; a hidden button says nothing."
+**The real label is 125px in a 343px band and would never have shown it**; it
+was found by setting a 52-character range by hand. `align-content: center` on
+the block keeps `overflow`, `text-overflow` and `white-space` doing what the
+base rule set them to. Verified both ways: with the long string the ellipsis is
+drawn, and text sits 13.5px from each edge of the 48px band.
+
+**AND A BROKEN COMMENT THAT ATE THE FIX FOR ONE PASS.** The note explaining all
+of the above was appended without its opening `/*`, so it closed the block
+above it and then sat as bare text in the rule -- the parser discarded up to the
+next `;`, which was `align-content: center` itself, while `min-block-size`
+after it survived. The band was 48px and the text was not centred, and the only
+reason it was caught is that the computed `align-content` was read back and
+said `normal`. **A stylesheet this heavily commented can lose a declaration to
+a comment, and no gate here can see it**: `check.mjs` parses classes, tokens,
+ids and hrefs, not cascade. Reading the computed value of what you just set is
+the check.
+
+**MEASURED AFTER, 375x812:** label band 48 and button row 48, toolbar 96, text
+13.5px from each edge, label text still starting at x=16 on the chevron glyph,
+document width 375. At 1440 the label is untouched: `display: block`,
+`align-content: normal`, `min-block-size: auto`, `margin-inline: 16px`, band
+22px in a 40px toolbar, grid at y=120, the same seven day columns.
+
+**AND A BUG THIS PASS INTRODUCED, FOUND BY RUX: "the profile and switcher
+button are hidden when viewing the trip editor and driver assignments panels".**
+The buttons were never hidden -- measured, they are visible, hit-testable and
+`aria-expanded` goes true on press. **The panel they open was.**
+`#rux-account-panel` lays out exactly where it should, x=119 y=48 at 256x764,
+and the full-width trip editor painted straight over it, so pressing Account
+appeared to do nothing.
+
+**IT IS A CONSEQUENCE OF SCOPING THE UN-FIXING AND EXISTS NOWHERE ELSE.** On a
+desktop rux-overrides.css gives the panel `z-index: auto` and it is a flex
+column in the board, so nothing ever stacked. Restoring Carbon's fixed
+positioning below md restored its `z-index: 9000` with it -- a number chosen
+for a panel in an app that does not also own the chrome. The roster, which this
+pass wrote by hand at 8999 to sit just under it, had the same fault for the
+same reason.
+
+**THE SCALE, READ OUT OF `rux.css` RATHER THAN GUESSED.** Distinct z-indexes
+there are 0-10, 999, 6000, 6001, 8000, 8001, 8002, 9000, 9100, 9999, 99999,
+100000. Measured on this page: side-nav scrim 6000; header, its panels and the
+side nav 8000; menus -- Carbon's and this app's three -- 9000; everything in
+the board at most 10. **999 is the only rung that clears the board while
+staying under all of it**, and it is Carbon's own next step down rather than a
+number invented here. Trip panel 999, roster 998, keeping the order between
+them.
+
+**VERIFIED AT 375x812, all four of the things that number has to satisfy.** The
+account panel opens over the trip editor and over the roster, settling at x=119
+and 256 wide with its theme radios hit-testable. The side-nav scrim at 6000
+dims the trip panel and the nav at 8000 sits over both. The bar's context menu
+at 9000 still opens over the panel and its items hit-test. At 1440 nothing
+moved: both regions are `position: static`, `z-index: auto`, the roster at
+x=48 and the editor at 1072, both 320 wide, the board at 384.
+
+**A MEASUREMENT MISTAKE OF MINE ALONG THE WAY, TWICE.** The account panel
+animates `transition-property: width`, and two readings taken under a second
+after the click recorded it 2px wide at x=373 and were nearly written up as
+"the panel does not open". It does; it had not finished. The poll loop written
+to fix that was also wrong -- it exited on `w === last` and two identical 2px
+samples BEFORE the transition started satisfied it at 100ms. A settle loop must
+not treat "has not started" as "has stopped". The reliable readings were a
+fixed 2s wait and the screenshot.
+
+**ONE THING THE SCREENSHOTS GOT WRONG AND THE MEASUREMENTS DID NOT.** After the
+bleed the board APPEARED to end 190px short of the pane, with dead page
+background under it. It does not: `elementFromPoint` finds real trip bars at
+y=650 and y=700 and `.sch-track` at y=770, with `.rux--content` only past the
+pane's measured bottom of 780. It is the paint lag this log already records for
+a hidden browser pane -- "read off the computed styles rather than the
+screenshots, which lag while the browser pane is hidden", 2026-09-06. Worth
+restating because this time the lag looked exactly like a layout bug.
+
+**TWO MISTAKES OF MINE, BOTH CAUGHT BY MEASURING AFTER.** The class swap first
+toggled `rux--btn--icon-only` by width on EVERY toolbar button, which would
+have stripped it from the two chevrons and the overflow trigger at md and up
+and left three text-padded buttons with no text in the desktop toolbar; it is
+keyed on the presence of a label span now. And `.sch-toolbar__glyph {
+display: none }` was written BELOW the media block -- same specificity, later
+in the file, so it beat the `display: block` inside it and Today and Drivers
+rendered as 48px squares with nothing in them: pressable, named to a screen
+reader, blank to look at. A media query adds no specificity. Both were visible
+only because the buttons were measured rather than assumed.
+
+**AND ONE STALE CLAIM CORRECTED IN PLACE.** The note on the stacked label
+first said it would then read "September 7 - 13, 2026". It does not -- the
+form is `formatRange`'s, the locale's, not the width's, and it reads "Sep 7 -
+13, 2026". The comment now says so and says it was wrong.
+
+**MEASURED AFTER, at 375x812 on the live project.** Document scroll width 375
+against a 375 viewport in every state -- board alone, roster open, editor open
+-- so the page no longer overflows and Account and App switcher sit at 279 and
+327, on the screen. The bus column offset is 0 at scrollLeft 0, 247, 433 and
+673 (the maximum); it was 0, 0, -186, -458. Board 311px with neither companion,
+295px with the editor over it, 311px with the roster over it -- never 0. Six
+toolbar buttons at 48x48 from x=32 to x=343, every glyph resolving. Panel x=0,
+w=375, below the 3rem header, with its Cancel/Reset/Save bar pinned at the
+foot. Roster head 48px holding a 48px close that closes it. Opening a trip
+while the roster is up still hides the roster -- the `crowded` yield written
+on 2026-09-06 does it, unchanged, because below md the board is always
+crowded. Crossing back to 1440 without a reload restores every button to 40px
+and its word, one row, no overflow. All eight themes resolve their own
+`--rux-overlay` and `--rux-layer` for the new overlay surfaces, read off the
+computed styles; white was opened as well as g90. specimen.html gains the
+sticky fix on the same stylesheet: 375 document width, column offset 0 at max
+scroll.
+
+**NOT DONE, AND THE FIRST IS THE ONE THAT MATTERS.** The week is still a week:
+at 375 the pane shows about two day columns of seven and you scroll for the
+rest. That is Carbon's own small-screen table pattern -- horizontal scroll
+under a sticky first column -- and it is what this pass chose. **A day view
+below md was considered and deliberately not built**: it is a surface Carbon
+does not ship, it needs the week/day switch designed rather than a breakpoint,
+and screen-inventory.md section 4 already points the other way by planning
+`driver.html` as the mobile-first surface. That decision is open.
+
+Also not done: the day header cells are still 32px, under both platforms'
+touch guidance, and they are the control that jumps a week; no landscape
+orientation was checked; nothing was tested on real hardware, so momentum
+scrolling and the two nested horizontal scrollers are unproven -- this was
+Chrome's device emulation driven by a mouse. `check-a11y` and rux-ds's browser
+gates still have never run against this app.
+
+**AND `node tools/check.mjs` DOES NOT EXIT 0, FOR A REASON THAT IS NOT THIS
+PASS.** It fails on `mock-billing.html` -- an untracked file, written 11:22
+today by something other than this session -- for `var(--rux-font-family-sans)`,
+a token declared nowhere. Classes, files, sprite and ids all pass, and the
+token gate passes on everything else, so the three files changed here are
+clean. The file was left alone rather than fixed or removed: it is not this
+pass's and not this pass's to delete.
+
 **2026-09-11 - the billing composition simplified.** Reworked the existing
 billing composition after the request for a clean, professional tab. Balance
 is the single headline, with the existing status tag beside it; Paid and the

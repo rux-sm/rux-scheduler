@@ -239,4 +239,24 @@
     window.Rux.schedule = { fit, crowded: () => crowded };
     fit();
   }
+
+  /* ── NOTHING WIDTH-DEPENDENT IS LEFT IN THIS FILE ──────────────────────────
+     A `matchMedia` handler stood here and emptied itself four times in one day.
+     It began as two class swaps -- `rux--btn--icon-only` and
+     `rux--layout--size-md`/`-lg` toggled by width, because the toolbar's module
+     was 40px on a desktop and wanted 48 on a phone, and because `Today`,
+     `Drivers` and `New trip` were words at one width and glyphs at the other.
+
+     Each of those stopped being about width. The module became Carbon's own 48
+     everywhere; `Today` and `Drivers` became icon-only everywhere; `New trip`
+     was hidden below `md` rather than squared off, which took
+     `.sch-toolbar__label` with it; and then `New trip` left the toolbar
+     entirely for the overflow menu, which took the last job -- renaming the
+     trigger from "View options" to "More" -- because the menu holds the action
+     at every width now and the markup can just say "More".
+
+     KEPT AS A NOTE RATHER THAN DELETED SILENTLY, because "the toolbar has no
+     breakpoint behaviour" is a fact worth being able to find. What responds to
+     width here is CSS, in sch.css's one media block. */
+
 })();

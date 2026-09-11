@@ -41,7 +41,18 @@
   const gridEl = document.getElementById('sch-grid');
   const schEl = document.getElementById('sch');
   const statusEl = document.getElementById('sch-status');
+  /* TWO ELEMENTS, AND KEEPING THEM APART IS LOAD-BEARING. `rangeEl` is the
+     BUTTON -- what `data-rux-open` goes on and what the overlay anchors to --
+     and `rangeTextEl` is the span inside it that holds the week. They were one
+     element until the trigger gained a caret `<use>`; `setRange` writes
+     `textContent`, which on the button would delete the svg on the first
+     render and leave a trigger with no disclosure mark. */
   const rangeEl = document.getElementById('sch-range');
+  const rangeTextEl = document.getElementById('sch-range-text') || rangeEl;
+  // The week picker's hidden input and the guard that tells its `change`
+  // events apart: ours, from setRange, or a person's, from the calendar.
+  let weekInput = null;
+  let valueSetBySelf = false;
   if (!gridEl || !schEl || !statusEl) return;
 
   // -- dates, all local -----------------------------------------------------
@@ -271,9 +282,23 @@
        once and the DAYS are what change week to week; spelling it out cost more
        than it said, and it was the first thing pushing this row to wrap. */
     const fmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-    rangeEl.textContent = typeof fmt.formatRange === 'function'
+    rangeTextEl.textContent = typeof fmt.formatRange === 'function'
       ? fmt.formatRange(weekStart, weekEnd)
       : `${fmt.format(weekStart)} - ${fmt.format(weekEnd)}`;
+    /* AND THE PICKER'S INPUT, WHICH NOBODY SEES. It is `hidden`, so this is
+       the calendar's idea of where it is rather than anything on screen: open
+       it and the shown week's first day is selected and its month is the one
+       displayed. Without this the calendar would open on today every time,
+       which is wrong the moment you have paged away from today -- which is the
+       only time you want it. `valueSetBySelf` stops the `change` listener
+       below from treating this as a user pick and re-rendering the week that
+       just rendered. */
+    if (weekInput) {
+      valueSetBySelf = true;
+      weekInput.value = iso(weekStart);
+      weekInput.dispatchEvent(new Event('change', { bubbles: true }));
+      valueSetBySelf = false;
+    }
   }
 
   // -- placing --------------------------------------------------------------
@@ -940,45 +965,107 @@
      its whole list on every change, which is safe for markup this file owns;
      a header holding a live toggle is not -- rebuilding it would mint a new
      switch on every row added and drop whatever state the old one held. */
-  const rowList = ({ title, action, addId, addLabel }) => {
-    // One surface for the document sections; only the summary gets a tile.
-    const list = el('div', 'rux--contained-list rux--contained-list--disclosed rux--layout--size-md');
-    const head = el('div', 'rux--contained-list__header');
-    /* NOT AN `<h3>`, AND THAT IS A rux-ds BUG BEING STEERED AROUND rather
-       than a preference. `.rux--contained-list__label` sets no typography, so
-       whatever the label element's own rule says wins over the `__header`
-       font it is supposed to inherit -- and rux-ds has a bare
-       `h3 { font-size: heading-04 }`, so the heading rendered at 28px, the
-       size of the figures above it. Measured in rux-ds's own sink too, where
-       the label comes out at 18.7px against a 16px header. Filed.
+  /* THE HEADER HOLDS THE SWITCH AND NOTHING ELSE, 2026-09-11. It held the
+     switch AND the `+`, both inside `__action`, and that is what put PO's and
+     Invoice's switches 40px inboard of Contract's -- three consecutive rows on
+     two right edges, measured 311 / 271 / 271 at the 320px panel. One control
+     per header line puts all three back on one, and the `+` becomes the list's
+     last ROW instead (`listAddRow` below).
 
-       A div with the heading role keeps the outline entry for assistive tech
-       and inherits the header's 14px/600. */
-    const label = el('div', 'rux--contained-list__label', title);
-    label.setAttribute('role', 'heading');
-    label.setAttribute('aria-level', '3');
-    head.appendChild(label);
-    const slot = el('div', 'rux--contained-list__action');
-    const controls = el('div', 'sch-list-action');
-    const add = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm');
-    add.type = 'button';
-    add.id = addId;
-    add.setAttribute('aria-label', addLabel);
-    add.appendChild(svgUse('#i-add', '16', '0 0 32 32'));
-    add.lastChild.setAttribute('class', 'rux--btn__icon');
-    if (action) controls.appendChild(action);
-    controls.appendChild(add);
-    slot.appendChild(controls);
-    head.appendChild(slot);
+     THE HEADER IS ALSO NO LONGER THE LIST'S. `--disclosed` existed here to
+     make the contained-list's own `__header` read like a section title; with
+     the label moved out to `.sch-panel-section__head` -- the line Contract
+     signed has always used -- the list has no header to style, so the variant
+     goes and `--inset-rulers` comes in to separate the rows.
+
+     THE LIST IS BUILT ONCE AND ONLY THE BODY IS REDRAWN, as before: a header
+     holding a live toggle must not be minted again on every row added. */
+  const rowList = () => {
+    const list = el('div', 'rux--contained-list rux--contained-list--inset-rulers rux--layout--size-md');
     const body = el('ul', 'sch-list-body');
     body.setAttribute('role', 'list');
-    list.append(head, body);
-    return { list, body, add };
+    list.appendChild(body);
+    return { list, body };
   };
 
-  /* ONE ROW: A TAG, A WORD, AN AMOUNT. `--with-action` puts the delete control
-     at the row's end and `--clickable` makes the row itself the editor, which
-     is what keeps editing a row from meaning deleting and retyping it.
+  /* THE ADD IS A ROW OF THE LIST. As a row it takes the list's ruler and the
+     rows' left edge, so it reads as the place the next row appears rather than
+     a button floating below the list. It is also the EMPTY STATE: an empty
+     list draws this row alone instead of "No purchase order recorded." above
+     an add button, which was two rows saying one thing. */
+  const listAddRow = ({ label, id, onClick }) => {
+    const li = el('li', 'rux--contained-list-item sch-list-additem');
+    const btn = el('button', 'rux--btn rux--btn--ghost rux--layout--size-sm sch-list-add');
+    btn.type = 'button';
+    if (id) btn.id = id;
+    btn.appendChild(svgUse('#i-add', '16', '0 0 32 32'));
+    btn.lastChild.setAttribute('class', 'rux--btn__icon');
+    btn.append(label);
+    btn.addEventListener('click', onClick);
+    li.appendChild(btn);
+    return { li, btn };
+  };
+
+  /* ── ONE MENU FOR EVERY ROW ─────────────────────────────────────────────────
+     Added 2026-09-11. Each row carried a permanent `✕`: a destructive control
+     on screen at all times, in a 320px row that has to grow a date and a
+     second line once `trip_pos` and `trip_invoices` exist. Edit and Remove go
+     behind the row's own overflow trigger, which is where Carbon puts row
+     actions and where `rux--menu-item--danger` already exists to mark one.
+
+     ONE ELEMENT, NOT ONE PER ROW, which is the pattern this file already uses
+     for the cell and bar menus: the menu is positioned at whichever trigger
+     was pressed and a variable holds what it acts on. A menu per row would
+     mint one on every redraw and leak them.
+
+     STILL NO CONFIRM ON REMOVE. Nothing is written until the panel saves, so a
+     mis-click costs a `Reset`, not a record -- the reasoning the `✕` shipped
+     with, unchanged by moving it into a menu. */
+  let rowMenuEl = null;
+  let rowMenuFor = null;
+  const rowMenu = () => {
+    if (rowMenuEl) return rowMenuEl;
+    const menu = el('ul', 'rux--menu rux--menu--sm rux--menu--open rux--menu--shown');
+    menu.setAttribute('role', 'menu');
+    menu.tabIndex = -1;
+    menu.hidden = true;
+    const item = (text, danger, pick) => {
+      const li = el('li', danger ? 'rux--menu-item rux--menu-item--danger' : 'rux--menu-item');
+      li.setAttribute('role', 'menuitem');
+      li.tabIndex = 0;
+      li.appendChild(el('div', 'rux--menu-item__label', text));
+      li.addEventListener('click', () => {
+        const act = rowMenuFor;
+        window.Rux?.menu?.close?.(menu);
+        act?.[pick]?.();
+      });
+      return li;
+    };
+    menu.append(item('Edit', false, 'edit'), item('Remove', true, 'remove'));
+    menu.addEventListener('rux:menu-closed', () => { menu.hidden = true; });
+    document.body.appendChild(menu);
+    rowMenuEl = menu;
+    return menu;
+  };
+
+  const openRowMenu = (trigger, actions) => {
+    const menu = rowMenu();
+    rowMenuFor = actions;
+    const box = trigger.getBoundingClientRect();
+    /* FIXED, WHICH IS THE ONE POSITION `menu.js` REPOSITIONS. Its kernel calls
+       `anchor()` on scroll and resize and that is a no-op for anything not
+       `position: fixed`; the panel scrolls, so a menu anchored any other way
+       would sit still while its row moved out from under it. */
+    menu.hidden = false;
+    menu.style.position = 'fixed';
+    menu.style.insetInlineStart = `${Math.round(box.right - 160)}px`;
+    menu.style.insetBlockStart = `${Math.round(box.bottom)}px`;
+    window.Rux?.menu?.open?.(menu, trigger);
+  };
+
+  /* ONE ROW: A TAG, A WORD, AN AMOUNT. `--with-action` puts the row's control
+     at its end and `--clickable` makes the row itself the editor, which is
+     what keeps editing a row from meaning deleting and retyping it.
 
      THE GRID IS INSIDE THE ROW'S CONTENT, NOT ON IT. Carbon's
      `__content` is an inline-block of its own, so the three columns go in a
@@ -1006,26 +1093,19 @@
     open.addEventListener('click', edit);
     li.appendChild(open);
     const act = el('div', 'rux--contained-list-item__action');
-    const drop = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm');
-    drop.type = 'button';
-    drop.setAttribute('aria-label', removeLabel);
-    drop.appendChild(svgUse('#i-close', '16', '0 0 32 32'));
-    drop.lastChild.setAttribute('class', 'rux--btn__icon');
-    /* NO CONFIRM ON THE X, deliberately. Nothing is written until the panel
-       saves, so a mis-click costs a `Reset` rather than a record -- and the
-       row is still on screen to be re-entered. A dialog to undo a thing that
-       has not happened is theatre. */
-    drop.addEventListener('click', remove);
-    act.appendChild(drop);
+    const more = el('button', 'rux--btn rux--btn--ghost rux--btn--icon-only rux--layout--size-sm rux--menu-button__trigger');
+    more.type = 'button';
+    more.setAttribute('aria-haspopup', 'true');
+    more.setAttribute('aria-expanded', 'false');
+    // The trigger's name is the ROW's, so two rows' menus are told apart.
+    more.setAttribute('aria-label', `Actions for ${title}`);
+    more.appendChild(svgUse('#i-overflow-menu--vertical', '16', '0 0 32 32'));
+    more.lastChild.setAttribute('class', 'rux--btn__icon');
+    more.addEventListener('click', () => openRowMenu(more, {
+      edit, remove, removeLabel,
+    }));
+    act.appendChild(more);
     li.appendChild(act);
-    return li;
-  };
-
-  // An empty list says so in a row of its own rather than collapsing to a
-  // header with nothing under it.
-  const emptyRow = (text) => {
-    const li = el('li', 'rux--contained-list-item');
-    li.appendChild(el('div', 'rux--contained-list-item__content', text));
     return li;
   };
 
@@ -1864,7 +1944,7 @@
     /* AN EMPTY DIALOG ADDS NOTHING. `Done` on a blank form is the same
        intention as `Cancel`, and a $0 receipt with no method is not a
        payment anyone meant to record. An EXISTING row emptied this way is
-       left alone rather than blanked -- removing it is what the X is for. */
+       left alone rather than blanked -- removing it is Remove on the row's own menu. */
     if (row.amount === null && !row.method) {
       window.Rux?.modal?.close?.('sch-payment-modal');
       return;
@@ -1918,7 +1998,7 @@
        no reference and no amount is not a PO -- it is the state the switch
        already expresses on its own, which 12 of the 55 existing PO trips are
        in. An EXISTING row emptied this way is left alone rather than blanked;
-       removing it is what the X is for. */
+       removing it is Remove on the row's own menu. */
     if (row.ref === null && row.amount === null) {
       window.Rux?.modal?.close?.('sch-po-modal');
       return;
@@ -2910,37 +2990,31 @@
          WHAT THE SWITCH DOES TO A LIST is what it did to the fields: off
          hides the rows and clears them, so hidden still means empty means
          exactly what Save will write. See `syncLists`. */
-      const poList = rowList({
-        title: 'PO received', action: poSwitch,
-        addId: 'sch-f-poadd', addLabel: 'Add purchase order',
-      });
-      const invList = rowList({
-        title: 'Invoice sent', action: invoiceSwitch,
-        addId: 'sch-f-invadd', addLabel: 'Add invoice',
-      });
-      poList.add.addEventListener('click', () => openPoDialog(null));
-      invList.add.addEventListener('click', () => openInvoiceDialog(null));
+      const poList = rowList();
+      const invList = rowList();
 
-      /* THE `+` IS DEAD IN TWO CASES, and they are different sentences. With
-         the switch off there is nothing to add a record to -- the section is
-         saying "not yet" and the rows are hidden. At the cap the section is
-         full, and the tooltip says so in the product's words rather than the
-         schema's: a dispatcher does not need to hear about `trip_pos`.
+      /* THE ADD ROW CARRIES THE CAP, and only the cap. With the switch off
+         the whole list is hidden, so there is no longer a dead `+` sitting in
+         a header to explain -- the control is simply not on screen. What is
+         left is the case the cap makes: the section is full, and the tooltip
+         says so in the product's words rather than the schema's. A dispatcher
+         does not need to hear about `trip_pos`.
 
-         `aria-disabled` IS NOT USED HERE. The button does nothing at either
+         `aria-disabled` IS NOT USED HERE. The button does nothing at that
          point, so `disabled` is the honest attribute -- it takes the control
          out of the tab order instead of letting a keyboard user land on
-         something that will not respond. */
-      const syncCap = () => {
-        for (const [toggleId, box, pending, note] of [
-          ['sch-f-poreceived', poList, poPending, CAP_NOTE.po],
-          ['sch-f-invoice', invList, invPending, CAP_NOTE.inv]]) {
-          const open = on(document.getElementById(toggleId));
-          const full = pending.length >= LIST_CAP;
-          box.add.disabled = !open || full;
-          box.add.title = full ? note : '';
-        }
+         something that will not respond.
+
+         IT IS APPLIED WHERE THE ROW IS BUILT, because the body is replaced on
+         every draw: a reference held from one draw is detached by the next.
+         The switch redraws both lists rather than reaching for a button. */
+      const capRow = ({ li, btn }, count, note) => {
+        const full = count >= LIST_CAP;
+        btn.disabled = full;
+        btn.title = full ? note : '';
+        return li;
       };
+      const syncCap = () => { drawPos(); drawInvoices(); };
 
       /* A ROW EXISTS WHEN THERE IS SOMETHING IN IT, which is the only reading
          of one column that survives the cap. A trip with a `po_ref` or a
@@ -2958,7 +3032,7 @@
 
       const drawPos = () => {
         poList.body.replaceChildren();
-        if (!poPending.length) poList.body.appendChild(emptyRow('No purchase order recorded.'));
+
         poPending.forEach((p, i) => {
           const much = (p.amount ?? null) === null ? '' : usd(Number(p.amount) || 0);
           const ref = p.ref || 'No reference';
@@ -2970,13 +3044,20 @@
             remove: () => { poPending.splice(i, 1); drawPos(); refreshDirty(); },
           }));
         });
-        syncCap();
+        /* THE ADD ROW IS THE EMPTY STATE. An empty list used to draw "No
+           purchase order recorded." and then an add button below it -- two
+           rows saying one thing in a panel that is already long. The add row
+           alone says both: there is nothing here, and this is how one starts. */
+        poList.body.appendChild(capRow(listAddRow({
+          label: 'Add purchase order', id: 'sch-f-poadd',
+          onClick: () => openPoDialog(null),
+        }), poPending.length, CAP_NOTE.po));
         drawSummary();
       };
 
       const drawInvoices = () => {
         invList.body.replaceChildren();
-        if (!invPending.length) invList.body.appendChild(emptyRow('No invoice recorded.'));
+
         invPending.forEach((v, i) => {
           const num = v.number || 'No number';
           invList.body.appendChild(listRow({
@@ -2994,7 +3075,10 @@
             remove: () => { invPending.splice(i, 1); drawInvoices(); refreshDirty(); },
           }));
         });
-        syncCap();
+        invList.body.appendChild(capRow(listAddRow({
+          label: 'Add invoice', id: 'sch-f-invadd',
+          onClick: () => openInvoiceDialog(null),
+        }), invPending.length, CAP_NOTE.inv));
       };
       redrawPos = drawPos;
       redrawInvoices = drawInvoices;
@@ -3117,7 +3201,24 @@
         contract_signed: ['Contract signed', 'rux--tag--blue'],
         pending: ['Pending', 'rux--tag--cool-gray'],
       };
-      const CONFIRM_WHEN = ['contract_signed', 'po_received', 'deposit_received', 'paid_full'];
+      /* OVERPAID CONFIRMS TOO, and its absence here was a bug, fixed
+         2026-09-11. Every other rung above `pending` was listed, so a trip
+         quoted $100 and paid $150 read `Balance -$50`, `Overpaid`, and
+         `Confirmed  Not yet` -- driven live on an unsaved trip before the fix.
+         A customer who has paid MORE than the quote has confirmed the trip by
+         any reading of the word. `po_partial` is remapped to `po_received`
+         below rather than listed, because it is the same rung with a gap. */
+      const CONFIRM_WHEN = ['contract_signed', 'po_received', 'deposit_received',
+                            'paid_full', 'overpaid'];
+      // What to say once it IS confirmed, per rung. `po_partial` is remapped
+      // to `po_received` before this is read.
+      const CONFIRM_BY = {
+        contract_signed: 'Confirmed by the signed contract.',
+        po_received: 'Confirmed by the purchase order.',
+        deposit_received: 'Confirmed by the deposit.',
+        paid_full: 'Confirmed — paid in full.',
+        overpaid: 'Confirmed — paid above the quote.',
+      };
       const deriveStatus = ({ contractSigned, poReceived, poAmount, price, paid }) => {
         const balance = price - paid;
         const remaining = Math.max(0, balance);
@@ -3132,6 +3233,7 @@
 
       const figures = el('div', 'sch-billing-figures');
       const derived = el('div');
+      const confirmWhy = el('p', 'rux--form__helper-text');
       const drawSummary = () => {
         const quoted = quotedNow();
         const paid = pending.reduce((n, p) => n + (Number(p.amount) || 0), 0);
@@ -3182,18 +3284,42 @@
            mapping between them is not guessable -- see below for the rung
            where it surprises. */
         const [rungLabel, rungTone] = STATUS_LABEL[rung];
+        const confirmRung = rung === 'po_partial' ? 'po_received' : rung;
+        const confirmed = CONFIRM_WHEN.includes(confirmRung);
+
+        /* THE HEADLINE IS THE ANSWER, NOT THE BALANCE, 2026-09-11. Balance led
+           this tile and on a new trip it read "No quote" -- the largest type on
+           the panel saying there is no data yet, in the slot a reader looks at
+           first. Confirmation is never empty: a trip is confirmed or it is not,
+           from the moment it exists, and it is the question a dispatcher
+           actually brings to this tab. Balance keeps every digit it had, one
+           row down beside Paid.
+
+           "ONCE SAVED" LEFT THE WORDING. The row it was in said
+           `Yes, once saved`, marking that the ladder is recomputed from the
+           controls rather than read from the database. That is true of every
+           value on this panel -- Balance, Paid and the coverage line are all
+           recomputed on each keystroke -- so singling out this one implied the
+           others were stored. The footer's Save is what says nothing is
+           written yet. */
         derived.replaceChildren(def([
+          ['Balance', quoted === null ? 'No quote'
+            : (quoted - paid < 0 ? `−${usd(paid - quoted)}` : usd(quoted - paid))],
           ['Paid', quoted === null ? usd(paid) : `${usd(paid)} of ${usd(quoted)}`],
-          ['Confirmed', CONFIRM_WHEN.includes(rung === 'po_partial' ? 'po_received' : rung)
-            ? 'Yes, once saved' : 'Not yet'],
         ]));
         const status = el('span', `rux--tag rux--tag--sm ${rungTone}`, rungLabel);
         status.title = `Billing status: ${rungLabel}`;
         figures.replaceChildren(
-          bigNumber('Balance', quoted === null ? 'No quote'
-            : (quoted - paid < 0 ? `−${usd(paid - quoted)}` : usd(quoted - paid))),
+          bigNumber('Trip', confirmed ? 'Confirmed' : 'Not confirmed'),
           status,
         );
+        /* WHICH ONE DID IT. Three separate things confirm a trip and the tab
+           gave no sign which was in force, so a dispatcher had to read the
+           rung tag and know the mapping. Unconfirmed, the line states the rule
+           instead -- the only place in the app that says it. */
+        confirmWhy.textContent = confirmed
+          ? (CONFIRM_BY[confirmRung] || 'Confirmed.')
+          : 'A signed contract, a PO or any payment confirms it.';
       };
       /* Billing composition revised 2026-09-11 for a quieter, shorter panel.
          Balance is the headline; Paid is a supporting definition row. This
@@ -3206,6 +3332,7 @@
       const tileStack = el('div', 'rux--stack-vertical rux--stack-scale-5');
       tileStack.append(
         figures,
+        confirmWhy,
         derived,
       );
       tile.appendChild(tileStack);
@@ -3262,13 +3389,9 @@
          behind a dialog there are no inputs to read, so the array is the
          truth and the list is a render of it. That also makes the diff a
          comparison of two arrays rather than a walk over form controls. */
-      const payList = rowList({
-        title: 'Payments', addId: 'sch-f-payadd', addLabel: 'Add payment',
-      });
-      payList.add.addEventListener('click', () => openPaymentDialog(null));
+      const payList = rowList();
       const draw = () => {
         payList.body.replaceChildren();
-        if (!pending.length) payList.body.appendChild(emptyRow('No payments recorded.'));
         pending.forEach((p, i) => {
           const mark = PAYMENT_TAG[p.method] || { code: '···', tone: 'rux--tag--gray' };
           const when = p.date ? mdy(p.date) : 'No date';
@@ -3287,6 +3410,13 @@
             remove: () => { pending.splice(i, 1); draw(); refreshDirty(); },
           }));
         });
+        /* NO CAP ON PAYMENTS: `trip_payments` is a real table with real rows,
+           so the add row is never disabled here. It is still the empty state,
+           the same as the two lists above. */
+        payList.body.appendChild(listAddRow({
+          label: 'Add payment', id: 'sch-f-payadd',
+          onClick: () => openPaymentDialog(null),
+        }).li);
         drawSummary();
       };
       draw();
@@ -3297,8 +3427,18 @@
          the section title -- that is what Carbon ships it for -- so the wrapper
          here exists only for the `spacing-06` above it that every other section
          gets. */
-      const listWrap = el('div', 'sch-billing-section sch-panel-section--bleed');
-      listWrap.appendChild(payList.list);
+      /* A LIST BLEEDS AND ITS HELPER TEXT DOES NOT. A `contained-list` pads
+         itself by `spacing-05` inside the band, so the wrapper is pulled out by
+         the panel body's own `spacing-05` to land the rows on the same left as
+         every field. The coverage line is NOT a list row, so it stays in the
+         padded section and keeps the panel's inline margin; bleeding it too
+         would run it to the panel's edges. */
+      const bleed = (node) => {
+        const box = el('div', 'sch-panel-section--bleed');
+        box.appendChild(node);
+        return box;
+      };
+      const listWrap = section('Payments', bleed(payList.list));
 
       /* THE ORDER, AND PAYMENTS MOVED TO THE END, 2026-09-10. Summary, then
          the three milestones in the order the ladder climbs -- contract, PO,
@@ -3318,16 +3458,26 @@
          already uses. The coverage line is NOT a list row, so it stays in the
          padded section and keeps the panel's own inline margin; bleeding it
          too would run it to the panel's edges. */
-      const poWrap = el('div', 'sch-billing-section');
-      const poBleed = el('div', 'sch-panel-section--bleed');
-      poBleed.appendChild(poList.list);
-      poWrap.append(poBleed, poCoverage);
+      /* EVERY SECTION IS NOW A `section()`: a head line carrying the label and
+         its one control, then the list bled out beneath it. The switch used to
+         ride in the contained-list's own header beside the `+`; with the label
+         moved out here, all four heads are the same element, which is what
+         puts the three switches on one right edge. */
+      const poBody = el('div');
+      poBody.append(bleed(poList.list), poCoverage);
 
-      const invWrap = el('div', 'sch-billing-section sch-panel-section--bleed');
-      invWrap.appendChild(invList.list);
-
+      const poWrap = section('PO received', poBody, poSwitch);
+      const invWrap = section('Invoice sent', bleed(invList.list), invoiceSwitch);
       const contractSection = section('Contract signed', contract, contractSwitch);
-      contractSection.classList.replace('sch-panel-section', 'sch-billing-section');
+
+      /* THE RULE, NOT A HEADING, IS WHAT SEPARATES THEM. A heading over each
+         group was tried first and cost about 60px of a 320px panel; the border
+         costs 1. `.sch-billing-rule` also zeroes the section's own top margin
+         and spends it as padding under the border -- see sch.css. */
+      for (const wrap of [contractSection, poWrap, invWrap, listWrap]) {
+        wrap.classList.replace('sch-panel-section', 'sch-billing-section');
+        wrap.classList.add('sch-billing-rule');
+      }
       panelBilling.append(
         contractSection,
         poWrap,
@@ -3669,6 +3819,17 @@
        -- so the button looked identical on and off. `rux--btn--selected` is
        Carbon's own compiled state for exactly this and needs no rule of ours. */
     availToggle.classList.toggle('rux--btn--selected', shown);
+    /* AND SO DOES THE MENU ROW, which is the same control at a narrow width.
+       It is kept in step here rather than where it is pressed, for the reason
+       the note above gives: what is announced is what is ON SCREEN, and only
+       this function knows that -- a yield by the editor changes it without
+       anyone pressing anything. */
+    const availItem = document.getElementById('sch-menu-drivers');
+    if (availItem) {
+      availItem.setAttribute('aria-checked', String(shown));
+      const slot = availItem.querySelector('.rux--menu-item__selection-icon');
+      if (slot) slot.replaceChildren(...(shown ? [svgUse('#i-checkmark', '16', '0 0 20 20')] : []));
+    }
     window.Rux?.schedule?.fit?.();
   }
 
@@ -3727,6 +3888,11 @@
     schEl.style.setProperty('--sch-bar-rows', String(1 + VIEW_ROWS.filter(r => view[r]).length));
     for (const item of viewMenu?.querySelectorAll('[role="menuitemcheckbox"]') || []) {
       const key = item.dataset.row || item.dataset.view;
+      /* THE ROSTER ROW IS A CHECKBOX IN THIS MENU AND IS NOT A VIEW OPTION.
+         It carries `data-act` instead, and without this guard `view[undefined]`
+         reads `undefined` and would silently uncheck it every time any other
+         option changed. `placeAvailability` owns its state. */
+      if (!key) continue;
       const on = !!view[key];
       item.setAttribute('aria-checked', String(on));
       const slot = item.querySelector('.rux--menu-item__selection-icon');
@@ -4067,14 +4233,38 @@
   let cellMenuAt = null;
   let barMenuFor = null;
 
-  // Both menus are placed the same way, so the arithmetic is written once.
+  /* Both menus are placed the same way, so the arithmetic is written once.
+
+     IT CLAMPS TO THE PAGE'S RIGHT EDGE, ADDED 2026-09-11, AND THIS WAS A
+     PRE-EXISTING FAULT RATHER THAN A NEW ONE. The left edge was pinned to the
+     click and nothing stopped the menu running past the page: a right-click in
+     Sunday's column, or any menu anchored to a button near the right edge, put
+     half the items off screen. It surfaced when the toolbar became one row and
+     the overflow trigger moved to x=327 of a 375 display -- the menu opened at
+     327 and ran to 510, so every label was cut -- but the same press on the
+     last day column would always have done it.
+
+     SHIFTED, NOT FLIPPED. Carbon's own menus open from the trigger's edge and
+     move only as far as they must; clamping keeps the menu under the thing
+     that opened it, which for a right-aligned button reads as right-aligned
+     and for a mid-board right-click barely moves at all.
+
+     MEASURED AFTER THE APPEND, because a menu still in the body has the width
+     it has there. `hidden` comes off first so there is a box to read at all.
+
+     THE BLOCK AXIS IS NOT CLAMPED, and that is a decision rather than an
+     oversight: the page grows to fit a menu near its bottom and scrolls, which
+     loses nothing, where the inline axis clips against the display. If a menu
+     opening below the fold turns out to matter, it is the same three lines. */
   function popMenuAt(menu, e) {
     const page = pageEl?.getBoundingClientRect();
     menu.hidden = false;
     menu.style.position = 'absolute';
-    menu.style.insetInlineStart = `${e.clientX - (page?.left ?? 0)}px`;
     menu.style.insetBlockStart = `${e.clientY - (page?.top ?? 0)}px`;
     pageEl?.appendChild(menu);
+    const room = page?.width ?? document.documentElement.clientWidth;
+    const want = e.clientX - (page?.left ?? 0);
+    menu.style.insetInlineStart = `${Math.max(0, Math.min(want, room - menu.offsetWidth))}px`;
     window.Rux?.menu?.open?.(menu, null);
   }
 
@@ -4213,7 +4403,35 @@
   });
   cellMenu?.addEventListener('rux:menu-closed', () => { cellMenu.hidden = true; });
 
-  document.getElementById('sch-new-trip')?.addEventListener('click', () => openCreate());
+  /* THE SAME ACTION FROM THE OVERFLOW MENU, which is where `New trip` lives
+     below `md`. It calls `openCreate()` with NO argument, exactly as the
+     toolbar button does -- a blank trip. The prefilled path is the cell menu's
+     `openCreate(cellMenuAt)` above, and the two are deliberately different
+     doors: one says "a trip, somewhere", the other "a trip, on this bus, that
+     day". */
+  /* TODAY AND DRIVERS FROM THE MENU, which is where they live below `md`. Each
+     calls exactly what its toolbar button calls -- the button is the same
+     control at a wider width, not a different one -- so there is no second
+     copy of either behaviour to drift. */
+  document.getElementById('sch-menu-today')?.addEventListener('click', () => {
+    const menu = document.getElementById('sch-view-menu');
+    if (menu) { window.Rux?.menu?.close?.(menu); menu.hidden = true; }
+    cursor = mondayOf(new Date());
+    show();
+  });
+  document.getElementById('sch-menu-drivers')?.addEventListener('click', () => {
+    const menu = document.getElementById('sch-view-menu');
+    if (menu) { window.Rux?.menu?.close?.(menu); menu.hidden = true; }
+    if (availOn && !availYielded) { availOn = false; }
+    else { availOn = true; availYielded = false; }
+    placeAvailability();
+  });
+
+  document.getElementById('sch-menu-new-trip')?.addEventListener('click', () => {
+    const menu = document.getElementById('sch-view-menu');
+    if (menu) { window.Rux?.menu?.close?.(menu); menu.hidden = true; }
+    openCreate();
+  });
   document.getElementById('sch-panel-close')?.addEventListener('click', () => closePanel());
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !panelEl.hidden) { e.preventDefault(); closePanel(); }
@@ -4267,6 +4485,95 @@
       schEl.removeAttribute('aria-busy');
       gridEl.classList.remove('sch-grid--busy');
     }
+  }
+
+  /* ── THE WEEK PICKER ───────────────────────────────────────────────────────
+     The week label is the trigger, which `docs/screen-inventory.md` settles
+     twice (sections 1 and 7) and which rux-ds BUILT FOR THIS APP: the header of
+     `js/date-picker.js` records `data-rux-open` arriving on 2026-09-08 "asked
+     for by rux-scheduler, whose week label is the control that should jump the
+     calendar and sits in a toolbar far from the picker", and the hidden input
+     the same way -- "a toolbar reading 'Sep 7 - 13, 2026' beside a `2026-09-07`
+     field is one week displayed twice". So nothing here is invented; this is
+     the consumer half of a contract already written.
+
+     BUILT, NOT WRITTEN IN THE PAGE, like the trip editor's date fields. It
+     reuses `DP_CONTAINER.single` and `calendarBody()` rather than a second copy
+     of the same markup, and `Rux.datePicker.init` claims it after.
+
+     NO LABEL AND NO `dpIcon()`. The label would name a field nobody sees, and
+     the icon is Carbon's own trigger -- this picker's trigger is the week
+     button, and a calendar glyph there would be the second one in this toolbar
+     after `Today`'s.
+
+     WHERE THE ROOT SITS IS WHAT POSITIONS THE CALENDAR. `date-picker.js` does
+     not portal it: `__calendar-container` is `position: absolute;
+     inset-block-start: 100%` against the root. The root goes INSIDE the week
+     row, after the heading, holding only a hidden input -- so it is a
+     zero-height box at the row's bottom edge and the calendar drops from
+     exactly there. The opener is the overlay's anchor, which is a different
+     job: it is what keeps a press on the button from reading as an outside
+     press (`overlay.js:122`). */
+  const weekRow = document.getElementById('sch-weekrow');
+  if (weekRow && rangeEl) {
+    const root = el('div', 'rux--date-picker rux--date-picker--next rux--date-picker--single');
+    root.id = 'sch-week-picker';
+    const container = el('div', DP_CONTAINER.single);
+    const wrap = el('div', 'rux--date-picker-input__wrapper');
+    const span = el('span');
+    weekInput = el('input', 'rux--date-picker__input');
+    weekInput.type = 'text';
+    weekInput.id = 'sch-week-date';
+    /* `hidden` IS ENOUGH AND THAT IS MEASURED, NOT ASSUMED -- date-picker.js's
+       header says so and corrects its own earlier note that claimed otherwise:
+       the UA's `[hidden] { display: none !important }` beats the author rule
+       that made the CALENDAR container need detaching, so the input alone needs
+       no CSS. */
+    weekInput.hidden = true;
+    span.appendChild(weekInput);
+    wrap.appendChild(span);
+    container.appendChild(wrap);
+    root.append(container, calendarBody());
+    weekRow.appendChild(root);
+    rangeEl.setAttribute('data-rux-open', root.id);
+
+    /* THE ONLY THING A PICK DOES IS MOVE THE CURSOR. A day is a day and the
+       board is a week, so the week CONTAINING that day is what it means --
+       `mondayOf` already answers that, and already knows about the Sunday-start
+       preference, so picking a Wednesday lands on the same week either way. */
+    weekInput.addEventListener('change', () => {
+      if (valueSetBySelf) return;
+      const picked = parseISO(weekInput.value);
+      if (!picked || Number.isNaN(picked.getTime())) return;
+      const next = mondayOf(picked);
+      if (shown && iso(next) === iso(shown)) return;   // same week, nothing to redraw
+      cursor = next;
+      show();
+    });
+
+    window.Rux?.datePicker?.init?.(weekRow);
+
+    /* `aria-expanded` IS OURS TO KEEP, because the module does not own this
+       trigger. `date-picker.js` reads `data-rux-open` to find the root and
+       makes the opener the overlay's anchor and focus destination -- and it
+       says nothing about the opener's state, which is right: it did not write
+       that element and cannot know what role it plays. Left alone the button
+       announced `false` the whole time the calendar was open, which is worse
+       than announcing nothing.
+
+       THE CONTAINER'S PRESENCE IS THE STATE, and that is the module's own
+       design rather than a signal borrowed for the purpose: Carbon ships no
+       closed state for the calendar, so `date-picker.js` DETACHES the
+       container on close and re-inserts it on open. Watching the root's child
+       list therefore reads exactly what open means here. */
+    const syncExpanded = () => {
+      rangeEl.setAttribute(
+        'aria-expanded',
+        root.querySelector('.rux--date-picker__calendar-container') ? 'true' : 'false',
+      );
+    };
+    new MutationObserver(syncExpanded).observe(root, { childList: true });
+    syncExpanded();
   }
 
   const go = days => { cursor = addDays(cursor, days); show(); };

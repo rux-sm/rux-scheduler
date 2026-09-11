@@ -90,12 +90,32 @@
    The app's own `.sch-trip` wrapper carries the width and the height; this
    rule deliberately sets neither, so a change to the column's size is a change
    in sch.css and never here. */
+/* AND ONLY AT md AND UP, SCOPED 2026-09-11. The un-fixing above describes a
+   board with three columns on it, and below Carbon's `md` (42rem) there is no
+   room for three: `.sch-trip` is a 20rem wrapper, and on a 375px screen it
+   took the whole board -- measured, `.sch-frame` and `.sch` both came out
+   0px wide with the panel's right edge 9px past the screen. Tapping a trip
+   deleted the schedule.
+
+   BELOW md, CARBON'S OWN RULE IS THE ANSWER AND IT IS ALREADY WRITTEN. The
+   base `.rux--side-panel` is `position: fixed`, z-index 9000, `inset-block-start:
+   3rem`, `block-size: calc(100% - 3rem)` and `max-inline-size: 100%` -- a panel
+   over the page, below the shell header. That is what a phone wants, and
+   leaving this block out of the cascade there restores it exactly, without a
+   rule of this app's own. Carbon's `max-inline-size: 75vw` is itself scoped to
+   `min-width: 42rem`, which is the same line drawn from the other side: the
+   component is built to stop being a column at this width.
+
+   42rem, NOT A NUMBER OF THIS APP'S CHOOSING. It is Carbon's `md`, and it is
+   the breakpoint the side panel's own compiled rules already turn on. */
+@media (min-width: 42rem) {
 .rux--side-panel {
   position: static;
   z-index: auto;
   inset-block-start: auto;
   block-size: 100%;
   transition: none;
+}
 }
 /* AND NO ELEVATION, 2026-09-07. Carbon drops a shadow on a side panel that has
    no overlay behind it -- `0 0.125rem 0.25rem` of `--rux-overlay` -- because a
@@ -108,8 +128,70 @@
    was asserting an elevation the move to a column removed. The `:not()` is
    matched exactly rather than dropped, because Carbon's rule is two classes and
    a single-class override would simply lose. */
+/* SCOPED WITH IT, 2026-09-11, AND FOR THE REASON THE RULE ITSELF GIVES. The
+   shadow is removed because the panel "is not above anything: it is the third
+   column in a flex row". Below 42rem it IS above something -- it is fixed over
+   the board at z-index 9000 -- so Carbon's elevation is telling the truth
+   there and is left alone. */
+@media (min-width: 42rem) {
 .rux--side-panel:not(.rux--side-panel--has-overlay) {
   box-shadow: none;
+}
+}
+
+/* ── THE PANEL FILLS THE PHONE ──────────────────────────────────────────────
+   `--sm` is `clamp(16rem, var(--rux-side-panel-modified-size, 20rem), 100%)`,
+   so on a 375px screen the editor would be a 320px sheet with 55px of board
+   showing beside it -- a strip too narrow to read and wide enough to tap by
+   accident. `--rux-side-panel-modified-size` is Carbon's own hook for exactly
+   this and the clamp still caps it at 100%, so this asks for a width Carbon
+   ships rather than setting one.
+
+   THIS REVERSES A NOTE IN sch.css, which said the hook was "deliberately
+   unused: nothing here wants a width Carbon does not already ship". That was
+   written about the desktop column and is still right about it -- this is the
+   phone, where the panel is an overlay and 100% is what an overlay is. */
+@media (max-width: 41.98rem) {
+  .rux--side-panel {
+    --rux-side-panel-modified-size: 100%;
+    /* AND IT HAS TO BE TOLD WHERE, because this page took the thing that knew
+       off the element. Carbon's base rule sets `position: fixed` and
+       `inset-block-start: 3rem` but NO inline inset: the horizontal anchor
+       lives on `--right-placement` / `--left-placement`, and index.html
+       removes both deliberately ("the app owns only open and closed"). A fixed
+       box with no inline inset falls back to its static position, which is
+       inside `.sch-trip` at the far end of the board -- measured at 375px the
+       panel came out `position: fixed`, 375 wide, at x=663, entirely off the
+       screen to the right.
+
+       So the anchor is restored here rather than by putting a placement class
+       back: the class would bring the entrance and exit animations with it,
+       which this page does not have and does not want mid-breakpoint. */
+    inset-inline: 0;
+    /* AND IT MUST NOT OUTRANK THE SHELL, 2026-09-11. rux: "the profile and
+       switcher button are hidden when viewing the trip editor and driver
+       assignments panels". The buttons were never hidden -- measured, they
+       are visible and hit-testable, and `aria-expanded` goes true when pressed.
+       **The panel they open is.** `#rux-account-panel` lays out exactly where
+       it should, x=119 y=48 at 256x764, and Carbon's `z-index: 9000` on the
+       side panel paints the full-width trip editor straight over it. Pressing
+       Account appeared to do nothing.
+
+       THIS IS A CONSEQUENCE OF THE SCOPING ABOVE AND EXISTS NOWHERE ELSE. On a
+       desktop the block above gives the panel `z-index: auto` and it is a flex
+       column in the board, so nothing ever stacked. Restoring Carbon's fixed
+       positioning below md restored its 9000 with it, and 9000 is a number
+       chosen for a panel in an app that does not also own the chrome.
+
+       999 IS CARBON'S OWN NEXT STEP DOWN, not a number invented here. The
+       scale in `rux.css` is 0-10, 999, 6000, 6001, 8000-8002, 9000, 9100:
+       the side-nav scrim is 6000, the header, its panels and the nav are 8000,
+       and menus -- Carbon's and this app's three -- are 9000. 999 is the only
+       rung that clears every z-index on the board (max 10) while staying under
+       all of them. So the scrim dims this panel, the header panels open over
+       it, and a menu still opens over it. Nothing on this page uses 999. */
+    z-index: 999;
+  }
 }
 
 
@@ -218,7 +300,14 @@
   display: flex;
   align-items: center;
   padding-block: 0;
-  min-block-size: var(--rux-layout-size-height-md);
+  /* 48px, `size-lg`, 2026-09-11, with the other two heads. The paragraph above
+     calls 40 "a step toward Carbon's shape, not an arrival at it"; this is the
+     next step, and it is taken because sch.js's `.sch-toolbar` note found that
+     `.rux--table-toolbar` is 48 at EVERY density and a bare `.rux--btn` is 48
+     by default. The rule that all three heads are one band is unchanged -- it
+     is what forced this one to move. The type in it is still `heading-03`,
+     which is the 2026-09-10 call and is untouched. */
+  min-block-size: var(--rux-layout-size-height-lg);
 }
 .rux--side-panel .rux--side-panel__title {
   flex: 1;
@@ -313,6 +402,56 @@
    this variant was accepted WITH is gone, and `Sched…` reads `Schedule`
    again. The note in index.html that offered to shorten the word is left
    standing because the offer still holds if a fifth tab ever lands. */
+/* ── THE WEEK PICKER'S INPUT, WHICH NOBODY IS MEANT TO SEE ──────────────────
+   Added 2026-09-11. The board's week label is the date picker's trigger and
+   its input carries only the value, so the input is `hidden` in the markup --
+   which `js/date-picker.js` explicitly supports: "THE INPUT MAY BE `hidden`,
+   AND THAT NEEDS NO CSS -- measured, not reasoned ... Writing `hidden` on
+   `.rux--date-picker__input` computes `display: none` and a 0x0 box on the
+   built page."
+
+   **IT DOES NOT, AND THIS RULE IS HERE BECAUSE OF THAT.** Measured on this
+   page: the input has the `hidden` attribute, computes `display: block` and
+   boxes at 288x40, and the only rule setting its display is
+   `.rux--date-picker__input { display: block }` in `rux.css` -- ONE CLASS, at
+   NORMAL priority. An author declaration beats a UA declaration whatever its
+   specificity, so `[hidden]` never gets a say. The header's own correction
+   note, which claims the UA sheet declares `[hidden] { display: none
+   !important }`, cannot be right either: an important UA declaration would
+   beat this normal author one and the input would be hidden. Filed against
+   rux-ds; this is the interim.
+
+   THE CONTAINER GOES, NOT THE INPUT. Hiding the input alone leaves the
+   container's label and wrapper boxes in flow, which is 40px of empty row
+   under the week. Scoped to this one picker by id so the trip editor's four
+   date fields -- which are meant to be seen -- are untouched. */
+#sch-week-picker .rux--date-picker-container {
+  display: none;
+}
+
+/* THE PANEL'S CLOSE IS 48 LIKE EVERY OTHER BUTTON, 2026-09-11 on rux's call,
+   AND IT TAKES A RULE BECAUSE CARBON COMPILES NO SIZE FOR IT. Only two exist:
+   `.rux--side-panel .rux--btn.rux--side-panel__close-button` at 2rem
+   (rux.css:24069) and the `--md` variant at 2.5rem (rux.css:24089). There is
+   no `lg`, and `.rux--btn--lg` is not compiled ANYWHERE in the sheet -- 0
+   occurrences against 6 for `--md` -- so putting that class in the markup
+   would be inventing one, which `check.mjs` catches and AGENTS.md forbids.
+
+   SO THE MARKUP KEEPS `rux--btn--md` AND THE SIZE COMES FROM HERE, at Carbon's
+   own specificity (0,3,0), matching its own selector shape and winning on
+   order alone. This is the one control on the page whose size is set by a
+   stylesheet rather than by its class, and that is a cost rather than a
+   preference: every other button says its size in the markup.
+
+   THE UPSTREAM ASK STANDS. docs/rux-ds-requests.md carries it -- a compiled
+   `lg` for this button -- and this rule is the interim, not the answer. The
+   request has been updated to say the workaround now exists, since it said it
+   deliberately did not. */
+.rux--side-panel .rux--btn--md.rux--side-panel__close-button {
+  block-size: var(--rux-layout-size-height-lg);
+  inline-size: var(--rux-layout-size-height-lg);
+}
+
 /* THE SPACE UNDER THE TABS BELONGS TO THE TABS, 2026-09-10. rux scrolled the
    Details tab and watched `Round trip` slide up and cut itself in half on the
    strip's bottom edge, and asked whether the padding could stick too. It can,
@@ -325,9 +464,27 @@
 
    `block-size` IS NOT ARITHMETIC FOR ITS OWN SAKE. `.rux--tabs` is a flex row
    and its nav items STRETCH to the content box, so padding alone came out of
-   the tabs: they measured 32px against the 40 they are meant to be, and the
-   strip stayed 48. Stating the height as the band plus the gap gives the
-   buttons their 40 back and puts the 16 below them.
+   the tabs: they measured 32px against the 40 they were then meant to be, and
+   the strip stayed 48. Stating the height as the band plus the gap gives the
+   buttons the band back and puts the 16 below them.
+
+   THE BAND IS `sm` SINCE 2026-09-11, ON RUX'S CALL -- "make the panel tab
+   strip 32 so it matches". It matches the two grids' column-header bands,
+   which are 32, so the panel's second band now lands on the same pixels as
+   the schedule's day header and the roster's column header; the three region
+   heads above them have been one 48px band since earlier the same day.
+
+   AND IT IS THIS ONE TOKEN, not an override of the component. The stretch
+   described above is what makes it work: the nav items take whatever the
+   content box is, so moving `md` to `sm` here takes the strip to 32 and the
+   buttons follow. `.rux--tabs` in index.html carries `rux--layout--size-sm`
+   for the other half -- the LABEL's line box, which was 40 and would have
+   overflowed a 32px strip. 32 is the floor of the range Carbon's own tabs
+   clamp themselves to (`sm` to `lg`, rux.css:25252), so this is the bottom of
+   the component's range rather than a size forced past it.
+
+   THE 16px GAP IS UNCHANGED and still sits below the band, which is the whole
+   point of the entry above: the sticky box keeps its clearance.
 
    WHAT CARBON DOES INSTEAD, since it is worth knowing this is not its answer:
    a side panel fades a 1px rule in under the header as content scrolls --
@@ -343,7 +500,7 @@
   margin-inline: calc(-1 * var(--rux-spacing-05));
   inline-size: auto;
   padding-block-end: var(--rux-spacing-05);
-  block-size: calc(var(--rux-layout-size-height-md) + var(--rux-spacing-05));
+  block-size: calc(var(--rux-layout-size-height-sm) + var(--rux-spacing-05));
   max-block-size: none;
 }
 #sch-panel-body .rux--tab-content {
@@ -504,4 +661,84 @@
 .sch-dialog-grid .rux--date-picker--single .rux--date-picker-input__wrapper > span,
 .sch-dialog-grid .rux--date-picker--single .rux--date-picker__input {
   inline-size: 100%;
+}
+
+
+/* ── THE PAGE GUTTER BELOW md ───────────────────────────────────────────────
+   Added 2026-09-11. `.rux--content` is `padding: 2rem` flat -- Carbon declares
+   it once, at rux.css:27158, with no breakpoint. On a 375px screen that spends
+   64px, 17% of the display, on empty margin either side of a board that is
+   already scrolling sideways to show two days of seven.
+
+   AND 2rem IS OUT OF STEP WITH CARBON'S OWN NUMBERS AT THIS WIDTH, which is
+   the argument for changing it rather than a preference. `--rux-grid-margin`
+   -- the margin Carbon's own 2x grid puts on a page -- steps 0 below 42rem,
+   1rem from 42rem, 1.5rem from 99rem (rux.css:253-272). So the flat 2rem is
+   above Carbon's LARGEST grid margin at the width where Carbon's own is
+   smallest. 1rem here is the value Carbon uses one breakpoint up, chosen over
+   the literal 0 because the board needs an edge to read against and 0 would
+   bleed the toolbar's own surface into the display bezel.
+
+   THE BLOCK PADDING GOES TOO, CORRECTED AGAIN 2026-09-11 ON RUX'S SECOND
+   QUESTION -- "is that gap above the calendar intended?" It was not. This rule
+   first read `padding-inline: 0` with a note saying "INLINE ONLY: the block
+   padding is separation from the shell header above and the end of the page
+   below, and neither changes with width". Measured, that left the board
+   reaching three display edges and stopping 32px short of the fourth, with
+   another 32px under it -- the top band of a full-bleed object hanging below
+   the header instead of meeting it, which is exactly the seam rux saw.
+
+   IT IS NOT SEPARATION FROM THE HEADER, EITHER. The shell header is its own
+   dark surface and the toolbar band below is `--rux-layer`; they are different
+   colours in all eight themes, so the edge between them is drawn by the
+   surfaces and the 32px was drawing it twice. And it is expensive here in a
+   way it is not on a desktop: 64px of a 812px viewport where one bus row is
+   95px, so the gap cost two thirds of a row at each end.
+
+   `fitHeight` in sch.js needs no change -- it reads this element's computed
+   `paddingBottom` and subtracts it, so the pane takes the room back on its own.
+
+   CORRECTED 2026-09-11, SAME DAY, ON RUX'S QUESTION -- "on mobile should the
+   calendar reach the edges inline?" It should, and this rule first said 1rem.
+   **1rem is Carbon's md value used at sm**, which is the opposite of what the
+   paragraph above argues: the steps are 0 / 1rem / 1.5rem, so Carbon's number
+   at THIS width is zero. The reason given for 1rem -- "the board needs an edge
+   to read against" -- was a preference dressed as a derivation, and it is
+   wrong on its own terms anyway: the board is a horizontally scrolling surface
+   whose next day column is always cut off, and a margin around it says the
+   week ends where it does not. Flush, the content slides under the edge, which
+   is what a scroll pane should look like.
+
+   IT ALSO PUT THIS PAGE AT ODDS WITH ITSELF. The trip editor and the driver
+   roster are both full-bleed below md by the rules above; the board keeping a
+   gutter made it the only region on the page that did not reach the edge.
+
+   NOTHING HERE NEEDS THE GUTTER. `.rux--content` holds one full-width data
+   surface and a heading that is in the outline only, never drawn -- there is
+   no prose on this page whose measure a margin would protect. A page that
+   grows one wants this scoped to the board rather than widened.
+
+   SO THIS HALF IS NOT A DIVERGENCE AFTER ALL: it is `.rux--content`, which
+   Carbon declares as a flat `padding: 2rem` with no breakpoint, being brought
+   into line with the grid margin Carbon itself declares at this width. The
+   rule below it is the divergence. */
+@media (max-width: 41.98rem) {
+  .rux--content {
+    padding: 0;
+  }
+  /* AND THE SECOND INSET, WHICH IS THE ONE A SINGLE MEASUREMENT FINDS AND
+     READING THE PAGE DOES NOT. Zeroing the content padding alone moved the
+     board 16px, not 32: `.rux--css-grid-column` carries
+     `margin-inline: var(--rux-grid-gutter-start) var(--rux-grid-gutter-end)`,
+     each `calc(var(--rux-grid-gutter) / 2)` = 1rem. That margin is the gutter
+     BETWEEN columns, and this grid has one column spanning all of them --
+     there is nothing on either side of it to be separated from.
+
+     `--rux-grid-gutter` is the single knob Carbon gives for it; `--narrow`
+     zeroes only the start and `--condensed` takes it to 1px, so neither says
+     what is meant here. THIS HALF IS A DIVERGENCE: Carbon holds the gutter at
+     2rem at every width. The half above is not -- see the note. */
+  .rux--css-grid {
+    --rux-grid-gutter: 0;
+  }
 }
