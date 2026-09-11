@@ -12,6 +12,12 @@ there is rux-ds's newest tag (rux-ds roadmap §8.4, step 2). Nothing from a
 client, a person or a private repository appears in it.
 
 ## What is yours and what is not
+**The shared part of this is one document, not three.** `rux-ds/docs/consumer-policy.md`
+is what every project on rux-ds agrees to — how it is linked rather than
+vendored, what is yours and what is rux-ds's, where a colour and a component
+rule go, the one check, and how to serve the family locally. Read it first;
+what follows is only what is this repository's own. Added 2026-09-11.
+
 
 - **Yours:** the pages at the root, `rux-theme.css` and `rux-overrides.css`
   (deltas only — empty is the normal state), `brand/`, `tools/`, this file.
@@ -30,6 +36,18 @@ client, a person or a private repository appears in it.
   restyle a Carbon part — that is a request to rux-ds (added 2026-09-06).
 - The app list is the hub's `switcher.json`, and `/switcher.js` fills the
   panel at runtime. Nothing here lists apps.
+- **`rux-ui` is the old app, it is still live, and it is not checked out
+  beside this one.** Removed from the Developer folder 2026-09-11; it is at
+  `github.com/rux-sm/rux-ui` and is read there. The docs here cite its files
+  by path — `js/data/*.js`, `js/core/billing-config.js`, `docs/trip-bar.md` —
+  and those citations still resolve on GitHub and nowhere on this machine.
+  **Never clone it back in beside this repository**: it carries its own
+  unrelated design system, `.rux-*` single-dash, and rux-ds froze it as a
+  non-consumer on 2026-08-26.
+  **What still couples the two is the database, not the source.** It writes
+  the `public` schema this app reads. `rux-backend/tools/check-drift.mjs` is
+  the only thing watching that seam; run it before trusting
+  `docs/backend-inventory.md`, which was read off rux-ui on 2026-09-06.
 
 ## The one check
 
