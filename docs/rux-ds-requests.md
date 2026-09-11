@@ -14,6 +14,57 @@ with the tag that carried it.
 
 ---
 
+## Open — a toggle's tap target is under both platforms' minimums, 2026-09-11
+
+**Asked for:** a toggle whose interactive surface meets 44px (iOS) / 48px
+(Android) at touch widths — as a compiled variant, a rule on
+`.rux--toggle__label`, or whatever shape rux-ds prefers. Not a bigger SWITCH:
+the graphic is the right size, the thing you press is not.
+
+**Why:** the scheduler's Billing tab has three toggles a dispatcher works on a
+phone. rux asked whether to go up a size and the answer measured out as no,
+because the size variants do not move the number that matters.
+
+**WHAT IS ACTUALLY PRESSED.** `.rux--toggle__button` is `position: absolute`
+and **1×1** — visually hidden, as intended. The hit area is the `<label>`, and
+with no `__label-text` in it the label collapses onto the switch graphic.
+Measured in rux-ds's own `kitchen-sink.html#toggle`, five stylesheets loaded:
+
+| | switch graphic | label box (sink, with text) |
+| --- | --- | --- |
+| default | **48 × 24** | 74 × 60 |
+| `--sm` | **32 × 16** | 90 × 52 |
+
+And in this app, where the toggles carry `aria-label` and no visible text, the
+label box IS the target: **56 × 21** at default and **40 × 21** at `--sm`.
+
+**THE SIZE VARIANT IS NOT THE FIX, which is the point of filing this.** Going
+from `--sm` to default buys 16px of WIDTH (32 → 48) and 8px of height
+(16 → 24). The target stays 21px tall in the labelless form either way — under
+half of iOS's 44 and Android's 48. A consumer reaching for the bigger switch to
+get a bigger target spends panel width and gets nothing.
+
+**IT BITES THE LABELLESS FORM HARDEST, and that is the common one.** A toggle
+with `__label-text` inherits a 52–60px label box from its own text, so it
+happens to clear the minimum. A settings row that names the control in its own
+heading — which is what `.rux--contained-list__header` and
+`.sch-panel-section__head` do — gets the 21px box. The accessible name is fine
+either way; the thumb target is not.
+
+**Related, and already this app's position:** `sch.css` records the toolbar's
+40px `size-md` as "still under iOS's 44 and Android's 48", and
+`feat(schedule): Make the board usable on a phone` (`ea6d7e9`) moved the
+control module to 48 below md for exactly this reason. The toggle is the same
+question one component over.
+
+**Not worked around locally.** `AGENTS.md` forbids `sch.css` carrying a rule on
+a `rux--*` class at all, and a `sch-` class is not a way to restyle a Carbon
+part. An interim override belongs in `rux-overrides.css` at Carbon's own
+specificity, and that file is in the middle of another pass's responsive work,
+so nothing has been written yet. The scheduler ships the 21px target today.
+
+---
+
 ## Open — `date-picker.js` says a `hidden` input needs no CSS, and it does, 2026-09-11
 
 **Asked for:** either a rule that lets `hidden` work on
