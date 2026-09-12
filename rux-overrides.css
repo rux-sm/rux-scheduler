@@ -307,7 +307,19 @@
      by default. The rule that all three heads are one band is unchanged -- it
      is what forced this one to move. The type in it is still `heading-03`,
      which is the 2026-09-10 call and is untouched. */
-  min-block-size: var(--rux-layout-size-height-lg);
+  /* 40px, `size-md`, 2026-09-12, with the other two heads again. rux asked for
+     a 40px first row over a 32px second across all three sections. Carbon's own
+     minimum for this header is already 2.5rem; what held it at 48 was 16px of
+     block padding, zeroed above, and its CLOSE BUTTON -- a 48px control keeps a
+     40px head at 48 whatever the minimum says, which is the same lesson the
+     toolbar's five buttons and `.sch-weekbtn` each taught in turn.
+
+     WHAT IT COSTS: the title is `heading-03` with a 28px line box, so it has
+     about 6px of air in a 40px band against the 16px Carbon intends. That is
+     the tightest thing on this page, taken deliberately for the row rhythm. If
+     the title ever gains a subtitle or a second line this is the first rule
+     that breaks, and the answer then is to give this band back its 48. */
+  min-block-size: var(--rux-layout-size-height-md);
 }
 .rux--side-panel .rux--side-panel__title {
   flex: 1;
@@ -429,28 +441,22 @@
   display: none;
 }
 
-/* THE PANEL'S CLOSE IS 48 LIKE EVERY OTHER BUTTON, 2026-09-11 on rux's call,
-   AND IT TAKES A RULE BECAUSE CARBON COMPILES NO SIZE FOR IT. Only two exist:
-   `.rux--side-panel .rux--btn.rux--side-panel__close-button` at 2rem
-   (rux.css:24069) and the `--md` variant at 2.5rem (rux.css:24089). There is
-   no `lg`, and `.rux--btn--lg` is not compiled ANYWHERE in the sheet -- 0
-   occurrences against 6 for `--md` -- so putting that class in the markup
-   would be inventing one, which `check.mjs` catches and AGENTS.md forbids.
+/* THE PANEL'S CLOSE NEEDS NO RULE AT ALL, 2026-09-12 -- the one that stood here
+   is DELETED rather than flipped, and that is the point of it.
 
-   SO THE MARKUP KEEPS `rux--btn--md` AND THE SIZE COMES FROM HERE, at Carbon's
-   own specificity (0,3,0), matching its own selector shape and winning on
-   order alone. This is the one control on the page whose size is set by a
-   stylesheet rather than by its class, and that is a cost rather than a
-   preference: every other button says its size in the markup.
+   IT EXISTED TO FORCE 48. Written 2026-09-11 when the three region heads went
+   to `size-lg`: the markup carries `rux--btn--md`, Carbon compiles no `lg` for
+   this button -- `.rux--btn--lg` appears nowhere in the sheet -- so 48 could
+   only come from a stylesheet. Its own comment called that "a cost rather than
+   a preference: every other button says its size in the markup", and it left an
+   ask in docs/rux-ds-requests.md for a compiled `lg`.
 
-   THE UPSTREAM ASK STANDS. docs/rux-ds-requests.md carries it -- a compiled
-   `lg` for this button -- and this rule is the interim, not the answer. The
-   request has been updated to say the workaround now exists, since it said it
-   deliberately did not. */
-.rux--side-panel .rux--btn--md.rux--side-panel__close-button {
-  block-size: var(--rux-layout-size-height-lg);
-  inline-size: var(--rux-layout-size-height-lg);
-}
+   THE HEADS ARE 40 NOW, WHICH IS WHAT `rux--btn--md` ALREADY MEANS. So the
+   workaround has nothing left to work around: deleting it returns this control
+   to saying its own size in its own markup, like every other button on the
+   page, and the upstream request goes with it. A rule that exists to reach a
+   number is worth removing the moment the number changes to one the component
+   already ships. */
 
 /* THE SPACE UNDER THE TABS BELONGS TO THE TABS, 2026-09-10. rux scrolled the
    Details tab and watched `Round trip` slide up and cut itself in half on the

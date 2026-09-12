@@ -829,8 +829,17 @@ button.sch-row-head__num {
 
      48px, `size-lg`, 2026-09-11, with the other two. `.sch-toolbar` carries
      the argument; the rule that this must equal it to the pixel is unchanged
-     and is precisely why it had to move with it. */
-  min-block-size: var(--rux-layout-size-height-lg);
+     and is precisely why it had to move with it.
+
+     40px, `size-md`, 2026-09-12, with the other two again -- rux asked for a
+     40px first row over a 32px second. **A `min-block-size` alone does not do
+     it**, which is the thing worth knowing: a head is as tall as what it holds,
+     so every control in it had to come down to `md` as well. Here that is the
+     close button; in the toolbar it is five icon buttons and `.sch-weekbtn`;
+     in the trip editor it is Carbon's own close button and its header padding.
+     Measured on the way: setting only these two rules left the toolbar at 48
+     and dropped the roster's column band 8px out of line with the board's. */
+  min-block-size: var(--rux-layout-size-height-md);
   padding-inline-start: var(--rux-spacing-05);
   background: var(--rux-layer);
 }
@@ -1005,7 +1014,7 @@ button.sch-row-head__num {
      THE BREAKPOINT SWAP IN sch.js GOES WITH THIS. One size at every width
      needs no `matchMedia`; what stays there is the icon-only swap, which is
      about words, not sizes. */
-  min-block-size: var(--rux-layout-size-height-lg);
+  min-block-size: var(--rux-layout-size-height-md);
 }
 /* THE LABEL IS THE ONLY THING THAT GIVES WAY, and it is the right one. A
    truncated "September 7 – 13, 20…" still says which week; a hidden button says
@@ -1047,7 +1056,11 @@ button.sch-row-head__num {
      button says nothing. That is the base rule's own argument, unchanged. */
   flex: 0 1 auto;
   min-inline-size: 0;
-  min-block-size: var(--rux-layout-size-height-lg);
+  /* `md` WITH THE TOOLBAR IT SITS IN, 2026-09-12. This wrapper is a row of its
+     own, so its minimum holds the toolbar at 48 even once every control inside
+     has come down to 40. Measured: all six controls at 40 and the toolbar still
+     48 until this moved. */
+  min-block-size: var(--rux-layout-size-height-md);
   /* THE PICKER'S ROOT IS A ZERO-HEIGHT CHILD AFTER THE HEADING and the
      calendar hangs off its bottom edge, so this box must not centre or stretch
      it -- `align-content` centres the LINE, which is what the heading wants,
@@ -1073,7 +1086,11 @@ button.sch-row-head__num {
   display: flex;
   align-items: center;
   gap: var(--rux-spacing-03);
-  min-block-size: var(--rux-layout-size-height-lg);
+  /* `md` WITH THE REST OF THE TOOLBAR, 2026-09-12. This is the tallest thing in
+     that row, so it -- not the row's own `min-block-size` -- is what decides the
+     row's height. Left at `lg` while everything else moved, the toolbar stayed
+     48 and the two grids' column bands fell 8px apart; measured. */
+  min-block-size: var(--rux-layout-size-height-md);
   padding-inline: var(--rux-spacing-05);
   border: 0;
   background: none;

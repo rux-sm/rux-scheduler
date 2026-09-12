@@ -139,39 +139,34 @@ exists to prevent.
 
 ---
 
-## Open — the side panel's close button has no `lg` size, 2026-09-11
+## Withdrawn — the side panel's close button has no `lg` size, 2026-09-11,
+withdrawn 2026-09-12
 
 **Asked for:** a compiled `.rux--side-panel .rux--btn--lg.rux--side-panel__close-button`
 at `3rem`, alongside the `--md` that already exists.
 
-**Why:** Carbon compiles exactly two sizes for that control —
+**Why it was asked:** Carbon compiles exactly two sizes for that control —
 `.rux--side-panel .rux--btn.rux--side-panel__close-button` at 2rem
 (`css/rux.css:24069`) and `.rux--side-panel .rux--btn--md.rux--side-panel__close-button`
 at 2.5rem (`css/rux.css:24089`). There is no `lg`. Every other button in this
-app is now `rux--layout--size-lg`, 48px, because that is Carbon's own default
-for `.rux--btn` and what `.rux--table-toolbar` is at every density — so the
-panel's close is the **one control on the page still at 40**, and it is the
-control that dismisses a panel which is full-screen below `42rem`.
+app was `rux--layout--size-lg`, 48px, so the panel's close was the one control
+still at 40 — and `rux--btn--lg` could not be put in the markup instead,
+because it is compiled nowhere in `rux.css` (0 occurrences against 6 for
+`--md`), which `check.mjs` catches and `AGENTS.md` forbids. A local rule pinned
+`3rem` at Carbon's own specificity as the interim.
 
-**MEASURED IN THIS APP:** with the trip editor open at 375×812 the close is
-40×40 against 48×48 for the toolbar's six buttons and the roster's close. It
-sits inside a 48px header band, so the band is not the constraint; the missing
-variant is.
+**WHY IT IS WITHDRAWN: the app moved to 40 and the gap closed from the other
+side.** rux asked for a 40px first row over a 32px second on 2026-09-12, so
+every region head and every control in one came down to `size-md` — which is
+exactly what `rux--btn--md` already compiles for this button. The local rule is
+deleted, the markup states the size again like every other button, and there is
+nothing left for an `lg` variant to fix.
 
-**WORKED AROUND LOCALLY SINCE, AND THIS PARAGRAPH USED TO SAY THE OPPOSITE.**
-It read: "Not worked around locally. A rule in this app's `rux-overrides.css`
-could pin 3rem at Carbon's own specificity, and that is deliberately not done
-… `AGENTS.md` — a missing rule is a request, never a local rule." rux asked
-for the button to be the right size the same day, so the rule exists:
-`.rux--side-panel .rux--btn--md.rux--side-panel__close-button` at
-`--rux-layout-size-height-lg`, at Carbon's own (0,3,0) specificity.
-
-**The request is not withdrawn by that.** The cost the old paragraph named is
-real and is now being paid — this is the only control on the page whose size
-comes from a stylesheet instead of from its class — and `rux--btn--lg` cannot
-be used instead because it is not compiled anywhere in `rux.css` (0
-occurrences, against 6 for `--md`), so putting it in the markup would be
-inventing a class. A compiled `lg` variant upstream removes the local rule.
+**Nothing upstream was needed and nothing upstream changed.** Recorded as
+withdrawn rather than deleted, because the measurement that produced it is
+still true — Carbon really does compile no `lg` for this control — and the next
+app that makes its heads 48 will find the same hole and should find this entry
+rather than rediscover it.
 
 ---
 

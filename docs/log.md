@@ -175,6 +175,54 @@ question asked -- this says nothing about spacing, focus order or whether any of
 it looks right, which is still what `docs/gate-coverage.md` is for, and that
 file is still at `52efa52`.
 
+**2026-09-12 - a 40px first row over a 32px second, and it took six rules
+because a head is as tall as what it holds.** rux: "can we make the first row
+for each section 40px size? keep 2nd row at 32?"
+
+**`min-block-size` DID ALMOST NOTHING, WHICH IS THE WHOLE LESSON.** Set on the
+two heads alone, the roster's went to 40 and the toolbar stayed at **48** --
+its buttons are the taller thing, and a minimum cannot shrink a box below its
+content. That left the roster's column band 8px above the board's, breaking the
+one rule `.sch-aside__head` has always carried: it must equal the toolbar to the
+pixel or the two grids' column headers stop sharing a line. Each control then
+had to come down in turn, and each was found by measuring rather than by
+reading the markup: the five toolbar icon buttons, `.sch-weekbtn`,
+`.sch-toolbar__weekrow`, the roster's close, the panel's header padding, and
+the panel's close.
+
+**TWO RULES I WROTE LOST TO RULES ALREADY IN THE SAME FILE.** A new
+`.rux--side-panel__header` rule at (0,2,0) lost to an existing
+`...__header--has-title` at (0,3,0), and a new close-button rule lost to an
+existing `.rux--btn--md.rux--side-panel__close-button`. Both times the computed
+value was unchanged and the page looked untouched. **Appending to
+rux-overrides.css is not the same as changing it** -- read what is already
+there for the selector first. That is the fifth specificity miss this week and
+the first where the losing rule was mine twice in one edit.
+
+**AND THE CLOSE BUTTON'S RULE WAS DELETED RATHER THAN FLIPPED, which is the
+best thing in this pass.** It existed only to force 48: the markup says
+`rux--btn--md`, Carbon compiles no `lg` for that control, so 48 could come from
+nowhere else. Its own comment called that "a cost rather than a preference:
+every other button says its size in the markup", and it left an ask upstream.
+40 is exactly what `rux--btn--md` already compiles -- so the rule goes, the
+control states its own size again, and `docs/rux-ds-requests.md` marks the ask
+**withdrawn**, with the measurement kept for the next app that makes its heads
+48. The workspace is at 19 open asks, down one.
+
+**MEASURED, all three regions with the roster and editor open at 1600:** first
+rows 40, 40, 40 and all starting at y=80; second rows 32, 32, 32; both grids'
+column bands back on one line at y=120; the panel's title not clipped; its close
+40x40 and overflowing nothing. The shell header is untouched at 48 -- it is
+Carbon's own band and not one of the three.
+
+**NOT DONE.** The panel's title is `heading-03` with a 28px line box in a 40px
+band, so it has about 6px of air against the 16px Carbon intends. It is the
+tightest thing on the page and the first rule that breaks if the title ever
+gains a subtitle or a second line; the answer then is to give that band back
+its 48. Below the width where the toolbar wraps, the heads read 40, 80, 40 --
+the toolbar is two rows now instead of two 48s, so the disagreement is older
+than this change and no worse, but it is still a disagreement.
+
 **2026-09-12 - `xs` panels tried and reverted, and the reason is 64px of
 content.** rux: "lets tri xs panels". Both companions are 20rem today; Carbon's
 side panel ships six sizes, each `clamp(16rem, <size>, 100%)` -- xs 16, sm 20,
