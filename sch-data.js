@@ -4860,61 +4860,249 @@
      `--expanded` and `__action--active`, and fires `rux:header-panel-opened`.
      So this listens for that event and does not own the open state -- the same
      reason the switcher and the account panels have no code in this file. */
+  const searchBox = document.getElementById('sch-search');
   const searchTrigger = document.getElementById('sch-search-trigger');
-  const searchPanel = document.getElementById('rux-search-panel');
   const searchInput = document.getElementById('sch-search-input');
   const searchResults = document.getElementById('sch-search-results');
   const searchClear = document.getElementById('sch-search-clear');
 
-  function searchHaystack(bar) {
-    const bus = bar.closest('.sch-row')?.querySelector('.sch-row-head__num')?.textContent || '';
-    return `${bar.textContent} ${bus}`.replace(/\s+/g, ' ').toLowerCase();
+  /* EXPANDING AND COLLAPSING, WHICH NOTHING UPSTREAM DOES. rux-ds ships no
+     search module -- `js/` has seventeen and none of them is one -- so the
+     class and the two attributes are moved here. All three together: Carbon's
+     CSS keys the width off `--expanded`, the magnifier reports state through
+     `aria-expanded`, and the input is `tabindex=-1` while collapsed so a tab
+     cannot land in a field that is 0px wide.
+
+     THE RESULTS PANEL FOLLOWS THE FIELD rather than being a second control.
+     `js/ui-shell.js` would have owned it, but it claims
+     `.rux--header__action[aria-expanded]` and this trigger is Carbon's
+     magnifier, so the class is set here. It is the same class ui-shell sets,
+     on the same element, so the panel behaves identically to the other two. */
+  const EXPANDED = 'rux--search--expanded';
+
+  function expandSearch() {
+    searchBox?.classList.add(EXPANDED);
+    searchTrigger?.setAttribute('aria-expanded', 'true');
+    if (searchInput) { searchInput.tabIndex = 0; searchInput.focus(); }
   }
 
-  function runSearch() {
+  /* COLLAPSING CLEARS THE FIELD, which is Carbon's own behaviour for the
+     expandable variant and the only one that makes sense here: a collapsed
+     search is a magnifier, so a query still in it is a filter nobody can see. */
+  function collapseSearch() {
+    searchBox?.classList.remove(EXPANDED);
+    searchTrigger?.setAttribute('aria-expanded', 'false');
+    if (searchInput) { searchInput.value = ''; searchInput.tabIndex = -1; }
+    searchClear?.classList.add('rux--search-close--hidden');
+    showResults(false);
+  }
+
+  const searchOpen = () => searchBox?.classList.contains(EXPANDED);
+  const toggleSearch = () => { if (searchOpen()) collapseSearch(); else expandSearch(); };
+
+  /* A `role=button` IS NOT A BUTTON, so it needs its keys wired by hand --
+     Enter and Space are what the platform would have given a real one, and
+     Carbon's own markup chose the div. */
+  searchTrigger?.addEventListener('click', toggleSearch);
+  searchTrigger?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSearch(); }
+  });
+
+  /* A CLICK OUTSIDE COLLAPSES IT, because an expanded field stretches across
+     the header and there is no other way back -- the magnifier is under it. */
+  document.addEventListener('pointerdown', e => {
+    if (!searchOpen()) return;
+    if (searchBox.contains(e.target)) return;   // the results live inside it now
+    collapseSearch();
+  });
+
+  /* WHAT IT SEARCHES, AND IT IS EVERY TRIP RATHER THAN THE WEEK ON SCREEN.
+     The first version read the rendered bars, which was honest while there was
+     nowhere for an off-week result to go. rux asked for all trips, "by
+     organizations and booking contact and destination" -- and all three are
+     plain columns on `trips`, checked against a live row rather than taken from
+     the inventory: `customer` is the organization (a sampled row reads "Mission
+     CISD"), `destination` is the destination, and `booking_contact_name` sits
+     denormalised beside `booking_contact_id`, so none of this needs a join.
+
+     ONE `or` OF THREE `ilike`s, WHICH IS WHY THE QUERY IS SANITISED FIRST.
+     PostgREST parses `or=(a.ilike.*x*,b.ilike.*x*)` as a LIST: an unescaped
+     comma, parenthesis or backslash in the typed text does not fail, it
+     re-parses into different filters. So those are stripped before the text is
+     interpolated, and `%`/`*` with them, which would otherwise let a typed
+     wildcard widen the match silently.
+
+     CANCELLED TRIPS ARE OUT, matching the board's own read, and the newest are
+     first -- a dispatcher searching a customer name wants the trip that is
+     coming, not one from 2019. One more than the cap is fetched so "more than
+     12 match" can be said without counting the whole table. */
+  const SEARCH_MIN = 2;
+  const searchSafe = q => q.replace(/[,()\\%*]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  async function searchTrips(q) {
+    const safe = searchSafe(q);
+    if (safe.length < SEARCH_MIN) return { rows: [] };
+    const like = `*${safe}*`;
+    const { data, error } = await client.from('trips')
+      .select('id,destination,customer,booking_contact_name,start_date')
+      .is('cancelled_at', null)
+      .or(`destination.ilike.${like},customer.ilike.${like},booking_contact_name.ilike.${like}`)
+      .order('start_date', { ascending: false })
+      .limit(SEARCH_CAP + 1);
+    if (error) throw new Error(error.message);
+    return { rows: data || [] };
+  }
+
+  /* DEBOUNCED, AND THE TOKEN IS WHAT KEEPS THE ANSWER HONEST. Every keystroke
+     would be a request; worse, replies can land out of order, so a slow query
+     for "dal" can overwrite a fast one for "dallas" and show results for text
+     the field no longer holds. `searchSeq` is incremented per run and checked
+     after the await -- a stale reply is dropped rather than rendered. */
+  let searchSeq = 0;
+  let searchTimer = 0;
+
+  /* HIDDEN WHEN IT HAS NOTHING TO SAY. The results hang off the field now, so
+     an empty box would be a shadow floating under the header with no content
+     in it -- which the header panel never showed, because a panel with no
+     content was still a panel. */
+  function showResults(on) {
     if (!searchResults) return;
-    const q = (searchInput.value || '').trim().toLowerCase();
+    searchResults.hidden = !on;
+    if (!on) searchResults.replaceChildren();
+  }
+
+  /* THE MATCH IS BOLDED IN PLACE, which is what Carbon's type-ahead shows and
+     what rux asked for from the capture. It answers the question a result list
+     otherwise leaves open: WHY is this row here. "Spring Branch, TX" for the
+     query "memorial high school" looks like a mistake until the second line
+     shows the words bolded inside "McAllen Memorial High School".
+
+     BUILT AS NODES, NEVER AS HTML. Every value here is a customer's, and the
+     rest of this file writes them with `textContent` for that reason -- a
+     destination with a `<` in it is data, not markup. So the string is split
+     on the match and reassembled from text nodes and a `<strong>`.
+
+     THE NEEDLE IS THE SANITISED QUERY, the same one the database was asked
+     with, so what is bolded is what actually matched rather than what was
+     typed. Case-insensitive, and every occurrence, not just the first. */
+  function mark(text, cls, needle) {
+    const span = el('span', cls);
+    const hay = String(text ?? '');
+    if (!needle) { span.textContent = hay; return span; }
+    const lower = hay.toLowerCase(), find = needle.toLowerCase();
+    let at = 0, i = lower.indexOf(find);
+    if (i === -1) { span.textContent = hay; return span; }
+    while (i !== -1) {
+      if (i > at) span.appendChild(document.createTextNode(hay.slice(at, i)));
+      const hit = el('strong', 'sch-search__hit');
+      hit.textContent = hay.slice(i, i + find.length);
+      span.appendChild(hit);
+      at = i + find.length;
+      i = lower.indexOf(find, at);
+    }
+    if (at < hay.length) span.appendChild(document.createTextNode(hay.slice(at)));
+    return span;
+  }
+
+  function searchNote(text) {
+    searchResults.replaceChildren(el('p', 'sch-search__empty', text));
+    showResults(true);
+  }
+
+  async function runSearch() {
+    if (!searchResults) return;
+    const q = (searchInput.value || '').trim();
     searchClear?.classList.toggle('rux--search-close--hidden', !q);
-    searchResults.replaceChildren();
-    if (!q) return;
-    const bars = [...gridEl.querySelectorAll('.sch-bar[data-trip-id]')].filter(b => searchHaystack(b).includes(q));
-    if (!bars.length) {
-      searchResults.appendChild(el('p', 'sch-search__empty', 'No trip on this week matches.'));
+    const mine = ++searchSeq;
+    if (!q) { showResults(false); return; }
+    if (searchSafe(q).length < SEARCH_MIN) { searchNote(`Type ${SEARCH_MIN} characters or more.`); return; }
+    searchNote('Searching…');
+    let found;
+    try {
+      found = await searchTrips(q);
+    } catch (e) {
+      if (mine === searchSeq) searchNote(String(e && e.message ? e.message : e));
       return;
     }
+    if (mine !== searchSeq) return;          // a later keystroke already owns the list
+    const rows = found.rows;
+    const safe = searchSafe(q);
+    /* NOT A DEAD END, which the pattern page asks for by name: "If a search
+       returns No results, suggest a follow-up action." The three columns it
+       looked in are the useful suggestion, since a dispatcher who typed a bus
+       number or a driver has typed something this search cannot see. */
+    if (!rows.length) {
+      searchNote(`No trip matches "${q}". This looks in the destination, the organization and the booking contact.`);
+      return;
+    }
+
+    searchResults.replaceChildren();
+    showResults(true);
+    /* THE COUNT, BECAUSE CARBON ASKS FOR IT IN SO MANY WORDS: "Always include
+       the number of search results, including for searches with no results."
+       One more than the cap is fetched, so past it the honest figure is a
+       floor rather than a total -- and it says so. */
+    searchResults.appendChild(el('p', 'sch-search__count', rows.length > SEARCH_CAP
+      ? `More than ${SEARCH_CAP} trips match`
+      : `${rows.length} trip${rows.length === 1 ? '' : 's'} match${rows.length === 1 ? 'es' : ''}`));
     const list = el('div', 'rux--contained-list rux--contained-list--inset-rulers');
-    for (const bar of bars.slice(0, SEARCH_CAP)) {
+    for (const trip of rows.slice(0, SEARCH_CAP)) {
       const row = el('div', 'rux--contained-list-item rux--contained-list-item--clickable');
       const btn = el('button', 'rux--contained-list-item__content');
       btn.type = 'button';
-      const bus = bar.closest('.sch-row')?.querySelector('.sch-row-head__num')?.textContent.trim();
-      const dest = bar.querySelector('.sch-bar__dest span')?.textContent || 'No destination';
-      const who = bar.querySelector('.sch-bar__client span')?.textContent || '';
-      btn.append(
-        el('span', 'sch-search__dest', dest),
-        el('span', 'sch-search__meta', [who, bus ? `Bus ${bus}` : 'No bus'].filter(Boolean).join(' · ')),
+      /* THE SECOND LINE IS THE DATE AND WHO IT IS FOR, because a result may be
+         on any week now: without the date, two "Austin TX" rows a year apart
+         are the same row. `fmtDay` is the board's own short format. */
+      const when = trip.start_date ? parseISO(trip.start_date).toLocaleDateString(undefined,
+        { year: 'numeric', month: 'short', day: 'numeric' }) : 'No date';
+      /* FOUR FIELDS ON TWO LINES, AND THE SHAPE WAS CHOSEN FROM THE DATA RATHER
+         THAN THE OTHER WAY ROUND. Counted over 737 live trips: destination is
+         never empty, organization is empty on 2%, and **booking contact is
+         empty on 60%** -- so a column for it would be blank more often than
+         filled, which is what ruled the four-column version out. It is never
+         equal to the organization (0% of rows), so when it IS there it adds
+         something, and it is a person's name: 13 characters median, 27 at the
+         longest.
+
+         SO IT IS APPENDED, NOT PLACED. The second line joins whatever exists,
+         and on the 60% with no contact it simply ends after the organization
+         with nothing missing on screen.
+
+         THE DATE GOES RIGHT, ALONE, because it is the only field that is both
+         short and always present -- which makes it the one thing that can form
+         a column down the list, and the column that tells seven "Dallas, TX"
+         rows apart. */
+      const head = el('div', 'sch-search__head');
+      head.append(
+        mark(trip.destination || 'No destination', 'sch-search__dest', safe),
+        el('span', 'sch-search__when', when),
       );
-      /* THE RESULT CARRIES THE ELEMENT, not an id to look one up by. Every bar
-         is replaced on a render, so a result list that outlived a redraw would
-         point at detached nodes -- which is exactly why the list is rebuilt from
-         the live grid on every keystroke and never cached.
+      btn.append(
+        head,
+        mark([trip.customer, trip.booking_contact_name].filter(Boolean).join(' · ') || 'No organization',
+          'sch-search__meta', safe),
+      );
+      /* GOING TO A RESULT IS A WEEK CHANGE FIRST AND A SELECTION SECOND, and
+         both halves have to wait on the read. The trip may be on any week, so
+         the cursor moves to the Monday (or Sunday) of its start date, `show()`
+         re-reads, and only then does a bar with that trip id exist to click.
 
-         AND IT CLICKS THE BAR RATHER THAN CALLING `openPanel`, which is the
-         whole of what makes a result behave like a bar. Selection is NOT this
-         file's: `sch.js` owns it, on its own delegated click handler that moves
-         `aria-pressed` between bars, and `openPanel` knows nothing about it.
-         Calling `openPanel` here opened the editor on a bar the board did not
-         show as selected -- and with it the roster's "who is free THEN" column,
-         which `markAvailDay` keys off `.sch-bar[aria-pressed="true"]`, stayed
-         dark. Driven both ways before this was changed: a real click marks one
-         bar pressed and lights 40 roster cells; the direct call marked none and
-         lit none.
+         IT CLICKS THE BAR for the reason the previous version learned:
+         selection is sch.js's, on a handler this file does not own, so calling
+         `openPanel` would open the editor with the board showing nothing
+         selected and the roster's day column dark.
 
-         THE GUARD IS BECAUSE THAT HANDLER TOGGLES. Clicking the bar that is
-         already selected would DESELECT it, which is right for a second click
-         on the board and wrong for "take me to this one". */
-      btn.addEventListener('click', () => {
-        searchTrigger?.click();            // ui-shell owns the close, as it owns the open
+         A TRIP CAN BE ON THE WEEK AND STILL HAVE NO BAR -- it is unassigned and
+         off the Unassigned row, or its leg falls outside the seven days. The
+         week still moves, which is the useful half, and the panel says so
+         rather than failing silently. */
+      btn.addEventListener('click', async () => {
+        collapseSearch();
+        if (!trip.start_date) return;
+        cursor = mondayOf(parseISO(trip.start_date));
+        await show();
+        const bar = gridEl.querySelector(`.sch-bar[data-trip-id="${CSS.escape(trip.id)}"]`);
+        if (!bar) { toast('info', 'That week is showing', 'The trip has no bar on it — it may have no bus yet.'); return; }
         bar.scrollIntoView({ block: 'center', inline: 'center' });
         if (bar.getAttribute('aria-pressed') === 'true') openPanel(bar);
         else bar.click();
@@ -4923,18 +5111,17 @@
       list.appendChild(row);
     }
     searchResults.appendChild(list);
-    if (bars.length > SEARCH_CAP) {
+    if (rows.length > SEARCH_CAP) {
       searchResults.appendChild(el('p', 'sch-search__empty',
-        `${bars.length - SEARCH_CAP} more match. Narrow the search, or use the week you want.`));
+        'Narrow the search to see the rest.'));
     }
   }
 
-  searchInput?.addEventListener('input', runSearch);
+  searchInput?.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(runSearch, 200);
+  });
   searchClear?.addEventListener('click', () => { searchInput.value = ''; runSearch(); searchInput.focus(); });
-  /* THE PANEL ANNOUNCES ITS OWN OPENING and this takes the focus then rather
-     than on the trigger's click, because ui-shell sets the class and fires the
-     event in that order -- focusing earlier lands on an element still 0px tall. */
-  searchPanel?.addEventListener('rux:header-panel-opened', () => { searchInput.value = ''; runSearch(); searchInput.focus(); });
 
   /* CMD-K, AND CTRL-K FOR THE SAME REASON EVERY EDITOR BINDS BOTH. It presses
      the TRIGGER rather than opening the panel, so there is one path in and out
@@ -4946,12 +5133,9 @@
   document.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
-      searchTrigger?.click();
+      toggleSearch();
     }
-    if (e.key === 'Escape' && searchTrigger?.getAttribute('aria-expanded') === 'true') {
-      e.preventDefault();
-      searchTrigger.click();
-    }
+    if (e.key === 'Escape' && searchOpen()) { e.preventDefault(); collapseSearch(); }
   });
   gridEl.addEventListener('click', e => {
     const bar = e.target.closest('.sch-bar');

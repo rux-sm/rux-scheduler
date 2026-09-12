@@ -283,42 +283,43 @@
          search field that does not disrupt other icon positions", with Account
          2nd from the right and the Switcher furthest right. Those two were
          already in that order; this goes in front of them and nothing moves.
+         The expanding field that sentence is about is exactly what this is.
 
-         AND IT IS A PLAIN ACTION BUTTON, NOT A COMPONENT. Carbon's own header
-         stories render search as exactly this -- `header__action` + ghost +
-         icon-only with `aria-label=Search` -- and ship no `header__search` at
-         all. The captures wrap it in an icon tooltip; the two buttons beside it
-         here do not, and matching its own header beats matching a story.
+         CARBON'S EXPANDABLE SEARCH, COPIED FROM `components-search--expandable`
+         IN `carbon-react-dom.json`. Three things in it are load-bearing and are
+         not this app's invention: the MAGNIFIER is the trigger, a `role=button`
+         with `aria-expanded` and `tabindex=0` rather than a <button>; the INPUT
+         is `tabindex=-1` while collapsed, so a tab does not land in a field
+         that is 0px wide; and the container carries `role=search`. sch-data.js
+         moves the `--expanded` class and both of those attributes together.
 
-         IT OPENS A THIRD HEADER PANEL, the pattern the switcher and the account
-         already use: `js/ui-shell.js` takes any `__action[aria-expanded]`,
-         resolves the panel through `aria-controls`, and owns the open state, so
-         nothing in this repository wires the toggle. -->
-    <button type="button" class="rux--header__action rux--btn rux--layout--size-lg rux--btn--ghost rux--btn--icon-only" aria-label="Search trips" aria-expanded="false" aria-controls="rux-search-panel" id="sch-search-trigger"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-search"/></svg></button>
+         IT IS NOT A `header__action`, so `js/ui-shell.js` does not wire it --
+         that module claims `.rux--header__action[aria-expanded]`, and this is a
+         search component that happens to sit in the header. The results panel
+         below is opened by this app instead, which is the one place it departs
+         from how the switcher and account panels work, and the reason is that
+         the trigger is Carbon's magnifier and not a header button. -->
+    <div class="sch-header-search">
+      <div class="rux--search rux--search--expandable rux--layout--size-lg" role="search" aria-labelledby="sch-search-label" id="sch-search">
+        <div class="rux--search-magnifier" role="button" tabindex="0" aria-expanded="false" aria-labelledby="sch-search-label" id="sch-search-trigger">
+          <svg class="rux--search-magnifier-icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-search"/></svg>
+        </div>
+        <label class="rux--label rux--visually-hidden" id="sch-search-label" for="sch-search-input">Search trips</label>
+        <input id="sch-search-input" class="rux--search-input" type="text" role="searchbox" tabindex="-1" placeholder="Destination, organization or contact…" autocomplete="off">
+        <button type="button" class="rux--search-close rux--search-close--hidden" id="sch-search-clear" aria-label="Clear search input"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <!-- RESULTS ATTACH TO THE FIELD, which is Carbon's type-ahead shape and
+           what the pattern page describes for an active search: "results are
+           shown immediately below the search field". They were a
+           `rux--header-panel` until rux saw it -- that component is a full
+           HEIGHT shell panel, the switcher's and the account's, so it left 444px
+           of empty surface under 659px of results and wrapped a third of the
+           rows at its fixed 16rem. Sized to the field instead, it is a menu
+           under a field rather than a panel that happens to hold a list. -->
+      <div class="sch-search__results" id="sch-search-results" role="listbox" aria-label="Matching trips" hidden></div>
+    </div>
     <button type="button" class="rux--header__action rux--btn rux--layout--size-lg rux--btn--ghost rux--btn--icon-only" aria-label="Account" aria-expanded="false" aria-controls="rux-account-panel"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-user--avatar"/></svg></button>
     <button type="button" class="rux--header__action rux--btn rux--layout--size-lg rux--btn--ghost rux--btn--icon-only" aria-label="App switcher" aria-expanded="false" aria-controls="rux-switcher-panel"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-grid"/></svg></button>
-  </div>
-  <!-- THE SEARCH PANEL. What it searches is THE WEEK ON SCREEN, and saying so
-       is the whole of its honesty: `screen-inventory.md` line 51 plans a trip
-       finder whose results land "in a data table on a page", and that page does
-       not exist yet. Rather than ship an icon that opens a promise, this
-       searches what is already loaded and selects the bar -- which is a real
-       answer to "where is the Dilley trip" on the week you are looking at, and
-       the step the page is built on top of.
-
-       THE PLACEHOLDER SAYS THE SCOPE so nobody reads it as a global find. When
-       the trips page lands, this panel gains a second section and the scope
-       note changes; the icon and the shortcut do not. -->
-  <div class="rux--header-panel" id="rux-search-panel">
-    <div class="sch-search">
-      <div class="rux--search rux--layout--size-lg">
-        <div class="rux--search-magnifier"><svg class="rux--search-magnifier-icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-search"/></svg></div>
-        <label class="rux--label rux--visually-hidden" for="sch-search-input">Search this week's trips</label>
-        <input id="sch-search-input" class="rux--search-input" type="text" role="searchbox" placeholder="Search this week…" autocomplete="off">
-        <button type="button" class="rux--search-close rux--search-close--hidden" id="sch-search-clear" aria-label="Clear"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg></button>
-      </div>
-      <div class="sch-search__results" id="sch-search-results" role="listbox" aria-label="Matching trips"></div>
-    </div>
   </div>
   <!-- THE SWITCHER PANEL: a sibling of __global, collapsed until the grid button
        opens it (js/ui-shell.js). Every app in an ecosystem lists the same apps

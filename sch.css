@@ -2135,60 +2135,174 @@ body:has(#sch-panel:not([hidden])) .sch-toast {
   inset-block-end: calc(var(--rux-spacing-09) + var(--rux-spacing-07) + var(--rux-spacing-05));
 }
 
-/* ── THE HEADER SEARCH PANEL ────────────────────────────────────────────────
-   The panel itself is Carbon's `rux--header-panel`, opened by `js/ui-shell.js`
-   through `aria-controls` exactly as the switcher and account panels are; what
-   is INSIDE it is this product's own, which is the division index.html already
-   records for the account panel. So these are `sch-` rules and every colour,
-   size and space is a `--rux-*` token.
+/* ── THE HEADER SEARCH ──────────────────────────────────────────────────────
+   WHAT THIS RULE IS FOR: Carbon's expandable search is `inline-size: 100%` when
+   expanded, and 100% of nothing is nothing. `rux--header__global` is a flex row
+   of fixed squares, so the search needs a box of its own to expand INTO, and
+   that box is this app's business rather than the component's.
 
-   A COLUMN, NOT A LIST IN A BOX. The search sits at the top and the results
-   fill what is left, because the panel's own height is fixed by the shell and
-   a results list that grew would push the field off its own panel. */
-.sch-search {
-  display: flex;
-  flex-direction: column;
-  block-size: 100%;
-  min-block-size: 0;          /* a flex child scrolls only once it may be shorter than its content */
-}
+   COLLAPSED IT IS A SQUARE THE SIZE OF THE ICONS BESIDE IT, which Carbon
+   already handles -- `.rux--search--expandable` takes
+   `--rux-layout-size-height-local` on both axes, and `rux--layout--size-lg` in
+   the markup sets that to the 48px the two header actions use. So the collapsed
+   state needs nothing here and the wrapper simply wraps it.
+
+   EXPANDED IT TAKES THE WHOLE EMPTY HEADER, which is the IBM demo's shape and
+   what rux asked for. It was 24rem, which was measured (at 16rem three of ten
+   result rows wrapped their second line) but was still a number sitting in a
+   file rather than a rule about the room available.
+
+   AND NOTHING CARBON OWNS HAD TO CHANGE, which is worth recording because the
+   obvious fix would have been to reach up and restyle the shell. Measured at
+   1263: `.rux--header__global` is ALREADY `flex: 1 1 0%` and already spans 1045
+   of those pixels, from the app name's right edge to the header's -- it simply
+   right-aligns its children, so the collapsed 48px square sits at the far end
+   with Account and the Switcher. All that was missing is for this wrapper to
+   claim the slack when it is expanded. So there is no rule here on
+   `__global`, and none in rux-overrides.css either.
+
+   `min-inline-size: 0` BECAUSE A FLEX ITEM WILL NOT SHRINK BELOW ITS CONTENT
+   OTHERWISE, which on a narrow header would push Account and the Switcher off
+   the end rather than shrinking the field.
+
+   IT GROWS AT ALL TIMES, AND THE FIRST VERSION SCOPED IT TO `:has(.rux--search--expanded)`
+   WHICH BROKE THE COLLAPSE. Measured frame by frame on the way back: the field
+   went 949 -> **0** and sat there for 72ms before popping to 48. The cause is
+   circular sizing -- the expanded field is `inline-size: 100%`, and removing
+   the class ALSO took the wrapper's `flex: 1 1 auto` in the same frame, so the
+   wrapper became shrink-to-fit while its only child was asking for 100% of it.
+   Percentage of a parent sized by that percentage resolves to zero.
+
+   GROWN ALWAYS, THE WRAPPER HAS A DEFINITE WIDTH and the transition has
+   something real to run against in both directions. The 949px box it leaves in
+   the header when collapsed costs nothing: it draws no background and no
+   border, the magnifier sits at its right edge under `flex-end` exactly where
+   the other icons are, and there is nothing behind it in the header to click.
+
+   `position: relative` IS WHAT THE RESULTS HANG FROM, which is the whole reason
+   this wrapper still exists now that the panel is gone -- and it is why the
+   results follow this width with no second rule: they are pinned to its inline
+   edges, so "the field's width" stays true at every size the field takes. */
+/* THE FIELD IS PINNED TO THIS BOX'S RIGHT EDGE, AND THAT IS THE WHOLE ANIMATION.
+   Carbon transitions the search's WIDTH (`width 70ms`, in
+   `.rux--search--expandable`) and says nothing about which edge stays still --
+   that falls out of the layout it is dropped into. Here the wrapper's `flex`
+   change is instantaneous, so on expand it becomes 949px in one frame while the
+   field is still 48; with the default `flex-start` the field was pinned to the
+   wrapper's LEFT edge, and the result was measured frame by frame: the
+   magnifier jumped 901px leftward in 3ms and the field then unrolled RIGHTWARD,
+   266 -> 857 -> 1167 over 79ms.
+
+   Which is backwards. The icon you pressed should stay under your cursor and
+   the field should sweep INTO the empty header beside it -- that is what makes
+   Carbon's own reason for putting search furthest left true of the search
+   itself and not only of Account and the Switcher: "an expanding search field
+   that does not disrupt other icon positions". `flex-end` anchors the right
+   edge, so the width transition plays out leftward and nothing jumps. */
+.sch-header-search { display: flex; align-items: center; justify-content: flex-end; position: relative; }
+.sch-header-search { flex: 1 1 auto; min-inline-size: 0; }
+.sch-header-search .rux--search--expandable.rux--search--expanded { inline-size: 100%; }
+
+/* ── THE RESULTS, ATTACHED TO THE FIELD ─────────────────────────────────────
+   A MENU UNDER A FIELD, NOT A PANEL HOLDING A LIST. This was
+   `rux--header-panel` -- the component the switcher and the account use -- and
+   that is a full-HEIGHT shell panel: measured with ten results open, 256x1103
+   holding 659px of list, so 444px of it was empty surface. rux asked for the
+   Carbon type-ahead shape instead, attached to the field and its width, which
+   is also what the search pattern page describes for an active search:
+   "results are shown immediately below the search field".
+
+   THE FIELD'S WIDTH EXACTLY, by hanging off the wrapper's inline edges rather
+   than carrying a width of its own. The field and its results are then one
+   column at whatever size the field takes, and 24rem is stated once, above.
+
+   ITS SURFACE IS THE MENU'S, because that is what it now is: `--rux-layer` over
+   the page with Carbon's own menu shadow, `0 2px 6px var(--rux-shadow)`, read
+   off `.rux--menu` in rux.css rather than invented. */
 .sch-search__results {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 100%;
+  z-index: 8100;
+  background: var(--rux-layer);
+  box-shadow: 0 2px 6px var(--rux-shadow, rgba(0, 0, 0, 0.3));
+  /* AS TALL AS ITS RESULTS AND NO TALLER, capped so a long list scrolls inside
+     itself rather than running off the bottom of the window. 60vh leaves the
+     board visible behind it, which is the point of a dropdown over a panel. */
+  max-block-size: 60vh;
   overflow-y: auto;
-  flex: 1 1 auto;
-  min-block-size: 0;
+}
+/* THE COUNT, WHICH CARBON ASKS FOR BY NAME: "Always include the number of
+   search results, including for searches with no results." It sits above the
+   rows and reads as a caption rather than a result. */
+.sch-search__count {
+  color: var(--rux-text-secondary);
+  font-size: var(--rux-helper-text-01-font-size);
+  line-height: var(--rux-helper-text-01-line-height);
+  padding: var(--rux-spacing-03) var(--rux-spacing-05);
 }
 /* TWO LINES PER RESULT, and the second is what tells two "Dallas, TX" apart:
-   the customer and the bus.
+   the date and who it is for.
 
    DONE ON THIS FILE'S OWN CLASSES, AND THE FIRST DRAFT WAS SIMPLY INERT. It put
    `flex-direction: column` on `.rux--contained-list-item__content`, which
    computes `inline-block` -- so the direction applied to nothing and the two
    spans stayed on one line. Found by reading the computed display rather than
-   by looking, since a wrong `flex-direction` shows as no change at all.
-
-   THE FIX IS SMALLER THAN OVERRIDING CARBON'S DISPLAY WOULD HAVE BEEN. These
-   spans are this app's own elements, so `display: block` stacks them inside
-   whatever display Carbon chooses for the button and leaves that choice alone.
-   docs/log.md records the cost of the other road: a guessed `display: flex` on
-   a Carbon component in the toolbar happened to look right and masked a real
-   layout fault underneath it.
-
-   (This file does carry a few rules on `rux--*` classes -- `.sch-row-head
-   .rux--popover-container`, the three on `.sch-times` -- all scoped under an
-   `sch-` ancestor to lay a Carbon component out INSIDE an app component. That
-   is a different thing from restyling the component, and it is not what this
-   needed either way.) */
-.sch-search__dest,
+   by looking, since a wrong `flex-direction` shows as no change at all. */
+.sch-search__head,
 .sch-search__meta { display: block; }
+/* THE TITLE ROW: destination on the left, date pushed to the right edge.
+
+   THE DATE IS THE ONLY FIELD THAT CAN BE A COLUMN, which is why it is the only
+   one moved. Counted over 737 trips, it is the sole field that is both short and
+   always present -- destination runs to 53 characters and organization to 46,
+   and the booking contact is absent on 60% of rows. Right-aligned it lands on
+   the same x in every row, which is what tells seven "Dallas, TX" apart at a
+   glance. `gap` rather than `justify-content` alone so a 53-character
+   destination pushes against the date instead of running under it. */
+.sch-search__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--rux-spacing-05);
+}
 .sch-search__dest {
   color: var(--rux-text-primary);
   font-size: var(--rux-body-compact-01-font-size);
   line-height: var(--rux-body-compact-01-line-height);
+  /* THE LONG ONE TRUNCATES AND THE DATE NEVER DOES. A 53-character destination
+     would otherwise wrap to two lines and push the row's height around, and the
+     date is what holds the column. */
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+/* NEVER SHRINKS, for the same reason: it is the column. `tabular-nums` so the
+   dates line up digit for digit the way the board's own day numbers do. */
+.sch-search__when {
+  flex: 0 0 auto;
+  color: var(--rux-text-secondary);
+  font-size: var(--rux-helper-text-01-font-size);
+  line-height: var(--rux-helper-text-01-line-height);
+  font-variant-numeric: tabular-nums;
+}
+/* ORGANIZATION, THEN THE BOOKING CONTACT WHEN THERE IS ONE. Truncated rather
+   than wrapped so every row is exactly two lines and the date column stays
+   straight. */
 .sch-search__meta {
   color: var(--rux-text-secondary);
   font-size: var(--rux-helper-text-01-font-size);
   line-height: var(--rux-helper-text-01-line-height);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+/* THE MATCHED RUN, WHICH IS THE ONLY THING HERE THAT EXPLAINS A ROW. Weight and
+   nothing else -- no colour, no background -- so it reads as emphasis inside
+   the line rather than as a second kind of text, and it inherits whichever of
+   the two lines it lands in. */
+.sch-search__hit { font-weight: 600; }
 /* THE EMPTY AND OVER-CAP NOTES SHARE ONE RULE, because they say the same kind
    of thing: what the list is not showing you. */
 .sch-search__empty {

@@ -128,6 +128,279 @@ They are not gone any more, so that note is now moot rather than pending, and
 nothing was changed either way. And the weekend's body mark is gone by design,
 recorded above so it is not rediscovered as a regression.
 
+**2026-09-11 - a result row carries all four fields, and the layout was chosen
+from a count rather than from taste.** rux wanted destination, organization,
+booking contact and date in each row, and asked which configuration.
+
+**ONE NUMBER DECIDED IT. Counted over 737 live trips:**
+
+    destination    empty   0%   median 14   p90 18   max 53
+    organization   empty   2%   median 17   p90 25   max 46
+    booking contact empty 60%   median 13   p90 17   max 27
+
+**A column for the booking contact would be blank more often than filled**,
+which is what ruled out the four-column version -- the list would read holey
+down its third column on three rows in five. It is also never equal to the
+organization (0% of rows), so when it IS present it adds something rather than
+repeating, and it is a person's name: short, and no threat to a row's width.
+
+**SO IT IS APPENDED, NOT PLACED.** The second line joins organization and
+contact with a separator, and on the 60% with no contact the line simply ends
+after the organization with nothing missing on screen.
+
+**AND THE DATE IS THE ONLY FIELD THAT CAN BE A COLUMN, which is why it is the
+only one moved.** It is the sole field that is both short and always present --
+destination runs to 53 characters and organization to 46 -- so right-aligned it
+lands on the same x in every row. That column is what tells seven "Dallas, TX"
+apart at a glance, which is the question the old single-line meta could not
+answer. Measured after: every `__when` in the list has its right edge at 1151,
+one value across all rows, and every row is 62px whatever it holds.
+
+**BOTH TEXT LINES TRUNCATE RATHER THAN WRAP**, so a 53-character destination
+cannot push a row to three lines and bend the date column. "Tynan High School 213
+W Walton St, Skidmore, TX 78389" was checked live: `white-space: nowrap`, and at
+949px it still fits in 370px with room, so today's longest destination does not
+even reach the ellipsis.
+
+**A RULE I EXPECTED TO NEED WAS NOT NEEDED, and measuring is the only reason it
+was not written.** `.rux--contained-list-item__content` computes `inline-block`,
+which normally means a `space-between` child has no width to work against -- the
+same class of fault as the inert `flex-direction` recorded below. Measured
+instead of assumed: the button already spans the full 949px, so the title row
+splits correctly with nothing added. One fewer rule on a Carbon class.
+
+**NOT DONE.** The booking contact is shown but not searched differently from the
+other two -- a query matching only a contact still shows the organization first,
+which is right, but nothing says WHICH field matched beyond the bolding. No
+second line for trips that have neither organization nor contact: they read "No
+organization", which is honest and untested against real data, since only 2% of
+rows lack one.
+
+**2026-09-11 - the search animation ran the wrong way, and fixing it exposed a
+second bug that only existed on the way back.** rux: "review the search
+animation it may be a bit off or the wrong direction." It was, and neither fault
+is visible in a screenshot -- both were read frame by frame off
+`getBoundingClientRect` during the transition.
+
+**IT EXPANDED RIGHTWARD FROM A MAGNIFIER THAT HAD ALREADY TELEPORTED.** Carbon
+transitions the search's WIDTH and says nothing about which edge holds still --
+that falls out of the layout it is dropped into, and this layout got it
+backwards. Measured: at t=0 the field sat at 1119-1167; at t=3ms it was at
+218-266, the magnifier having jumped **901px leftward in one frame**; then the
+field unrolled RIGHTWARD, its right edge sweeping 266 -> 857 -> 1167 over 79ms.
+The cause is that the wrapper's `flex` change is instantaneous while the width
+is what animates, so with the default `flex-start` the growing field was pinned
+to the wrapper's left edge.
+
+**`justify-content: flex-end` IS THE WHOLE FIX for that half.** The right edge
+is anchored, so the width transition plays out leftward and the icon stays under
+the cursor that pressed it -- which is what makes Carbon's reason for putting
+search furthest left true of the SEARCH and not only of the icons beside it.
+
+**AND THEN THE COLLAPSE WENT TO ZERO, which the expand had been hiding.** With
+the growth scoped to `:has(.rux--search--expanded)`, removing the class took the
+wrapper's `flex: 1 1 auto` in the SAME frame as the field's `inline-size: 100%`.
+The wrapper became shrink-to-fit while its only child asked for 100% of it, and
+a percentage of a parent sized by that percentage resolves to zero: measured,
+the field held **0px for 72ms** before popping to 48. Nothing about the expand
+showed this, because on the way out the wrapper was growing into a definite
+width before the field needed to measure against it.
+
+**SO THE WRAPPER GROWS AT ALL TIMES NOW.** It has a definite width in both
+directions and the transition has something real to run against. The 949px box
+it leaves in the header while collapsed costs nothing: no background, no border,
+the magnifier at its right edge under `flex-end` exactly where the other icons
+sit, and nothing behind it in the header to click.
+
+**MEASURED AFTER, BOTH WAYS, AND THEY ARE SYMMETRIC.** Expanding: 48, 305, 639,
+845, 940, 949 with the left edge running 1119 -> 862 -> 528 -> 322 -> 227 -> 218.
+Collapsing: 949, 692, 358, 152, 56, 48 with the left edge running back 218 ->
+475 -> 809 -> 1015 -> 1111 -> 1119. The right edge reads 1167 in every frame of
+both, no frame is zero, and Account does not move.
+
+**WHAT THIS COST TO FIND, AS A NOTE ON METHOD.** Two of the three readings taken
+here were wrong before they were right: one rAF loop was starved and sampled at
+1000ms intervals, missing the whole 70ms transition and suggesting the collapse
+was instant; another asserted the wrong starting state and measured a collapse
+that had already happened. A transition is measured by asserting the state
+first, then sampling on a timer short enough to land inside it.
+
+**NOT DONE.** `prefers-reduced-motion` is not honoured -- Carbon's own 70ms
+transition is not wrapped in a query either, so this would be a change to the
+component's behaviour rather than to this app's, and the app adds no motion of
+its own. The results list appears with no transition at all, which is its own
+choice and was not examined here.
+
+**2026-09-11 - the results attach to the field, and the header panel they were
+in was the wrong component all along.** rux, on the rendered version: "is this
+right panel the only option?", then a Carbon capture and "i like the fill width
+results attached liek in this pic".
+
+**IT WAS NOT THE ONLY OPTION AND CARBON SAYS WHICH ONE IT SHOULD HAVE BEEN.**
+`patterns/search-pattern` names three kinds -- basic (routes to a results page),
+active ("results are shown immediately below the search field"), focused -- and
+what this is, is active. The panel was `rux--header-panel`, the component the
+switcher and the account use, and that is a full-HEIGHT shell panel. Measured
+with ten results open: 256x1103 holding 659px of list, so **444px of it was
+empty surface**, and three of the ten rows wrapped their second line at its
+fixed 16rem.
+
+**NOW IT IS A MENU UNDER A FIELD.** `.sch-search__results` hangs off the search
+wrapper's inline edges, so it is the field's width by construction rather than
+by a number repeated in two places; `--rux-layer` with `.rux--menu`'s own
+`0 2px 6px var(--rux-shadow)`; height its content, capped at 60vh so a long list
+scrolls inside itself and the board stays visible behind it. Measured after:
+field 384 and results 384, attached at a 0px gap, 643px tall, **zero rows
+wrapping**.
+
+**AND THEN IT TOOK THE WHOLE EMPTY HEADER, on rux's ask: "can i make the seach
+expand all the empty space like the ibm demo?" Yes, and nothing Carbon owns had
+to change to do it** -- which is the part worth keeping, because the obvious fix
+would have been to reach up and restyle the shell. Measured at 1263 before
+touching anything: `.rux--header__global` is ALREADY `flex: 1 1 0%` and already
+spans 1045 of those pixels, from the app name's right edge to the header's. It
+simply right-aligns its children, which is why the collapsed square sits at the
+far end beside Account and the Switcher. The only thing missing was for this
+app's own wrapper to claim the slack while expanded. So there is no rule on
+`__global`, here or in rux-overrides.css.
+
+**MEASURED AFTER: the field runs 218 to 1167 -- 949px, the app name's edge to
+Account -- and Account and the Switcher DID NOT MOVE**, 1167 and 1215 before and
+after. That is Carbon's own stated reason for putting search furthest left,
+holding in practice: "to allow for an expanding search field that does not
+disrupt other icon positions". The results follow to 949 with no second rule,
+since they are pinned to the wrapper's inline edges rather than carrying a width.
+
+**`min-inline-size: 0` IS NOT DECORATION.** A flex item will not shrink below
+its content, so without it a narrow header pushes Account and the Switcher off
+the end instead of shrinking the field. And the growth is scoped to
+`:has(.rux--search--expanded)` -- always-on would leave a 949px hole in the
+header with a magnifier at the far end of it.
+
+**24rem WAS MEASURED, NOT LIKED.** 16rem came from the header panel's width and
+was never a decision; the second line carries a date and an organization, and
+"Aug 26, 2026 · McAllen Memorial High School" does not fit 256px. The field
+expands leftward into empty header, so the extra costs nothing that was in use.
+
+**THE MATCH IS BOLDED IN PLACE, which is the half of the capture that does the
+work.** It answers the question a result list otherwise leaves open: why is this
+row here. "Spring Branch, TX" for "memorial high school" looks like a mistake
+until the second line shows the words bolded inside "McAllen Memorial High
+School". **Built as text nodes and a `<strong>`, never as HTML** -- every value
+in these rows is a customer's, and this file writes them with `textContent`
+everywhere else for exactly that reason. The needle is the SANITISED query, the
+same string the database was asked with, so what is emphasised is what actually
+matched rather than what was typed.
+
+**AND TWO OF CARBON'S BEST PRACTICES WERE BEING MISSED, both from the same
+page.** "Always include the number of search results, including for searches
+with no results" -- there is a count line now, and past the cap it says "More
+than 12 trips match" rather than inventing a total, since only cap+1 is fetched.
+"Avoid dead ends: if a search returns No results, suggest a follow-up action" --
+the empty state now names the three columns it looked in, which is the useful
+suggestion when a dispatcher has typed a bus number or a driver.
+
+**THE RESULTS HIDE WHEN THERE IS NOTHING TO SAY**, which the panel never needed
+to: a panel with no content was still a panel, but a shadow floating under the
+header with nothing in it is a defect.
+
+**NOT DONE.** Still no keyboard navigation of the list -- arrows and
+Enter-to-first are exactly what this shape invites and nothing binds them, which
+is the largest remaining gap now that it looks like a typeahead. No recent
+searches, which Carbon's active search describes for the pre-typing state. The
+cap is 12 with no paging. Not measured below md, where a 24rem field is wider
+than a 375px screen and the expanded state would need its own width.
+
+**2026-09-11 - the search reaches every trip and the field expands, which
+replaced both halves of the entry below on the same day it was written.** rux:
+"i want the seach to search all trips. by organizations and booking contact and
+destination?" with a link to Carbon's `components-search--expandable-with-layer`,
+"and can we make the it expandabel variant?"
+
+**ALL THREE FIELDS ARE PLAIN COLUMNS ON `trips`, CHECKED RATHER THAN ASSUMED.**
+A live row was read before any query was written: `destination` is the
+destination, `customer` is the organization (a sampled row reads "Mission
+CISD"), and `booking_contact_name` sits denormalised beside
+`booking_contact_id` -- 93 columns, and the three that were asked for need no
+join. `docs/backend-inventory.md` says "booking plus five trip contacts, each
+name, phone, email, id", which is true and does not say which of those are
+columns on `trips`; reading the row did.
+
+**ONE `or` OF THREE `ilike`s, SANITISED FIRST, AND THE SANITISING IS NOT
+COSMETIC.** PostgREST parses `or=(a.ilike.*x*,b.ilike.*x*)` as a LIST, so a
+comma, parenthesis or backslash typed into the field does not error -- it
+re-parses into DIFFERENT filters and returns a confident wrong answer. Those are
+stripped before interpolation, and `%` and `*` with them, since a typed wildcard
+would otherwise widen the match with nothing on screen saying so.
+
+**DEBOUNCED AT 200ms AND SEQUENCED, because the second one is the bug that
+would have been blamed on the database.** Replies can land out of order, so a
+slow query for "dal" can overwrite a fast one for "dallas" and leave the panel
+showing results for text the field no longer holds. Every run takes a token and
+checks it after the await; a stale reply is dropped.
+
+**A RESULT IS A WEEK CHANGE FIRST AND A SELECTION SECOND.** A match may be on
+any date, so the cursor moves to the week of its `start_date`, `show()` re-reads,
+and only then does a bar with that trip id exist to click. Driven: from Sep 7-13
+2026, picking "Austin TX, May 30 2027, Mission CISD" moved the board to **May
+24-30 2027**, collapsed the search, closed the panel, marked exactly one bar
+pressed and opened its editor. **A trip can be on the week and still have no
+bar** -- no bus yet, or a leg outside the seven days -- and the week still moves,
+with a toast saying why rather than a silent nothing.
+
+**THE FIELD IS CARBON'S EXPANDABLE VARIANT, copied from
+`components-search--expandable` in `carbon-react-dom.json`.** Three things in
+that capture are load-bearing and none is this app's invention: the MAGNIFIER is
+the trigger, a `role=button` with `aria-expanded` and `tabindex=0` rather than a
+`<button>`; the INPUT is `tabindex=-1` while collapsed, so a tab cannot land in
+a field 0px wide; and the container carries `role=search`. All three move
+together here, because **rux-ds ships no search module** -- `js/` has seventeen
+and none of them is one -- so the class and both attributes are this app's to
+set. Enter and Space are wired by hand for the same reason: a `role=button` is
+not a button.
+
+**AND IT NEEDED A BOX TO EXPAND INTO.** `.rux--search--expandable.rux--search--expanded`
+is `inline-size: 100%`, and 100% of nothing is nothing: `rux--header__global` is
+a flex row of fixed squares. `.sch-header-search` is that box, and the expanded
+width is 16rem -- Carbon's own `header-panel--expanded` figure, read from
+rux.css rather than chosen, so the field and the results beneath it are one
+column. Collapsed it is a 48px square and needs no rule at all: Carbon sizes it
+from `--rux-layout-size-height-local`, which `rux--layout--size-lg` in the
+markup sets to the same 48 the two header actions use. Measured: 48 collapsed,
+256 expanded, `tabindex` -1 then 0, `aria-expanded` following.
+
+**IT IS THE ONE CONTROL IN THIS HEADER `ui-shell.js` DOES NOT OWN, and that is
+deliberate rather than an oversight.** That module claims
+`.rux--header__action[aria-expanded]`; this trigger is Carbon's magnifier inside
+a search component, so it does not match. The panel class is therefore set here
+-- the same class, on the same element, so the panel behaves exactly as the
+switcher's and the account's do.
+
+**THREE FAULTS OF MY OWN, ALL FROM EDITING BY REPLACEMENT.** Twice a block was
+rewritten whose range also held declarations that belonged to a different
+concern -- first `searchSeq`/`searchTimer`, then `SEARCH_MIN`, `searchSafe` and
+`searchTrips` -- and both times the page threw `ReferenceError` and the panel
+rendered nothing at all, including its own "no match" note. The lesson is the
+symptom: a search that shows an EMPTY panel rather than an error looks like a
+query returning no rows, and both times the console said otherwise. Read the
+console before believing a blank result. Third, a panel measured 2px twice and
+was a reading taken mid-transition both times -- `width 0.11s` -- which is
+recorded below and was re-learned here anyway.
+
+**DRIVEN.** "a" gives the minimum-length note; "mission" and "austin" each give
+12 rows and "More than 12 match"; "zzzqqq" gives "No trip matches."; results
+span 2026 and 2027, matching on organization and destination in the same list;
+Cmd-K and Ctrl-K expand and focus, again collapses; Escape collapses; a press
+outside collapses; the clear button hides when the field empties.
+
+**NOT DONE.** No keyboard navigation of the results -- they are tab-reachable
+buttons and nothing binds arrows or Enter-to-first. No highlight of the matched
+substring. The cap is 12 with "more than" rather than paging. Cancelled trips
+are excluded with no way to include them. It does not search bus number, driver
+or trip reference, which the week-scoped version did reach by reading rendered
+text. Not measured below md, where a 16rem field over a 375px board is most of
+the header. And `docs/gate-coverage.md` is still at `52efa52`.
+
 **2026-09-11 - the header carries a search, and what it searches is the week on
 screen.** rux asked where search belongs -- "ui header ? or shedule toolbar?" --
 then "add the header search icon and cmd-k for now".
