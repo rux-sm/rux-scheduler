@@ -1505,7 +1505,7 @@
     if (panelEl.hidden) return;
     panelEl.hidden = true;
     if (tripEl) tripEl.hidden = true;
-    markAvailDay(null);
+    markAvailDays(null);
     for (const b of document.querySelectorAll('.sch-bar[aria-pressed="true"]')) b.setAttribute('aria-pressed', 'false');
     const opener = panelOpener;
     panelOpener = null;
@@ -4009,7 +4009,13 @@
     refreshDirty();
 
     panelOpener = bar;
-    markAvailDay(bar ? Number(bar.style.getPropertyValue('--sch-start')) : null);
+    /* THE WHOLE SPAN, NOT THE FIRST DAY. The bar carries both numbers and the
+       roster brackets all of them; reading only `--sch-start` here is what made
+       a five-day trip light one column. */
+    markAvailDays(
+      bar ? Number(bar.style.getPropertyValue('--sch-start')) : null,
+      bar ? Number(bar.style.getPropertyValue('--sch-span')) : 1,
+    );
     const wasOpen = !panelEl.hidden;
     panelEl.hidden = false;
     if (tripEl) tripEl.hidden = false;
@@ -4195,24 +4201,51 @@
       });
       availGrid.appendChild(r);
     }
-    markAvailDay(currentTripDay());
+    const on = currentTripDay();
+    markAvailDays(on ? on.start : null, on ? on.span : 1);
   }
 
   // The selected trip's day, marked down the column so "who is free THEN" does
   // not need counting. Null clears it.
-  function markAvailDay(index) {
+  /* THE SELECTED TRIP'S DAYS, TINTED, 2026-09-11. This has been three things in
+     one day and the history is the argument. It drew a four-sided box on every
+     cell of one column -- forty outlined squares, which rux called messy -- and
+     it only ever marked the FIRST day, so a five-day trip lit one column of
+     five. Then it became a bracket around the whole span, and rux did not like
+     that either.
+
+     WHAT THE PANE IS FOR DECIDED IT. The question here is "who is free on this
+     day", so the eye is hunting the cells in that column that are EMPTY. A
+     tint lands on exactly those: a busy cell paints
+     `--rux-tag-background-blue` and a day-off cell `--rux-tag-background-red`
+     through the `background` SHORTHAND, which resets what is under it, so the
+     tint shows on the free cells and nowhere else. The marking and the answer
+     are the same pixels.
+
+     `--rux-layer-selected` IS CARBON'S OWN TOKEN FOR THIS STATE rather than a
+     step chosen by eye, and it is what a selected row takes in Carbon's table.
+
+     NO LINES AT ALL NOW. The header keeps its underline, which says which days
+     without drawing on the body; the day rules already mark every column edge,
+     so the tint has boundaries without adding any. */
+  function markAvailDays(start, span) {
     for (const c of availGrid.querySelectorAll('.sch-avail__cell--on-day, .sch-avail__day--on-day')) {
       c.classList.remove('sch-avail__cell--on-day', 'sch-avail__day--on-day');
     }
-    if (index == null) return;
-    for (const c of availGrid.querySelectorAll(`.sch-avail__cell[data-day="${index}"]`)) c.classList.add('sch-avail__cell--on-day');
-    for (const d of availGrid.querySelectorAll(`.sch-avail__day[data-day="${index}"]`)) d.classList.add('sch-avail__day--on-day');
+    if (start == null) return;
+    const end = start + Math.max(1, span || 1) - 1;
+    for (let i = start; i <= end && i < 7; i++) {
+      for (const d of availGrid.querySelectorAll(`.sch-avail__day[data-day="${i}"]`)) d.classList.add('sch-avail__day--on-day');
+      for (const c of availGrid.querySelectorAll(`.sch-avail__cell[data-day="${i}"]`)) c.classList.add('sch-avail__cell--on-day');
+    }
   }
 
   const currentTripDay = () => {
     const bar = document.querySelector('.sch-bar[aria-pressed="true"]');
-    const start = bar && Number(bar.style.getPropertyValue('--sch-start'));
-    return Number.isFinite(start) && bar ? start : null;
+    if (!bar) return null;
+    const start = Number(bar.style.getPropertyValue('--sch-start'));
+    const span = Number(bar.style.getPropertyValue('--sch-span'));
+    return Number.isFinite(start) ? { start, span: Number.isFinite(span) ? span : 1 } : null;
   };
 
   function placeAvailability() {

@@ -1694,10 +1694,19 @@ button.sch-row-head__num {
    Three letters at 14px/600 is ~30px in a 32px square and the seven of them
    touched; at 12px they sit clear. The two are different jobs in one row -- a
    word labelling a column of names, and a day labelling a column of marks. */
-.sch-avail__days > .sch-avail__day {
-  font-size: var(--rux-label-01-font-size);
-  letter-spacing: var(--rux-label-01-letter-spacing);
-}
+/* ONE TYPE FOR ALL FOUR COLUMN-HEADER CELLS, 2026-09-11. These were label-01
+   at 12px while the board's day cells, the board's corner and this grid's own
+   "Driver" corner are all `heading-compact-01` at 14/600 -- one cell in four
+   differing from the rest of the band.
+
+   THE 12px WAS SET FOR 24px CELLS AND OUTLIVED THEM. It exists because "Wed"
+   would not fit a 24px square, which is why these went to two letters in the
+   first place; the cells are 32px wide since the same-day pass, and two letters
+   at 14/600 measure **21px**, inside 32 with eleven to spare. Measured before
+   changing it, in the cell's own font.
+
+   SO THE RULE IS GONE RATHER THAN RETUNED: with nothing here, these cells
+   inherit the same `heading-compact-01` the rest of the band already sets. */
 .sch-avail__days > .sch-avail__day--head {
   font-size: var(--rux-heading-compact-01-font-size);
   letter-spacing: var(--rux-heading-compact-01-letter-spacing);
@@ -1759,6 +1768,25 @@ button.sch-row-head__num {
    one of six identical ones -- so the class is gone and the weekend's only
    remaining mark is the dimmed text in the band. */
 .sch-avail__cell:not([data-day="0"]) { border-inline-start: 1px solid var(--rux-border-subtle-01); }
+/* THE SELECTED TRIP'S DAYS, TINTED. `--rux-layer-selected` is Carbon's own
+   token for a selected surface -- what a selected row takes in its table --
+   rather than a step picked by eye: #393939 against the pane's #262626.
+
+   IT MARKS THE FREE CELLS AND ONLY THOSE, which is the point rather than a
+   limitation. This pane answers "who is free on this day", so the eye hunts the
+   EMPTY cells in the selected column -- and `--busy` and `--off` below set the
+   `background` SHORTHAND, which resets what is under it, so a booked or
+   day-off cell keeps its tag colour and the tint shows exactly where the answer
+   is.
+
+   BEFORE `--busy` AND `--off` FOR THAT REASON, so those two win on order.
+
+   AND IT NEEDS NO LINES. The header cells keep their underline, which says
+   which days without drawing on the body, and the day rules already mark every
+   column edge -- so the band has boundaries without adding any. What this
+   replaced drew four blue borders around the span, and before that a
+   four-sided box on all forty cells of one column. */
+.sch-avail__cell--on-day { background-color: var(--rux-layer-selected); }
 .sch-avail__cell--busy {
   background: var(--rux-tag-background-blue);
   color: var(--rux-tag-color-blue);
@@ -1786,10 +1814,35 @@ button.sch-row-head__num {
    band that reads as one unit; the tint belongs in the body, where the empty
    row that cannot be counted actually is. Placed above `--on-day` so a
    selected weekend column still takes the brighter colour. */
-.sch-avail__day--weekend { color: var(--rux-text-placeholder); }
-.sch-avail__cell--on-day { box-shadow: inset 0 0 0 1px var(--rux-border-interactive); }
-.sch-avail__day--on-day { color: var(--rux-text-primary); box-shadow: inset 0 -2px 0 var(--rux-border-interactive); }
+/* THE CHILD COMBINATOR IS WHAT THIS HAS TO BEAT, AND IT NEVER DID.
+   `.sch-avail__days > .sch-avail__day` sets `color: var(--rux-text-primary)`
+   for the whole band and counts as (0,2,0); this was a single class at (0,1,0)
+   and lost. So the roster's weekend labels have been full-strength since the
+   day they were written, while the board's -- which have no such band rule to
+   fight -- dimmed correctly, and the two bands quietly disagreed.
 
+   IT PASSED A TEST THAT ASKED THE WRONG QUESTION. An earlier pass here checked
+   `.sch-day--weekend` and `.sch-avail__day--weekend` were on the right cells
+   and reported the weekend "still dims" -- the CLASSES were right and nothing
+   painted. Third time today: assert the computed colour, not the class. */
+.sch-avail__days > .sch-avail__day--weekend { color: var(--rux-text-placeholder); }
+/* THE HEADER BAND SHOWS NOTHING FOR THE SELECTED DAYS, 2026-09-11, and the
+   body's tint is the whole marker. It carried
+   `box-shadow: inset 0 -2px 0 var(--rux-border-interactive)` -- the underline
+   the board marks today with -- and rux asked for it off once the tint was
+   doing the work: "want to remove the accented line on date selected".
+
+   AND THE `color: var(--rux-text-primary)` THAT WENT WITH IT IS GONE TOO,
+   because measuring showed it had never changed anything: the band already
+   sets `text-primary` on every label through
+   `.sch-avail__days > .sch-avail__day`, so lifting a selected one to the same
+   value is a rule that computes to what was already there. Keeping it would
+   have been a line of CSS asserting a distinction that does not exist.
+
+   `.sch-avail__day--on-day` IS STILL APPLIED and now draws nothing. It stays
+   because it is the honest record of which days are selected -- the hook for a
+   header cue if one is ever wanted, and what a test would assert against --
+   but no rule reads it today. */
 
 /* ── THE SCHEDULE'S THREE TIMES, ON ONE ROW ─────────────────────────────────
    Carbon pairs two DATES with `rux--date-picker--range`, which is a compiled

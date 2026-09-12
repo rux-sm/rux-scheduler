@@ -128,6 +128,149 @@ They are not gone any more, so that note is now moot rather than pending, and
 nothing was changed either way. And the weekend's body mark is gone by design,
 recorded above so it is not rediscovered as a regression.
 
+**2026-09-11 - a Carbon audit of the three regions, and the two things it found
+are the two rux pointed at.** rux: "review/audit the design again ibm carbon
+standards ... more consistent headers? assignments grid selected days accent
+squared to messy?"
+
+**THE HEADERS ARE CONSISTENT, MEASURED, AND ONE CELL IN FOUR WAS NOT.** All
+three region heads -- the roster's, the board toolbar, the trip editor's -- read
+48px on `--rux-layer` at 16px/400. Three of the four column-header cells read
+32px on `layer-accent-01` at 14px/600. The roster's DAY cells read **12px**.
+That is the whole of the inconsistency, and it was a leftover: 12px exists
+because "Wed" would not fit a 24px square, which is why those labels went to two
+letters at all. The cells have been 32px wide since the pass that widened them,
+and two letters at 14/600 measure **21px** -- inside 32 with eleven to spare,
+measured in the cell's own font before the rule was touched. The rule is deleted
+rather than retuned, so the cells inherit the same `heading-compact-01` the rest
+of the band already sets.
+
+**AND A MEASUREMENT OF MINE WAS WRONG BEFORE IT WAS RIGHT.** The first pass at
+this reported the toolbar as **288px** tall against the other heads' 48, which
+would have been a real defect. It was an artifact of a short browser pane:
+re-measured at 1440x950 it is 48 like the others. A layout read taken at a
+viewport nobody uses is not a reading.
+
+**THE SELECTED-DAY ACCENT WAS DOING THE HEADER'S JOB FORTY TIMES OVER.**
+Measured: the board marks today with `inset 0 -2px 0` on ONE header cell and
+nothing in the body. The roster carried the same underline on its header cell
+AND `inset 0 0 0 1px` on **all forty body cells** -- forty separate outlined
+squares down one column, which is what rux called messy. Two grids, the same
+question, two answers.
+
+**AND IT ONLY EVER MARKED ONE DAY.** `currentTripDay` read `--sch-start` and
+nothing else, so a five-day trip lit one column of the five it occupies. rux
+asked for "a single outline around the entire columns but should include
+multiple column if the trip is multiple days", which is the fault and the fix in
+one sentence.
+
+**IT IS A BRACKET NOW, AND IT IS THE DAY RULE RECOLOURED.** The bar carries
+`--sch-span` beside `--sch-start`, so the marked block is the trip's real span;
+the outline is a left border on the first marked column and another on the
+column AFTER the last. **The second edge is the next column's left border
+rather than this one's right**, because every cell but the first already draws a
+left border from the day rules -- a right border here would sit beside it and
+read as 2px where every other boundary reads as 1. Where the span ends on the
+last column there is no next cell and the pane's edge closes it. A border also
+survives the busy and day-off tints, which set the `background` shorthand; a
+column fill would not.
+
+**DRIVEN on a five-day trip (start 0, span 5): edges at columns 0 and 5, headers
+underlined across Mo Tu We Th Fr, zero four-sided boxes left, the edge reading
+#4589ff against the plain boundary's #525252, and every day label still fitting
+at 14px.**
+
+**AND THEN THE RIGHT LINE TURNED OUT NOT TO BE DRAWING AT ALL.** rux: "looks
+like its missing the right and bottom lines." Measured: column 0 read #4589ff
+and column 5 read **#525252** -- the grey boundary, not the blue edge. The day
+rule above it is `.sch-avail__cell:not([data-day="0"])`, a class and an
+attribute, so (0,2,0); `.sch-avail__cell--edge` is (0,1,0) and lost everywhere
+EXCEPT column 0, which has no boundary rule to lose to. So the bracket drew its
+left line and nothing else, and the first reading of it -- which checked the
+CLASSES were on the right cells, and stopped there -- called it correct.
+Doubling the class matches the boundary rule and this one comes later in the
+file. **That is the second single-class `sch-` rule to lose to a compiled one
+today**; the search's active row was the first. When a rule paints nothing,
+compare specificity before looking anywhere else.
+
+**THE BOTTOM IS DRAWN NOW TOO, at the end of the DATA rather than at the fold.**
+The roster scrolls -- 40 drivers against about 20 rows of room -- so the line
+sits on the last driver's row and is on screen once you scroll to it, which was
+checked rather than assumed: scrolled to the end, the marked row's bottom edge
+lands exactly on the pane's. Drawing it at the fold instead would move it every
+time the pane resized.
+
+**VERIFIED, ALL FOUR SIDES:** a five-day trip lights the header underline across
+Mo Tu We Th Fr, both verticals at #4589ff on columns 0 and 5, and a bottom
+border at #4589ff across columns 0 to 4 on the last row.
+
+**AND THE BRACKET WENT TOO, WHICH MAKES THIS THE THIRD TREATMENT IN A DAY.**
+rux: "not sure i like it. is there another suggestion? maybe dimm column not
+selected? or tint bg tiles for selected day or something else?" Forty boxes,
+then four lines, now a tint -- and the tint is the one that should have been
+first, for a reason about the PANE rather than about taste.
+
+**WHAT THIS GRID IS FOR DECIDED IT.** The question it answers is "who is free on
+this day", so the eye is hunting the cells in the selected column that are
+EMPTY. A tint lands on exactly those: measured, a free cell in the span reads
+#393939 against the pane's #262626, while a busy cell still reads #0043ce and a
+day-off cell #a2191f -- because both set the `background` SHORTHAND, which
+resets what is under it. The marking and the answer are the same pixels, and
+nothing competes with the tag colours. Lines could not do that: they sat beside
+the data rather than on it.
+
+**`--rux-layer-selected` IS CARBON'S OWN TOKEN** for a selected surface -- what
+a selected row takes in its data table -- rather than a step chosen by eye,
+which the first version's `border-interactive` bracket and the version before
+that both were.
+
+**AND IT HAD TO GO ABOVE `--busy` AND `--off` IN THE FILE, which the first
+attempt got backwards.** All three are single classes, so order decides; written
+after them, the tint overrode the tag colours on booked cells -- the exact
+opposite of the argument in its own comment, which was already written and
+already right. Moved, and checked: both tag colours survive inside the span.
+
+**NO LINES AT ALL NOW.** The header keeps its underline, and the day rules
+already mark every column edge, so the band is bounded without drawing anything.
+Verified: columns 0 to 4 tinted for a five-day trip, Mo Tu We Th Fr underlined,
+zero edge classes left in the document.
+
+**THE HEADER'S UNDERLINE CAME OFF, AND TAKING IT OFF FOUND A RULE THAT HAD
+NEVER WORKED.** rux: "want to remove the accented line on date selected." Gone
+-- the body tint is the whole marker now, and neither header band draws anything
+for it.
+
+**THE COLOUR THAT WENT WITH IT WAS A NO-OP AND I NEARLY KEPT IT ON A WRONG
+ARGUMENT.** `.sch-avail__day--on-day` also set `color: var(--rux-text-primary)`,
+and the comment justifying it said the labels were secondary so this was "a real
+cue". Measured: selected and unselected labels both read **#f4f4f4**. The band
+already sets `text-primary` on every label, so the rule computed to what was
+already there. It is deleted rather than defended.
+
+**AND THE SAME MEASUREMENT SHOWED THE ROSTER'S WEEKEND LABELS HAVE NEVER
+DIMMED.** `.sch-avail__days > .sch-avail__day` sets `color: text-primary` for
+the band and counts as (0,2,0); `.sch-avail__day--weekend` was a single class at
+(0,1,0) and lost. So the board's weekend dimmed and the roster's did not, and
+the two bands have quietly disagreed since the pass that built them -- **which
+that pass reported as working**, because it asserted the CLASSES were on the
+right cells and never read a colour. Fixed with the child combinator, and
+checked the right way: both bands now read `rgba(244,244,244,0.4)` on Sa and Su,
+weekdays stay #f4f4f4, and no header cell carries a box-shadow.
+
+**THAT IS THREE RULES IN ONE DAY THAT PAINTED NOTHING AND WERE CALLED DONE** --
+the search's active row, the roster's bracket, and now the weekend dim. All
+three were single-class `sch-` rules losing to a longer selector, and all three
+passed a check that asserted the class rather than the computed value. The
+check cannot see any of it: it reads classes against the compiled CSS and has no
+opinion about which rule wins. **Assert the colour, not the class.**
+
+**NOT DONE.** `--rux-layer-selected` was not re-measured in the other seven
+themes. It resolves to the same #393939 as `layer-accent-01` in g100, and the
+entry four passes below records `layer-hover-01` and `layer-accent-01`
+collapsing to one value in ant-dark and spotify -- so a theme where
+`layer-selected` equals the pane, or equals the header band, is plausible and
+unchecked.
+
 **2026-09-11 - the result cap is 50, and the 12 it replaced was a rule written
 for a component that no longer exists.** rux asked whether results were limited,
 then "make it 50".
