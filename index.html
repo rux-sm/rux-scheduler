@@ -305,7 +305,16 @@
           <svg class="rux--search-magnifier-icon" width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-search"/></svg>
         </div>
         <label class="rux--label rux--visually-hidden" id="sch-search-label" for="sch-search-input">Search trips</label>
-        <input id="sch-search-input" class="rux--search-input" type="text" role="searchbox" tabindex="-1" placeholder="Destination, organization or contact…" autocomplete="off">
+        <!-- `combobox`, NOT the capture's `searchbox`, and the difference is the list.
+             Carbon's expandable search is captured with `role=searchbox` because
+             nothing hangs off it; this one owns a listbox of suggestions, and a
+             searchbox has no way to say which suggestion is current. The pattern
+             page asks for exactly that behaviour -- "the ARROW keys should cycle
+             through displayed suggestions, with ENTER choosing a suggestion" --
+             and `aria-activedescendant` is how a screen reader is told, without
+             focus ever leaving the field. sch-data.js keeps `aria-expanded` and
+             `aria-activedescendant` in step with what is drawn. -->
+        <input id="sch-search-input" class="rux--search-input" type="text" role="combobox" aria-expanded="false" aria-controls="sch-search-list" aria-autocomplete="list" tabindex="-1" placeholder="Destination, organization or contact…" autocomplete="off">
         <button type="button" class="rux--search-close rux--search-close--hidden" id="sch-search-clear" aria-label="Clear search input"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-close"/></svg></button>
       </div>
       <!-- RESULTS ATTACH TO THE FIELD, which is Carbon's type-ahead shape and
@@ -316,7 +325,31 @@
            of empty surface under 659px of results and wrapped a third of the
            rows at its fixed 16rem. Sized to the field instead, it is a menu
            under a field rather than a panel that happens to hold a list. -->
-      <div class="sch-search__results" id="sch-search-results" role="listbox" aria-label="Matching trips" hidden></div>
+      <div class="sch-search__results" id="sch-search-results" hidden>
+        <!-- THE THREE PARTS ARE STATIC AND ONLY THEIR CONTENTS CHANGE, which is
+             what lets `aria-controls` above name the list: an id minted at
+             runtime is an id `tools/check.mjs` cannot resolve, and it said so.
+             The COUNT and the NOTE sit outside the listbox deliberately -- a
+             listbox's children must be options, and neither of those is one. -->
+        <p class="sch-search__count" id="sch-search-count" hidden></p>
+        <!-- `tabindex="-1"` OPTS OUT OF THE BROWSER'S FOCUSABLE-SCROLLER RULE, and
+             without it the whole list is a tab stop. rux saw it: a ring around
+             all ten rows instead of around one. Chrome gives a SCROLLING region
+             its own tab stop when nothing inside it is tabbable, so a keyboard
+             user can still scroll it -- and this list qualifies twice over,
+             being `overflow-y: auto` with every option at `tabindex=-1`.
+             Reproduced with real key presses: two Tabs from the field landed on
+             this element, 949x611, wearing the UA's own `1px auto` ring.
+
+             OPTING OUT COSTS NOTHING HERE, WHICH IS THE ONLY REASON TO DO IT.
+             That rule exists so a scrollable region is reachable by keyboard;
+             this one already is, through the combobox -- the arrow keys move
+             `aria-activedescendant` and scroll the active option into view, so
+             every row can be reached without the scroller ever taking focus.
+             The property reads -1 either way; only the ATTRIBUTE opts out. -->
+        <div class="rux--contained-list rux--contained-list--inset-rulers" id="sch-search-list" role="listbox" aria-label="Matching trips" tabindex="-1"></div>
+        <p class="sch-search__empty" id="sch-search-note" hidden></p>
+      </div>
     </div>
     <button type="button" class="rux--header__action rux--btn rux--layout--size-lg rux--btn--ghost rux--btn--icon-only" aria-label="Account" aria-expanded="false" aria-controls="rux-account-panel"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href="#i-user--avatar"/></svg></button>
     <button type="button" class="rux--header__action rux--btn rux--layout--size-lg rux--btn--ghost rux--btn--icon-only" aria-label="App switcher" aria-expanded="false" aria-controls="rux-switcher-panel"><svg width="20" height="20" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><use href="#i-grid"/></svg></button>

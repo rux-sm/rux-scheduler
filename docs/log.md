@@ -128,6 +128,329 @@ They are not gone any more, so that note is now moot rather than pending, and
 nothing was changed either way. And the weekend's body mark is gone by design,
 recorded above so it is not rediscovered as a regression.
 
+**2026-09-11 - the result cap is 50, and the 12 it replaced was a rule written
+for a component that no longer exists.** rux asked whether results were limited,
+then "make it 50".
+
+**THE OLD COMMENT GAVE ITS OWN REASON AND THE REASON HAD EXPIRED.** It read "the
+panel is 256px of header, not a page; past a dozen rows it is a list to scroll
+rather than an answer" -- true of the `rux--header-panel` the results lived in
+when it was written. They are a menu hung off the field now, at the field's
+width with `max-block-size: 60vh` and the list scrolling inside. The shape the
+cap was protecting had already been replaced two passes earlier and the number
+stayed behind.
+
+**WHAT 12 WAS COSTING, counted against the fleet's 737 trips before changing
+anything:** "memorial" matches 38, "dallas" 28, "vanguard" 25. All three were
+cut to 12 -- and since the order is `start_date` DESCENDING, what was cut was
+always the OLDEST, with nothing on screen saying so. A dispatcher hunting last
+spring's trip was told to narrow a query that was already a school's name.
+
+**AT 50, ALL THREE COMPLETE.** Measured after: memorial 38 of 38, dallas 28 of
+28, vanguard 25 of 25, "mcallen memorial" 11 of 11, each with an exact count and
+no over-cap note. "tx" still matches 612 and still stops at 50 with "More than
+50 trips match" -- which is the query that ought to be narrowed, and the cap is
+printed rather than silent. cap+1 is still what is fetched, so that line never
+claims a total it did not count.
+
+**THE LAYOUT DID NOT MOVE, which is the thing a bigger cap could have broken.**
+The box holds at 691px, 0.60 of the viewport, exactly the `60vh` it was given;
+the list scrolls inside it. And the keyboard still reaches the far end of a
+50-row list: End lands on index 49 with the row in view and the list scrolled
+2440px, ArrowDown from there wraps to 0 with the scroll back at 0, ArrowUp wraps
+to 49, Home returns to 0.
+
+**NOT DONE.** Ordering is still newest-first rather than by relevance, so a
+query past 50 still hides the oldest and says only "narrow the search". Fifty
+rows is also 50 DOM nodes rebuilt on every keystroke past the debounce; not
+measured for cost, and no virtualisation.
+
+**2026-09-11 - the results were covering the field's focus ring by one pixel,
+and it is the 47-against-48 difference for the third time.** rux, holding ours
+beside the Carbon website: "looks like the focus border is clipped on ours by
+the results unlike the carbon website."
+
+**ONE PIXEL, MEASURED.** The input's box ends at y=48; the results began at
+y=47. Carbon draws the input's focus as `outline: 2px solid` at
+`outline-offset: -2px`, so the ring paints on y 46 to 48 -- and the results are
+opaque `--rux-layer` at z-index 8100, so they took the ring's bottom edge. On
+the Carbon website the ring closes and the menu starts below it, which is what
+made the difference visible side by side.
+
+**THE CAUSE IS THE SAME ONE TWICE ALREADY IN THIS HEADER.**
+`.rux--header__global` is 47px -- the header's 48 less its bottom border -- and
+the search inside it is 48. `.sch-header-search` was an ordinary flex item, so
+it stretched to 47, and the results are `inset-block-start: 100%`: 100% of 47 is
+47, one pixel above the field's own bottom. The magnifier's clipped ring and its
+half-pixel misalignment were the first two faults from the same difference.
+
+**`align-self: flex-start` SIZES THE BOX TO ITS CONTENT**, so it is 48, `100%`
+is the field's real bottom edge, and the ring keeps its last pixel. Measured
+after: wrapper 48, field bottom 48, results top 48, **overlap 0**; the field
+still 949 wide, the results still exactly aligned to it, Account unmoved at
+1167.
+
+**WORTH NAMING AS A PATTERN RATHER THAN THREE BUGS.** Every one of these came
+from a control sized to the header (48) sitting in a bar sized to the header
+MINUS its border (47), and each showed up as something a pixel out: a ring
+above the page, a control half a pixel high, a menu a pixel too far up. Anything
+else anchored to this wrapper should be measured against the field rather than
+assumed to inherit its height.
+
+**NOT DONE.** Only the bottom edge was checked against the results. The field's
+ring also runs along the top of the header, where the earlier `flex-start`
+change put it at y=0 -- visible, but with nothing above it to prove it is not
+being cropped by the viewport, which is the same shape of fault and was not
+re-driven here.
+
+**2026-09-11 - the arrow keys had been selecting results for three passes and
+nothing on screen said so.** rux: "should pressing tab or arrow key let you
+select individual search results and then enter to select/load it?" Arrows and
+Enter already did. The reason it did not look like it is the answer.
+
+**THE HIGHLIGHT NEVER PAINTED, AND THE CHECK CANNOT SEE THAT.** Measured with a
+row active: the highlighted option's background computed **`transparent`** --
+identical to every other row, contrast **1.00**. `aria-activedescendant` was
+correct, `aria-selected` was correct, the class was on the right element, and a
+sighted person saw nothing move. A selection a screen reader can follow and an
+eye cannot is barely a selection.
+
+**CARBON'S `background: none` OUTRANKED IT.**
+`.rux--contained-list-item--clickable .rux--contained-list-item__content` is two
+classes; `.sch-search__opt--active` was one. It lost on specificity and had lost
+since the day it was written -- through a pass that verified the KEYS worked and
+never verified that anything was drawn. Scoping it to `.sch-search__results`
+makes it two as well, and sch.css loads after rux.css, so the later of two equal
+rules wins with no `!important`.
+
+**AND THE TOKEN IS NOW CARBON'S OWN FOR THAT ROW.** It was `--rux-layer-hover-01`,
+picked by eye; the rule Carbon actually paints a hovered contained-list row with
+is `--rux-layer-hover`, at
+`.rux--contained-list-item--clickable ...:not(:disabled):hover`. Using the same
+token means the keyboard highlight and the mouse hover are literally the same
+colour rather than two near-misses. Measured after: active row #333333 against
+the panel's #262626 in g100, visible.
+
+**DRIVEN END TO END AFTER THE FIX.** Three ArrowDowns lit "San Antonio TX ·
+May 17, 2027 · Vanguard Mozart", Enter moved the board **Sep 7-13 2026 to May
+17-23 2027**, collapsed the search, selected that bar and opened its editor.
+
+**AND THE ANSWER TO THE TAB HALF IS STILL NO**, for the reason the entry below
+gives: Tab leaves a widget, arrows move within it, and the options are
+`tabindex=-1` on purpose.
+
+**NOT DONE.** The highlight is 1.2:1 against the panel -- Carbon's own hover
+step, so it matches the mouse exactly, but it is a weak signal for a keyboard
+user who has no cursor to corroborate it. A border or a left rule on the active
+row would carry further and would depart from what the mouse does; not changed,
+and named here so the trade is on record. Nor was the highlight re-measured in
+the other seven themes: `layer-hover` is one token, but the entry three passes
+below records `layer-hover-01` and `layer-accent-01` collapsing to one colour in
+ant-dark and spotify, and no one has checked whether `layer-hover` does
+something similar against `layer`.
+
+**2026-09-11 - the whole listbox was a tab stop, and the property that would
+have shown it reads -1 either way.** rux: "the entire list is focuable instead
+of individual rows", with a ring drawn around all ten rows at once.
+
+**IT IS THE BROWSER'S FOCUSABLE-SCROLLER RULE.** Chrome gives a SCROLLING region
+its own tab stop when nothing inside it is tabbable, so a keyboard user can
+still scroll it. This list qualifies twice over: `overflow-y: auto` since the
+count had to stay pinned, and every option at `tabindex=-1` since the combobox
+owns the keyboard. So the element the pattern deliberately keeps out of the tab
+order was put back into it by the engine.
+
+**AND `el.tabIndex` DOES NOT SHOW IT, which is why the first reading missed.**
+Queried directly the list reported `tabIndex: -1` with no `tabindex` attribute
+-- the DOM property is untouched by the rule -- and that was taken as "not a tab
+stop", which was wrong. Only pressing Tab shows it: driven with real key presses
+through the browser, two Tabs from the field landed on `sch-search-list`, 949 by
+611, wearing the UA's own `1px auto rgb(153,200,255)`. That is the ring in the
+screenshot, and it is the browser's, not Carbon's.
+
+**`tabindex="-1"` AS AN ATTRIBUTE IS THE OPT-OUT.** The property already read
+-1; only the attribute tells the engine the author has an opinion. Re-driven
+after: two Tabs go field, Clear, **Account** -- the list is skipped, never takes
+focus, and the focusout handler collapses the search on the way past.
+
+**OPTING OUT OF AN ACCESSIBILITY FEATURE NEEDS THE REASON WRITING DOWN.** That
+rule exists so a scrollable region is reachable by keyboard, and this one
+already is: the arrows move `aria-activedescendant` and scroll the active option
+into view. Checked rather than asserted -- twelve ArrowDowns reached indices 0
+through 11 in order, the list scrolled 123px on its own, and the last row
+finished inside the box. Nothing is unreachable without the scroller's tab stop,
+which is the only thing that makes removing it legitimate.
+
+**NOT DONE.** Only Chrome was driven. The rule is Chromium's; Firefox and Safari
+differ on focusable scrollers, and an explicit `tabindex=-1` is the safe answer
+in all three, but the fault itself was reproduced in one engine only.
+
+**2026-09-11 - no, the results should not be tabbable, and asking found two
+bugs that had nothing to do with Tab.** rux: "should the search results be
+individually selectable with tab?"
+
+**THE ANSWER IS NO, AND THE PATTERN IS THE REASON.** This is an
+activedescendant listbox: focus stays in the field so the query stays editable,
+`aria-activedescendant` names the current option, and the options are
+`tabindex=-1`. Tab moves between widgets rather than within one -- tabbing
+through twelve results to reach the Account button is the alternative, and the
+list is rebuilt on every keystroke, so those stops would appear and vanish as a
+person types. Verified as built: 0 of 12 options tabbable, and Tab from the
+field goes to Clear, then Account.
+
+**BUT TAB DID LEAVE, AND LEFT THE SEARCH OPEN BEHIND IT.** Measured: focus on
+"Account", field still expanded at its full width, twelve results still drawn
+over the board. The only things that collapsed it were a pointer press outside
+and Escape -- and a keyboard user reaches neither by tabbing. `focusout` on the
+wrapper closes it now, testing `relatedTarget` first and falling back to
+`activeElement` after a tick, so moving between the field and its own clear
+button does not count as leaving.
+
+**AND THE PRESS-OUTSIDE TEST WAS WRONG, on a comment that asserted the thing it
+got wrong.** It read `searchBox.contains(e.target)` with "the results live
+inside it now" beside it. They do not: `#sch-search` is the `.rux--search`
+element and the results are its SIBLING inside `.sch-header-search`. Checked
+directly -- `searchBox.contains(results)` is **false**. So every press on the
+list collapsed the search out from under the thing being pressed: grabbing its
+scrollbar, pressing the count line, starting a drag across a row. **Clicking a
+result looked fine only by accident**, because that handler collapses the search
+itself, so the one path anyone had tested was the one path where the bug could
+not show.
+
+**DRIVEN, FOUR WAYS, after.** Press the list: stays open, where it used to
+close. Press the board: closes. Tab away to Account: closes, where it used to
+stay. Move to its own clear button: stays open.
+
+**NOT DONE.** Shift-Tab backwards out of the field was not driven, only forward;
+the handler is direction-agnostic by construction but that is reasoning rather
+than a reading. Nothing returns focus to the magnifier when the search collapses
+from a Tab -- focus has already gone where the person sent it, which seems
+right, and is untested against a screen reader.
+
+**2026-09-11 - the search icon's focus ring had no top edge, and it was two
+faults stacked.** rux, with the search focused beside the account button for
+comparison: "focus seem to be missing the top section on search button."
+
+**CARBON STYLES THE TWO CONTROLS' FOCUS DIFFERENTLY, which is the first half:**
+
+    .rux--header__action:focus     { border-color: var(--rux-focus); outline: none }
+    .rux--search--expandable
+      .rux--search-magnifier:focus { outline: 2px solid var(--rux-focus) }
+
+A border draws INSIDE the element and an outline draws OUTSIDE it. Every other
+control in this header rings within its own 48px; the magnifier needs 2px above
+the header, and above the header is off the page.
+
+**AND THE CONTROL WAS ALREADY HALF A PIXEL PROUD, which is the second.**
+Measured: the magnifier read top **-0.5**, bottom 47.5, against Account at 0 and
+48. The search is 48px (`size-lg`, matched to the header actions) and
+`.rux--header__global` is 47 -- the header's 48 less its bottom border -- so
+`align-items: center` split the difference. Half a pixel is invisible on an icon
+and is not invisible on a ring: it is the difference between a ring that starts
+at 0 and one that starts above the page. So the ring wanted -2.5 to 49.5 and the
+browser had nowhere to put the first 2.5px.
+
+**BOTH FIXED, AND EACH ON ITS OWN SIDE OF THE LINE.** `outline-offset: -2px`
+goes in `rux-overrides.css` -- a component rule at Carbon's own specificity, no
+`!important`, which is what that file is for -- and puts the ring inside the
+box, where the header actions' borders already sit. `align-items: flex-start`
+goes in sch.css, because the wrapper is this app's, and it puts all three
+controls on one top edge. The 1px the control then overhangs at the bottom is
+clipped by nothing: every ancestor reads `overflow: visible`, checked.
+
+**IT IS OURS AND NOT A rux-ds BUG, which is why no request was filed.** Carbon's
+expandable search is designed for a page with room around it. Putting it flush
+against the top of a 48px shell header is this app's decision, so the correction
+is this app's too.
+
+**MEASURED AFTER: magnifier 0 to 48, Account 0 to 48, top edges equal; outline
+2px solid at offset -2px; the ring spans 0 to 48 and is fully inside the
+header.** Before: ring -2.5 to 49.5, top edge off the page.
+
+**AND THE MEASUREMENT NEARLY DID NOT HAPPEN, which is worth the line.** Three
+readings in a row reported `outline-style: none` and `outline-offset: 0px` with
+the rule plainly loaded and last in the cascade -- because `document.hasFocus()`
+was **false**: the browser pane held the element as `activeElement` while the
+window itself was unfocused, and `:focus` cannot match in a document that does
+not have focus. A click into the page first, and every reading changed. A focus
+style cannot be measured from an unfocused window, and the failure looks exactly
+like a rule that is not applying.
+
+**NOT DONE.** Only `:focus` was looked at, not `:focus-visible` -- Carbon's rule
+is on `:focus`, so the ring shows for a mouse press too, which is Carbon's
+choice and was not changed. The other two header actions were not re-measured in
+every theme; `--rux-focus` is one token and the geometry is what moved here.
+
+**2026-09-11 - the result list is navigable by keyboard, and building it found
+ARIA I had already got wrong.** rux asked for keyboard navigation; the pattern
+page specifies it exactly: "the ARROW keys should cycle through displayed
+suggestions, with ENTER choosing a suggestion and ESCAPE allowing the user to
+exit the type-ahead menu without selecting anything."
+
+**THE ROLES WERE INVALID AS SHIPPED, which the feature exposed rather than
+caused.** `role="listbox"` sat on the results CONTAINER -- which also holds the
+count line and the over-cap note, neither of which is an option -- and its
+rows were `<button>`s inside `contained-list-item` divs. A listbox's children
+must be options. So the listbox moved onto the `contained-list` itself, the
+item wrappers take `role="presentation"` so Carbon's styling survives while the
+tree ignores them, and the button carries `role="option"`. The count and the note
+are now siblings of the list rather than contents of it.
+
+**AND THE FIELD IS A `combobox`, NOT THE CAPTURE'S `searchbox`.** Carbon's
+expandable search is captured with `role=searchbox` because nothing hangs off
+it; this one owns a list of suggestions, and a searchbox has no way to say which
+suggestion is current. `aria-activedescendant` is how that is said without focus
+ever leaving the field -- which is the point of the pattern: the query stays
+editable while the arrows walk the list. Options are `tabindex=-1` for the same
+reason; tabbing through twelve results to leave the search is the alternative.
+
+**`check.mjs` CAUGHT THE FIRST ATTEMPT AND WAS RIGHT TO.** `aria-controls` named
+a list id that JavaScript minted at render time, and the ids gate fails on a
+reference it cannot resolve. The fix is better than the thing it rejected: the
+count, the list and the note are all static in index.html now and only their
+CONTENTS change, so the id is real in the file and the three parts stop being
+rebuilt on every keystroke.
+
+**ESCAPE IS TWO-STAGE, which is that last clause of the spec read literally.**
+Carbon asks for an escape from the MENU, not from the search: the first press
+closes the list and leaves the query alone -- measured, "memorial" still in the
+field -- and only a second collapses it. Enter with nothing highlighted takes the
+first row, because a person who typed a destination and pressed Enter meant the
+obvious one and doing nothing reads as a broken key.
+
+**A POINTERMOVE MOVES THE HIGHLIGHT TOO**, so the mouse and the keyboard cannot
+disagree about which row Enter would take -- without it, hovering row 9 while row
+2 is highlighted leaves two rows looking current and Enter taking neither.
+
+**THE ARROWS SCROLLED THE COUNT AWAY, AND THAT IS WHY ONLY THE LIST SCROLLS
+NOW.** The whole box was the scroller, so `scrollIntoView` on the highlighted
+option scrolled everything: measured `scrollTop: 32` after four presses of Down,
+exactly the count's height. A flex column with the list as the one scrolling
+child pins the count above and the note below. Re-measured after twelve presses:
+outer scroll 0, list scroll 122.5, count still in view, highlighted option still
+in view.
+
+**DRIVEN.** Twelve options; Down from nothing takes the first and Up from
+nothing takes the LAST; both ends wrap; Home and End jump; `aria-activedescendant`
+matches the selected option on every reading and exactly one row is lit at a
+time; Enter on the third result moved the board Sep 7-13 2026 to Jan 11-17 2027,
+collapsed the field and selected the Fort Worth bar.
+
+**A MISTAKE IN METHOD, WORTH THE LINE.** Two of the edits in this pass were
+written with `str.replace` and no assertion, and one silently did not match --
+so the old `searchNote` stayed, kept calling `replaceChildren` on the container,
+and deleted the very static markup the new code depended on. The symptom was a
+list that navigated correctly by `aria-activedescendant` while reporting zero
+options to the page. Every replacement in this file should assert its count
+first; the two that did are the two that were right.
+
+**NOT DONE.** No type-ahead before typing -- Carbon describes recent searches in
+the panel for an active search and there are none. Nothing announces the result
+count to a screen reader when the list changes; the count is drawn but the
+listbox has no live region, so an assistive user hears only what
+`aria-activedescendant` names. And `docs/gate-coverage.md` is still at
+`52efa52`, now with a combobox it has never seen.
+
 **2026-09-11 - a result row carries all four fields, and the layout was chosen
 from a count rather than from taste.** rux wanted destination, organization,
 booking contact and date in each row, and asked which configuration.

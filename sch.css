@@ -2199,7 +2199,39 @@ body:has(#sch-panel:not([hidden])) .sch-toast {
    itself and not only of Account and the Switcher: "an expanding search field
    that does not disrupt other icon positions". `flex-end` anchors the right
    edge, so the width transition plays out leftward and nothing jumps. */
-.sch-header-search { display: flex; align-items: center; justify-content: flex-end; position: relative; }
+/* `flex-start`, NOT `center`, AND IT IS HALF A PIXEL OF REAL DIFFERENCE. The
+   search is 48px (`size-lg`, matching the header actions) and
+   `.rux--header__global` is 47 -- the header's 48 less its bottom border -- so
+   centring put the control at top -0.5, bottom 47.5 while Account and the
+   Switcher sit at 0 and 48. Half a pixel is invisible on an icon and is not
+   invisible on a focus ring: it put the ring's top edge above the header, where
+   the browser has nowhere to draw it. Aligned to the start, all three controls
+   share one top edge and the ring has room. The 1px the control then overhangs
+   at the bottom is not clipped by anything -- every ancestor is
+   `overflow: visible`, measured. */
+.sch-header-search {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  position: relative;
+  /* `align-self: flex-start` SO THIS BOX IS ITS CONTENT'S HEIGHT, NOT ITS
+     PARENT'S, AND THAT IS WHAT STOPPED CLIPPING THE FIELD'S FOCUS RING.
+
+     As an ordinary flex item it stretched to `.rux--header__global`'s 47px --
+     the header's 48 less its bottom border -- while the search inside is 48.
+     The results are `inset-block-start: 100%`, and 100% of 47 is 47, so they
+     began ONE PIXEL above the field's bottom edge and painted over it: they are
+     opaque `--rux-layer` at z-index 8100. Carbon draws the input's focus as
+     `outline: 2px solid` at `outline-offset: -2px`, which lands on y 46 to 48,
+     so the covered pixel was the ring's bottom edge. rux saw it against the
+     Carbon website, where the ring closes and the menu starts below it.
+
+     Content-sized, the box is 48, `100%` is the field's own bottom, and the
+     ring has its last pixel back. This is the third thing in this header that
+     the 47-against-48 difference has bent -- the magnifier's ring and its
+     alignment were the first two -- and it is the same cause every time. */
+  align-self: flex-start;
+}
 .sch-header-search { flex: 1 1 auto; min-inline-size: 0; }
 .sch-header-search .rux--search--expandable.rux--search--expanded { inline-size: 100%; }
 
@@ -2228,9 +2260,25 @@ body:has(#sch-panel:not([hidden])) .sch-toast {
   box-shadow: 0 2px 6px var(--rux-shadow, rgba(0, 0, 0, 0.3));
   /* AS TALL AS ITS RESULTS AND NO TALLER, capped so a long list scrolls inside
      itself rather than running off the bottom of the window. 60vh leaves the
-     board visible behind it, which is the point of a dropdown over a panel. */
+     board visible behind it, which is the point of a dropdown over a panel.
+
+     AND ONLY THE LIST SCROLLS, WHICH THE ARROW KEYS MADE NECESSARY. This whole
+     box was the scroller, so `scrollIntoView` on the highlighted option scrolled
+     the COUNT away: measured `scrollTop: 32`, exactly the count's height, after
+     four presses of Down. A column with the list as the one scrolling child
+     pins the count above it and the over-cap note below, where they can still be
+     read while the arrows walk the list. */
+  display: flex;
+  flex-direction: column;
   max-block-size: 60vh;
+  overflow: hidden;
+}
+/* THE ONE SCROLLING CHILD. `min-block-size: 0` because a flex item will not
+   shrink below its content, and without it the list pushes the box past 60vh
+   instead of scrolling inside it. */
+.sch-search__results .rux--contained-list {
   overflow-y: auto;
+  min-block-size: 0;
 }
 /* THE COUNT, WHICH CARBON ASKS FOR BY NAME: "Always include the number of
    search results, including for searches with no results." It sits above the
@@ -2298,6 +2346,26 @@ body:has(#sch-panel:not([hidden])) .sch-toast {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* THE HIGHLIGHTED OPTION, AND IT WAS INVISIBLE UNTIL IT WAS MEASURED. The
+   arrows moved `aria-activedescendant` correctly from the day they were built
+   and NOTHING ON SCREEN CHANGED: measured, the active row's background computed
+   `transparent`, identical to every other row, contrast 1.00. A selection a
+   screen reader can follow and an eye cannot is barely a selection, and it is
+   why the keyboard felt like it was doing nothing.
+
+   CARBON'S OWN `background: none` WAS WINNING.
+   `.rux--contained-list-item--clickable .rux--contained-list-item__content` is
+   two classes; `.sch-search__opt--active` is one, so it lost on specificity and
+   never painted. Scoping it to the results makes it two as well, and sch.css
+   loads after rux.css, so the later of two equal rules wins -- no `!important`.
+
+   `--rux-layer-hover`, WHICH IS CARBON'S TOKEN FOR THIS EXACT ROW, read from
+   `.rux--contained-list-item--clickable ...:not(:disabled):hover` rather than
+   chosen: the keyboard highlight and the mouse hover are then literally the
+   same colour, and the pointermove handler in sch-data.js keeps them from ever
+   disagreeing about which row is current. */
+.sch-search__results .sch-search__opt--active { background-color: var(--rux-layer-hover); }
+
 /* THE MATCHED RUN, WHICH IS THE ONLY THING HERE THAT EXPLAINS A ROW. Weight and
    nothing else -- no colour, no background -- so it reads as emphasis inside
    the line rather than as a second kind of text, and it inherits whichever of

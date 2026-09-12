@@ -742,3 +742,35 @@
     --rux-grid-gutter: 0;
   }
 }
+
+/* THE EXPANDABLE SEARCH'S FOCUS RING DRAWS OUTSIDE ITS BOX, AND IN A SHELL
+   HEADER THERE IS NOTHING OUTSIDE IT. rux saw the ring's top edge missing on
+   the search while the Account button beside it rings cleanly.
+
+   THE TWO ARE STYLED DIFFERENTLY BY CARBON, which is the whole of it:
+
+       .rux--header__action:focus        { border-color: var(--rux-focus); outline: none }
+       .rux--search--expandable
+         .rux--search-magnifier:focus    { outline: 2px solid var(--rux-focus) }
+
+   A border is drawn INSIDE the element; an outline is drawn OUTSIDE it. Every
+   other control in this header rings with the border and stays inside its own
+   48px; the magnifier rings with an outline and needs 2px above the header to
+   do it.
+
+   MEASURED, AND THE BOX IS ALREADY HALF A PIXEL PROUD. `.rux--search-magnifier`
+   reads top -0.5 and bottom 47.5 -- a 48px element centred in a 47px global bar
+   -- against the header's own top at 0. So the ring wants to span -2.5 to 49.5
+   and the browser has nowhere to put the first 2.5px of it.
+
+   `outline-offset: -2px` PUTS IT INSIDE, which costs nothing and gains the
+   consistency: the ring now lands where the header actions' borders land,
+   inside the control, and every one of the three rings the same way.
+
+   THIS IS OURS, NOT A rux-ds BUG. Carbon's expandable search is designed for a
+   page with room around it; putting it flush against the top of a 48px shell
+   header is this app's decision, so the correction belongs here. Carbon's own
+   specificity, no !important. Added 2026-09-11. */
+.rux--search--expandable .rux--search-magnifier:focus {
+  outline-offset: -2px;
+}

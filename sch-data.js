@@ -1192,11 +1192,27 @@
      because it measures its pane. Carbon's slide-in variant exists for
      exactly this and drops the shadow a floating panel would carry.
      ────────────────────────────────────────────────────────────────────────*/
-  /* HOW MANY RESULTS A PANEL SHOWS. The panel is 256px of header, not a page;
-     past a dozen rows it is a list to scroll rather than an answer, and the
-     right move is a narrower query. The count of what was dropped is printed
-     so the cap is never silent. */
-  const SEARCH_CAP = 12;
+  /* HOW MANY RESULTS THE LIST SHOWS, 50 SINCE 2026-09-11.
+
+     IT WAS 12, AND THAT ARGUMENT DIED WITH THE PANEL IT WAS WRITTEN FOR. The
+     comment read "the panel is 256px of header, not a page" -- true of the
+     `rux--header-panel` the results used to live in. They are a menu hung off
+     the field now: the field's own width, `max-block-size: 60vh`, and the list
+     scrolling inside it. A dozen rows was a cap on a shape that no longer
+     exists.
+
+     WHAT 12 WAS ACTUALLY COSTING, counted live against the fleet's 737 trips:
+     "memorial" matches 38, "vanguard" 25, "dallas" 28. Every one of those was
+     cut to 12 -- and since the order is `start_date` DESCENDING, what was cut
+     was always the OLDEST, with nothing on screen saying so. A dispatcher
+     looking for last spring's trip got told to narrow a query that was already
+     a school's name.
+
+     50 CLEARS ALL THREE, and the ones it does not clear are the queries that
+     should be narrowed anyway: "tx" matches 612. The cap is still printed
+     rather than silent -- "More than 50 trips match" -- and cap+1 is still what
+     is fetched, so that line never claims a total it did not count. */
+  const SEARCH_CAP = 50;
   let panelIndex = { trips: new Map(), buses: new Map(), driversById: new Map(), contacts: [] };
   let panelOpener = null;
   const panelDetails = document.getElementById('sch-panel-details');
@@ -4860,10 +4876,14 @@
      `--expanded` and `__action--active`, and fires `rux:header-panel-opened`.
      So this listens for that event and does not own the open state -- the same
      reason the switcher and the account panels have no code in this file. */
+  const searchWrap = document.querySelector('.sch-header-search');
   const searchBox = document.getElementById('sch-search');
   const searchTrigger = document.getElementById('sch-search-trigger');
   const searchInput = document.getElementById('sch-search-input');
   const searchResults = document.getElementById('sch-search-results');
+  const searchList = document.getElementById('sch-search-list');
+  const searchCount = document.getElementById('sch-search-count');
+  const searchNoteEl = document.getElementById('sch-search-note');
   const searchClear = document.getElementById('sch-search-clear');
 
   /* EXPANDING AND COLLAPSING, WHICH NOTHING UPSTREAM DOES. rux-ds ships no
@@ -4908,12 +4928,45 @@
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSearch(); }
   });
 
-  /* A CLICK OUTSIDE COLLAPSES IT, because an expanded field stretches across
-     the header and there is no other way back -- the magnifier is under it. */
+  /* A PRESS OUTSIDE COLLAPSES IT, because an expanded field stretches across the
+     header and there is no other way back -- the magnifier is under it.
+
+     THE TEST IS THE WRAPPER, NOT THE FIELD, AND THE COMMENT THAT WAS HERE WAS
+     WRONG. It read "the results live inside it now" and tested
+     `searchBox.contains` -- but `#sch-search` is the `.rux--search` element and
+     the results are its SIBLING inside `.sch-header-search`. Checked:
+     `searchBox.contains(results)` is false. So every press on the list --
+     grabbing its scrollbar, pressing the count line, starting a drag over a row
+     -- collapsed the search out from under the thing being pressed. Clicking a
+     RESULT looked fine only by accident: that handler collapses the search
+     itself, so the bug was invisible on the one path anyone tested. */
   document.addEventListener('pointerdown', e => {
     if (!searchOpen()) return;
-    if (searchBox.contains(e.target)) return;   // the results live inside it now
+    if (searchWrap.contains(e.target)) return;
     collapseSearch();
+  });
+
+  /* AND TABBING AWAY COLLAPSES IT TOO, which the pointer handler cannot see.
+     rux asked whether the results should be individually selectable with Tab;
+     they should not -- this is an activedescendant listbox, the options are
+     `tabindex=-1` on purpose, and Tab is for leaving a widget rather than
+     walking it. But that exposed the real fault: Tab DID leave, and left a
+     942px field and twelve results sitting open over the board with focus on
+     the Account button. Measured before the fix -- field expanded, 12 options
+     drawn, focus "Account".
+
+     `relatedTarget` FIRST, `activeElement` AFTER A TICK. The first says where
+     focus is going and is enough for a Tab; it is null when focus leaves for
+     the window itself or for a non-focusable press, and the deferred check
+     covers that without collapsing on the way between the field and its own
+     clear button. */
+  searchWrap?.addEventListener('focusout', e => {
+    if (!searchOpen()) return;
+    const to = e.relatedTarget;
+    if (to && searchWrap.contains(to)) return;
+    setTimeout(() => {
+      if (searchOpen() && !searchWrap.contains(document.activeElement)) collapseSearch();
+    }, 0);
   });
 
   /* WHAT IT SEARCHES, AND IT IS EVERY TRIP RATHER THAN THE WEEK ON SCREEN.
@@ -4960,6 +5013,54 @@
      after the await -- a stale reply is dropped rather than rendered. */
   let searchSeq = 0;
   let searchTimer = 0;
+  /* WHICH OPTION IS CURRENT, AND IT IS AN INDEX RATHER THAN AN ELEMENT. The
+     list is rebuilt on every keystroke, so a held element would be detached the
+     moment the query changed; the index is re-read against the live list each
+     time it is used. `optionAt` only exists to mint unique ids -- it never
+     resets, because an id reused across two renders can be pointed at by a
+     stale `aria-activedescendant` for exactly one frame. */
+  let activeAt = -1;
+  let optionAt = 0;
+
+  const searchOptions = () => [...searchList.querySelectorAll('[role="option"]')];
+
+  /* MOVING THE HIGHLIGHT IS THREE THINGS AT ONCE and none of them is focus.
+     `aria-selected` is what a screen reader reads as current, the class is what
+     the eye sees, and `aria-activedescendant` on the FIELD is what connects the
+     two -- it names the option without moving the caret out of the input, which
+     is the whole point of this pattern: the query stays editable while the
+     arrows walk the list.
+
+     AND IT SCROLLS THE OPTION INTO VIEW, because the list is capped at 60vh and
+     arrowing to the twelfth result otherwise walks a highlight off the bottom
+     of a box that never moves. `block: 'nearest'` so it only scrolls when it
+     has to, rather than re-centring on every keypress. */
+  function setActive(i) {
+    const opts = searchOptions();
+    activeAt = i;
+    opts.forEach((o, n) => {
+      const on = n === i;
+      o.setAttribute('aria-selected', String(on));
+      o.classList.toggle('sch-search__opt--active', on);
+    });
+    const cur = opts[i];
+    if (cur) {
+      searchInput?.setAttribute('aria-activedescendant', cur.id);
+      cur.scrollIntoView({ block: 'nearest' });
+    } else {
+      searchInput?.removeAttribute('aria-activedescendant');
+    }
+  }
+
+  /* WRAPS AT BOTH ENDS, which is what a twelve-row menu wants: down from the
+     last is the first, and up from nothing is the LAST, so a single Up key
+     reaches the bottom of the list. */
+  function moveActive(by) {
+    const opts = searchOptions();
+    if (!opts.length) return;
+    if (activeAt === -1) setActive(by > 0 ? 0 : opts.length - 1);
+    else setActive((activeAt + by + opts.length) % opts.length);
+  }
 
   /* HIDDEN WHEN IT HAS NOTHING TO SAY. The results hang off the field now, so
      an empty box would be a shadow floating under the header with no content
@@ -4968,7 +5069,13 @@
   function showResults(on) {
     if (!searchResults) return;
     searchResults.hidden = !on;
-    if (!on) searchResults.replaceChildren();
+    searchInput?.setAttribute('aria-expanded', String(!!on));
+    if (!on) {
+      searchList.replaceChildren();
+      searchCount.hidden = true;
+      searchNoteEl.hidden = true;
+      setActive(-1);
+    }
   }
 
   /* THE MATCH IS BOLDED IN PLACE, which is what Carbon's type-ahead shows and
@@ -5004,8 +5111,18 @@
     return span;
   }
 
+  /* A NOTE IS NOT A RESULT, so it sits beside the listbox rather than inside it
+     -- a listbox's children must be options -- and the list is emptied when one
+     shows, or `aria-activedescendant` could still name an option no longer
+     drawn. The three parts are static in index.html and only their contents
+     change, which is what lets the field's `aria-controls` name the list: an id
+     minted at runtime is one `tools/check.mjs` cannot resolve, and it said so. */
   function searchNote(text) {
-    searchResults.replaceChildren(el('p', 'sch-search__empty', text));
+    searchList.replaceChildren();
+    setActive(-1);
+    searchCount.hidden = true;
+    searchNoteEl.textContent = text;
+    searchNoteEl.hidden = false;
     showResults(true);
   }
 
@@ -5036,20 +5153,39 @@
       return;
     }
 
-    searchResults.replaceChildren();
     showResults(true);
+    setActive(-1);
     /* THE COUNT, BECAUSE CARBON ASKS FOR IT IN SO MANY WORDS: "Always include
        the number of search results, including for searches with no results."
        One more than the cap is fetched, so past it the honest figure is a
        floor rather than a total -- and it says so. */
-    searchResults.appendChild(el('p', 'sch-search__count', rows.length > SEARCH_CAP
+    searchCount.textContent = rows.length > SEARCH_CAP
       ? `More than ${SEARCH_CAP} trips match`
-      : `${rows.length} trip${rows.length === 1 ? '' : 's'} match${rows.length === 1 ? 'es' : ''}`));
-    const list = el('div', 'rux--contained-list rux--contained-list--inset-rulers');
+      : `${rows.length} trip${rows.length === 1 ? '' : 's'} match${rows.length === 1 ? 'es' : ''}`;
+    searchCount.hidden = false;
+    searchNoteEl.hidden = true;
+    const list = searchList;
+    list.replaceChildren();
     for (const trip of rows.slice(0, SEARCH_CAP)) {
+      /* THE ROW IS PRESENTATIONAL AND THE BUTTON IS THE OPTION. A listbox's
+         children must be options, and Carbon's contained list puts a wrapper
+         between them -- so the wrapper is `presentation`, which removes it from
+         the tree without removing its styling, and the thing a person actually
+         presses carries `role=option`. It stays a <button> for the click, the
+         hover and the focus ring; `role` only changes what it is ANNOUNCED as.
+
+         `tabindex=-1` BECAUSE FOCUS NEVER COMES HERE. This is an
+         activedescendant listbox: focus stays in the field so typing keeps
+         working, and the options are reached with the arrow keys. Tabbing
+         through twelve results to leave the search would be the alternative. */
       const row = el('div', 'rux--contained-list-item rux--contained-list-item--clickable');
+      row.setAttribute('role', 'presentation');
       const btn = el('button', 'rux--contained-list-item__content');
       btn.type = 'button';
+      btn.setAttribute('role', 'option');
+      btn.setAttribute('aria-selected', 'false');
+      btn.id = `sch-search-opt-${optionAt++}`;
+      btn.tabIndex = -1;
       /* THE SECOND LINE IS THE DATE AND WHO IT IS FOR, because a result may be
          on any week now: without the date, two "Austin TX" rows a year apart
          are the same row. `fmtDay` is the board's own short format. */
@@ -5110,10 +5246,9 @@
       row.appendChild(btn);
       list.appendChild(row);
     }
-    searchResults.appendChild(list);
     if (rows.length > SEARCH_CAP) {
-      searchResults.appendChild(el('p', 'sch-search__empty',
-        'Narrow the search to see the rest.'));
+      searchNoteEl.textContent = 'Narrow the search to see the rest.';
+      searchNoteEl.hidden = false;
     }
   }
 
@@ -5122,6 +5257,54 @@
     searchTimer = setTimeout(runSearch, 200);
   });
   searchClear?.addEventListener('click', () => { searchInput.value = ''; runSearch(); searchInput.focus(); });
+
+  /* THE ARROWS, ENTER AND ESCAPE, WHICH IS THE PATTERN PAGE'S OWN LIST: "the
+     ARROW keys should cycle through displayed suggestions, with ENTER choosing
+     a suggestion and ESCAPE allowing the user to exit the type-ahead menu
+     without selecting anything."
+
+     ESCAPE IS TWO-STAGE FOR THAT LAST CLAUSE. Carbon asks for an escape from
+     the MENU, not from the search -- so the first press closes the list and
+     leaves the query where it is, and only a second one collapses the field.
+     Pressed with no list open it collapses immediately, which is what the
+     document-level handler already did and still does.
+
+     ENTER WITH NOTHING HIGHLIGHTED TAKES THE FIRST ROW. A person who typed a
+     destination and pressed Enter meant the obvious one, and the alternative --
+     doing nothing -- reads as a broken key. With a row highlighted it takes
+     that one.
+
+     THESE ARE ON THE FIELD, NOT THE DOCUMENT, so they cannot reach a key the
+     trip editor or the board wanted; the document-level handler keeps Cmd-K and
+     the bare Escape, which are global by intent. */
+  searchInput?.addEventListener('keydown', e => {
+    const open = !searchResults.hidden && searchOptions().length > 0;
+    switch (e.key) {
+      case 'ArrowDown': if (open) { e.preventDefault(); moveActive(1); } break;
+      case 'ArrowUp':   if (open) { e.preventDefault(); moveActive(-1); } break;
+      case 'Home':      if (open) { e.preventDefault(); setActive(0); } break;
+      case 'End':       if (open) { e.preventDefault(); setActive(searchOptions().length - 1); } break;
+      case 'Enter': {
+        if (!open) break;
+        e.preventDefault();
+        const opts = searchOptions();
+        (opts[activeAt] ?? opts[0])?.click();
+        break;
+      }
+      case 'Escape':
+        if (!searchResults.hidden) { e.preventDefault(); e.stopPropagation(); showResults(false); }
+        break;
+    }
+  });
+
+  /* A HOVER MOVES THE HIGHLIGHT TOO, so the mouse and the keyboard cannot
+     disagree about which row Enter would take. */
+  searchList?.addEventListener('pointermove', e => {
+    const opt = e.target.closest('[role="option"]');
+    if (!opt) return;
+    const at = searchOptions().indexOf(opt);
+    if (at !== -1 && at !== activeAt) setActive(at);
+  });
 
   /* CMD-K, AND CTRL-K FOR THE SAME REASON EVERY EDITOR BINDS BOTH. It presses
      the TRIGGER rather than opening the panel, so there is one path in and out
