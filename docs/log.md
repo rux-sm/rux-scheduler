@@ -128,6 +128,136 @@ They are not gone any more, so that note is now moot rather than pending, and
 nothing was changed either way. And the weekend's body mark is gone by design,
 recorded above so it is not rediscovered as a regression.
 
+**2026-09-12 - the roster's title takes the panel's type, and the three
+"headers" were never three of a kind.** rux: "the inconsistent header bother me
+a bit. Driver availability / date picker / Edit trip (different style). what
+option do i have to unify them or make this match?"
+
+**TWO OF THE THREE ARE HEADERS AND THE THIRD IS A CONTROL ROW**, which is the
+first thing the comparison needed. The toolbar has no title at all: the week is
+a BUTTON that opens the date picker, and Carbon's data table toolbar carries no
+heading either. Matching it to the other two would mean inventing a title for a
+toolbar so it could resemble a panel.
+
+**AND THE FIRST MEASUREMENT OF THIS WAS WRONG, twice over.** An earlier audit
+this week reported all three heads at "16px/400" and called them consistent --
+it had probed the CONTAINERS, which inherit, rather than the title elements.
+Read properly: the roster's title is `heading-compact-02` at 16/600, the week
+label 16/600, and the editor's `heading-03` at **20/400**. A third of that audit
+was measuring the wrong nodes.
+
+**CARBON SHIPS BOTH TOKENS IN THE SAME PANEL, which is what makes this a
+mismatch rather than a preference.** `.rux--side-panel__title-text` is
+`heading-03`, and beside it `.rux--side-panel__collapsed-title-text` is
+`heading-compact-02` -- the panel swaps to the smaller one as it scrolls. So the
+roster's head was wearing the panel's COLLAPSED type, permanently, beside the
+panel's expanded one.
+
+**THE PANEL IS THE MODEL AND THE ROSTER MOVED.** `.sch-aside__title` is this
+app's own markup imitating a Carbon side panel; the panel is the component
+Carbon ships complete. Overriding `__title-text` to match the imitation would
+have been the app overruling the design system, in the file reserved for
+overruling it. One rule in sch.css instead.
+
+**VERIFIED AT 1600 with all three panes open:** both titles read 20px/400 with a
+28px line box, the title is not clipped and fits inside the 48px band, the
+roster head and the toolbar are still 48 to the pixel and still start at y=80 --
+which is load-bearing, because `.sch-aside__head`'s own comment says it must
+equal the toolbar's "or the two grids' COLUMN headers stop landing on one line".
+Both bands still start at y=128.
+
+**NOT DONE.** Only checked where the head has room. At a pane narrow enough to
+wrap the toolbar to two rows the two heads stop being equal -- measured 48
+against 96 -- and the column bands fall out of line. That is true before this
+change as well and is the toolbar wrapping rather than the title growing, but a
+20px title in a 48px band has less slack than a 16px one if that band is ever
+squeezed.
+
+**2026-09-11 - one control, one name.** rux asked whether the Drivers button
+belonged somewhere else and what the options were. It does not need moving; it
+needed renaming.
+
+**WHERE IT IS IS RIGHT, AND THE DUPLICATION IS A BREAKPOINT, NOT A MISTAKE.**
+Inventoried: the toolbar carries the week, the two chevrons, Today, the toggle
+and the overflow; the overflow carries New trip, Today, the toggle, the four
+bar-row options and Start week on Sunday. Below md the toolbar sheds Today and
+the toggle -- both menu rows carry `sch-menu-item--sm-only` -- so at 375 it is
+the week, the chevrons and the overflow. Measured at both widths. One control in
+two places by width.
+
+**AND CARBON PUTS IT IN THE TOOLBAR.** The data table toolbar is "a location for
+primary buttons, search, filtering" and holds "global data table controls
+including search and table settings"; a companion-pane toggle is a view setting
+for this screen. The alternatives were weighed and rejected on their own terms:
+the shell's global bar is for "system-level functions such as profile, search,
+notifications" and this is app content; the side nav navigates BETWEEN views and
+this is a pane beside the current one; the pane's own header cannot host the
+control that opens it when it is closed. A collapsed rail on the board's left
+edge is the one idea that would read better -- the affordance sitting where the
+thing appears -- and Carbon ships nothing for it, so it would be invented
+chrome. Not built.
+
+**WHAT WAS ACTUALLY WRONG IS THAT IT HAD TWO NAMES.** The toolbar button was
+`aria-label="Drivers"` while the overflow row and the pane's own header both
+read "Driver availability". One control under two names is a control a
+screen-reader user cannot match to the thing it opens, and a second string to
+search the page for. The pane's header settles it -- the button is the way to
+that pane -- so the button took the pane's name. Checked after: all three read
+"Driver availability".
+
+**AND "Drivers" WAS ALREADY TAKEN THREE WAYS**, which is why the rename is the
+whole fix and not a preference. The overflow carries "Drivers on the bar" for
+the bar's own driver row, and the trip editor labels a trip's assigned drivers
+"Drivers". Both left alone; only the pane's opener changed.
+
+**2026-09-11 - the roster stops standing aside for the editor, except on a
+phone.** rux asked whether the force-close was intended, then "id rather the
+assigments grid not be force closed", then "unless its mobile breakpoint".
+
+**IT WAS INTENDED AND IT WAS CONDITIONAL, which is worth recording because the
+answer to "is this a bug" was no.** `openPanel` yielded the roster when
+`sch.js` reported the board `crowded` -- its name for the day columns hitting
+their 8.5rem floor -- guarded by `!wasOpen` so a second bar could not re-take
+it, restored when the editor closed, and overruled by any press of `Drivers`.
+Driven at three widths before changing anything: 645 crowded and yields, 1440
+crowded and yields, **1900 not crowded and all three panes stay open** with day
+columns at 157px.
+
+**THE OBJECTION IS THE PREMISE, NOT THE MACHINERY.** 1440 is a width people
+work at all day, so in practice opening any trip took the roster away -- and
+nothing said why. The `Drivers` button simply went unpressed. A control that
+closes itself reads as a control that broke.
+
+**ON A DESKTOP THE COST OF KEEPING IT IS THE BOARD SCROLLING, which this board
+is built to do.** `.sch-grid` is `max-content` with a sticky bus column
+precisely so seven days can total more than the pane -- the work recorded
+2026-09-11 for the phone. Measured after: at 1440 with both companions open the
+roster stays, the toggle still reads pressed, the day track sits on its 136px
+floor and `#sch` scrolls horizontally.
+
+**BELOW md IT STILL YIELDS, AND THERE IT IS NOT A PREFERENCE.** sch.css puts
+both companions ON TOP of the board at that width -- the editor through Carbon's
+own `position: fixed`, the roster by hand beside it -- so they are full-width
+overlays and one does not sit next to the other, it covers it. That file's own
+stacking comment says the z-index "only decides what happens during the frame
+between", which is only true because this line exists. So the condition moved
+from `crowded()` to `matchMedia('(max-width: 41.98rem)')` rather than being
+deleted: measured at 375, the roster yields and comes back when the editor
+closes.
+
+**WHAT WAS NEARLY DONE INSTEAD.** The first pass removed the mechanism
+outright -- the flag, the restore, the guards, four sites -- on the first half
+of the instruction. rux's "unless its mobile breakpoint" arrived while that was
+running, and the whole thing had to be put back and re-keyed. The lesson is
+about the shape of the request rather than the code: "do not do X" and "do not
+do X except when Y" are different changes, and the second is not the first plus
+a patch.
+
+**NOT DONE.** Nothing tells a person on a phone that the roster stepped aside;
+it is the same silence the desktop case was removed for, and it survives here
+because on a 375px screen the roster was covering the board anyway. Whether
+that deserves a line of its own is unasked.
+
 **2026-09-11 - a Carbon audit of the three regions, and the two things it found
 are the two rux pointed at.** rux: "review/audit the design again ibm carbon
 standards ... more consistent headers? assignments grid selected days accent

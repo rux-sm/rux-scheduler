@@ -4020,12 +4020,29 @@
     panelEl.hidden = false;
     if (tripEl) tripEl.hidden = false;
     window.Rux?.schedule?.fit?.();
-    /* ONLY ON THE WAY IN. Clicking a second bar while the editor is already
-       open calls this again, and re-taking the yield there would undo a
-       `Drivers` press the person made in between. The fit above is what makes
-       `crowded` true or false for the layout the editor is now part of, so it
-       has to run first; taking the roster away runs another. */
-    if (!wasOpen && availOn && !availYielded && window.Rux?.schedule?.crowded?.()) {
+    /* THE ROSTER ONLY STEPS ASIDE ON A PHONE, NARROWED 2026-09-11.
+
+       IT USED TO YIELD WHENEVER THE BOARD WAS `crowded` -- `sch.js`'s name for
+       the day columns hitting their 8.5rem floor -- which is true at 1440 with
+       both companions open, so opening a trip on an ordinary desktop took the
+       roster away. rux: "id rather the assigments grid not be force closed".
+       A control that closes itself reads as a control that broke, and nothing
+       said why. On a desktop the cost of keeping it is the board scrolling,
+       which this board is built to do: `.sch-grid` is `max-content` with a
+       sticky bus column precisely so seven days can total more than the pane.
+
+       BELOW md IT STILL YIELDS, AND THERE IT IS NOT A PREFERENCE. sch.css puts
+       both companions on top of the board at that width -- the editor through
+       Carbon's own `position: fixed`, the roster by hand beside it -- so they
+       are full-width overlays and one does not sit next to the other, it
+       covers it. The stacking comment there says as much: the z-index "only
+       decides what happens during the frame between", because this line is
+       what stops both being up at once.
+
+       STILL ONLY ON THE WAY IN. Clicking a second bar while the editor is open
+       calls this again, and re-taking the yield would undo a `Drivers` press
+       made in between. */
+    if (!wasOpen && availOn && !availYielded && matchMedia('(max-width: 41.98rem)').matches) {
       availYielded = true;
       placeAvailability();
     }
@@ -4063,10 +4080,12 @@
      together return 120 of the 323.
 
      SEPARATE FROM `availOn`, WHICH IS WHAT RUX ASKED FOR. Yielding is the
-     layout's doing and is undone the moment the editor closes; `availOn`
-     survives it, which is how the roster comes back without being asked for
-     twice. An explicit press of `Drivers` overrules the yield and stands, week
-     scrolling and all -- see the toggle. */
+     IT ONLY YIELDS ON A PHONE NOW, 2026-09-11. The roster used to step aside
+     whenever the editor opened onto a CROWDED board -- which was true at 1440,
+     a width people work at all day -- and rux asked for it to stay. Below the
+     md breakpoint it still steps aside, because there both panes are full-width
+     overlays and one would simply cover the other. `openPanel` carries the
+     reasoning. */
   let availYielded = false;
   let availRows = [];
 
