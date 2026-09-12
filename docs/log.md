@@ -128,6 +128,51 @@ They are not gone any more, so that note is now moot rather than pending, and
 nothing was changed either way. And the weekend's body mark is gone by design,
 recorded above so it is not rediscovered as a regression.
 
+**2026-09-12 - `xs` panels tried and reverted, and the reason is 64px of
+content.** rux: "lets tri xs panels". Both companions are 20rem today; Carbon's
+side panel ships six sizes, each `clamp(16rem, <size>, 100%)` -- xs 16, sm 20,
+md 30, lg 40, xl 65, 2xl 80 -- so xs is one rung down and also the floor every
+other size clamps to.
+
+**THE ROSTER CANNOT GO THERE AT ALL, and that was measured before anything was
+edited.** Its seven day columns are a fixed 32px, so 224 of any 256 is spoken
+for and the name column gets **32px** -- the same width as a day cell. Driven:
+the grid template became `32px` eight times and **all forty driver names
+truncated**. It is not a Carbon side panel anyway; `.sch-aside` is app chrome
+whose width is set by what it holds.
+
+**THE EDITOR LOOKED FINE AND WAS NOT, which is the part worth keeping.** The
+first check said everything fitted: footer buttons 85px and unclipped, no field
+label clipped, no input clipped, the date pair still on one line, four tabs at
+64px each reporting `clipped: false`. It was applied on that reading. **The
+screenshot then showed "Sche…"** -- and re-measuring against every descendant
+rather than a list of likely suspects found the real state at 256px:
+
+    rux--tabs__nav-item-label     60 in 48    "Schedule" ellipsised
+    rux--side-panel__inner-content 304 in 256  clipped by overflow: hidden
+    rux--tab-content               288 in 224
+    rux--stack-vertical            288 in 224
+
+The panel's fields are laid out for about 288px of content and xs gives 224. So
+the editor overflows by 48 to 64px, silently, because the container that clips
+is `overflow: hidden` and says nothing.
+
+**WHY THE FIRST CHECK MISSED IT: it asked the elements I expected to break.**
+Buttons, labels, inputs, the tab BUTTONS -- and the tab button does not overflow
+because the ellipsis is on a span inside it, and the panel does not overflow
+because it clips. Asking every descendant for `scrollWidth > clientWidth` found
+all four in one pass. **That is the fourth time this week a check confirmed what
+it was looking for and missed what was there**; the others are recorded below as
+asserting a class rather than a computed value. Enumerate, do not audition.
+
+**REVERTED to `--sm` and 20rem, verified: panel back to 320, "Schedule" whole at
+60 in 60, zero overflowing descendants.**
+
+**NOT DONE.** xs is reachable if the editor's content is made to fit 224px --
+the stack's own inline padding is the first thing to look at, since 288 against
+224 is close to `spacing-05` twice over. Not attempted; it is a change to what
+the panel holds rather than to how wide it is.
+
 **2026-09-12 - the roster's title takes the panel's type, and the three
 "headers" were never three of a kind.** rux: "the inconsistent header bother me
 a bit. Driver availability / date picker / Edit trip (different style). what
