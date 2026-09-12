@@ -128,6 +128,53 @@ They are not gone any more, so that note is now moot rather than pending, and
 nothing was changed either way. And the weekend's body mark is gone by design,
 recorded above so it is not rediscovered as a regression.
 
+**2026-09-12 - the theme sweep the last several passes kept deferring, and it
+found nothing.** Every treatment added this week measured in all nine readings,
+with the roster, the trip editor and the search dropdown open at once so each
+surface was on screen in the same execution.
+
+**ZERO COLLAPSES.** The roster's selected-day tint against a plain cell, and
+against the busy and day-off tag colours; the search list's active option
+against its plain rows; the day rules, the bus column's rule and the driver
+name column's rule against the surfaces they sit on. All distinct in white,
+g10, g90, g100, geist, linear, ant-dark, rux and spotify.
+
+    theme      roster tint          ratio   day rule
+    white      #e0e0e0 on #f4f4f4    1.20     1.55
+    g10        #e0e0e0 on #ffffff    1.32     1.32
+    g90        #525252 on #393939    1.48     2.30
+    g100       #393939 on #262626    1.31     1.94
+    geist      #1a1a1a on #0a0a0a    1.14     1.31
+    linear     #22243a on #141419    1.21     1.41
+    ant-dark   #112545 on #141414    1.21     1.40
+    rux        #e0e0e0 on #f4f4f4    1.20     1.55
+    spotify    #193824 on #181818    1.38     1.41
+
+**THE FEAR WAS SPECIFIC AND IT DID NOT MATERIALISE.** Three passes carried a
+NOT DONE saying `--rux-layer-selected` was unmeasured and that `layer-hover-01`
+and `layer-accent-01` collapse to one value in ant-dark and spotify, so a
+selection invisible in some theme was plausible. It is not: those two themes
+define `layer-selected` as a HUE -- #112545 blue, #193824 green -- rather than a
+grey step, which is why their ratios understate them. The pair that collapses is
+not the pair in use.
+
+**A READING THAT LOOKED WRONG AND WAS NOT, worth writing down.** The search
+list's active option measured #333333 on #262626 in EVERY theme including the
+light ones, which should be impossible for a rule reading `--rux-layer`. The
+cause is that `.rux--header` carries its own `data-theme="g100"`: everything
+inside the shell header resolves the layer tokens as g100 whatever the page is
+set to, because Carbon's shell header is always dark. The search dropdown hangs
+off the field, inside that header, so it is theme-invariant by design. Checked
+directly -- header background #161616 and `--rux-layer` #262626 inside it while
+the board's pane read #f4f4f4 in white.
+
+**NOT DONE.** geist's roster tint is **1.14:1**, a sixteen-value step on
+near-black and the weakest figure anywhere in the sweep. It passes "distinct"
+and that is all; nobody has looked at it on a screen. Contrast was the only
+question asked -- this says nothing about spacing, focus order or whether any of
+it looks right, which is still what `docs/gate-coverage.md` is for, and that
+file is still at `52efa52`.
+
 **2026-09-12 - `xs` panels tried and reverted, and the reason is 64px of
 content.** rux: "lets tri xs panels". Both companions are 20rem today; Carbon's
 side panel ships six sizes, each `clamp(16rem, <size>, 100%)` -- xs 16, sm 20,
