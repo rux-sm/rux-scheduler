@@ -2134,3 +2134,66 @@ button.sch-row-head__num {
 body:has(#sch-panel:not([hidden])) .sch-toast {
   inset-block-end: calc(var(--rux-spacing-09) + var(--rux-spacing-07) + var(--rux-spacing-05));
 }
+
+/* ── THE HEADER SEARCH PANEL ────────────────────────────────────────────────
+   The panel itself is Carbon's `rux--header-panel`, opened by `js/ui-shell.js`
+   through `aria-controls` exactly as the switcher and account panels are; what
+   is INSIDE it is this product's own, which is the division index.html already
+   records for the account panel. So these are `sch-` rules and every colour,
+   size and space is a `--rux-*` token.
+
+   A COLUMN, NOT A LIST IN A BOX. The search sits at the top and the results
+   fill what is left, because the panel's own height is fixed by the shell and
+   a results list that grew would push the field off its own panel. */
+.sch-search {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  min-block-size: 0;          /* a flex child scrolls only once it may be shorter than its content */
+}
+.sch-search__results {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+/* TWO LINES PER RESULT, and the second is what tells two "Dallas, TX" apart:
+   the customer and the bus.
+
+   DONE ON THIS FILE'S OWN CLASSES, AND THE FIRST DRAFT WAS SIMPLY INERT. It put
+   `flex-direction: column` on `.rux--contained-list-item__content`, which
+   computes `inline-block` -- so the direction applied to nothing and the two
+   spans stayed on one line. Found by reading the computed display rather than
+   by looking, since a wrong `flex-direction` shows as no change at all.
+
+   THE FIX IS SMALLER THAN OVERRIDING CARBON'S DISPLAY WOULD HAVE BEEN. These
+   spans are this app's own elements, so `display: block` stacks them inside
+   whatever display Carbon chooses for the button and leaves that choice alone.
+   docs/log.md records the cost of the other road: a guessed `display: flex` on
+   a Carbon component in the toolbar happened to look right and masked a real
+   layout fault underneath it.
+
+   (This file does carry a few rules on `rux--*` classes -- `.sch-row-head
+   .rux--popover-container`, the three on `.sch-times` -- all scoped under an
+   `sch-` ancestor to lay a Carbon component out INSIDE an app component. That
+   is a different thing from restyling the component, and it is not what this
+   needed either way.) */
+.sch-search__dest,
+.sch-search__meta { display: block; }
+.sch-search__dest {
+  color: var(--rux-text-primary);
+  font-size: var(--rux-body-compact-01-font-size);
+  line-height: var(--rux-body-compact-01-line-height);
+}
+.sch-search__meta {
+  color: var(--rux-text-secondary);
+  font-size: var(--rux-helper-text-01-font-size);
+  line-height: var(--rux-helper-text-01-line-height);
+}
+/* THE EMPTY AND OVER-CAP NOTES SHARE ONE RULE, because they say the same kind
+   of thing: what the list is not showing you. */
+.sch-search__empty {
+  color: var(--rux-text-secondary);
+  font-size: var(--rux-helper-text-01-font-size);
+  line-height: var(--rux-helper-text-01-line-height);
+  padding: var(--rux-spacing-05);
+}

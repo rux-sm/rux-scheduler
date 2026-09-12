@@ -128,6 +128,93 @@ They are not gone any more, so that note is now moot rather than pending, and
 nothing was changed either way. And the weekend's body mark is gone by design,
 recorded above so it is not rediscovered as a regression.
 
+**2026-09-11 - the header carries a search, and what it searches is the week on
+screen.** rux asked where search belongs -- "ui header ? or shedule toolbar?" --
+then "add the header search icon and cmd-k for now".
+
+**THE ANSWER WAS ALREADY WRITTEN DOWN IN THREE PLACES.**
+`docs/screen-inventory.md` line 51 plans a trip finder on Cmd-K: "Header search
+from the shell, results in a data table on a page. Keep the shortcut." Carbon
+agrees and is specific: `components/ui-shell-header/usage.mdx` lists search
+among "system-level functions such as profile, search, notifications" and orders
+the global icons -- search "as the furthest left icon ... to allow for an
+expanding search field that does not disrupt other icon positions", Account 2nd
+from the right, Switcher furthest right. This header already ran Account then
+Switcher, so search went in front and nothing moved.
+
+**AND THE TOOLBAR IS THE RIGHT HOME FOR A DIFFERENT FEATURE.** Carbon's data
+table toolbar search is "global data table controls including search", following
+the active-search pattern: it filters the rows in front of you. That is "narrow
+this week", not "find a trip in March". `rux--toolbar-search-container--expandable`
+is compiled if that is ever wanted; the two are not alternatives.
+
+**IT COST NO NEW COMPONENT, which was checked before building rather than
+assumed.** Carbon's own header stories render search as exactly
+`header__action` + ghost + icon-only with `aria-label=Search`, and ship no
+`header__search` at all -- so the classes were already on the two buttons beside
+it. The captures wrap it in an icon tooltip; the two buttons here do not, and
+matching its own header beat matching a story.
+
+**THE PANEL IS THE THIRD OF ITS KIND AND NEEDED NO TOGGLE CODE.**
+`js/ui-shell.js` takes any `__action[aria-expanded]`, resolves the panel through
+`aria-controls`, sets `--expanded` and `__action--active`, and fires
+`rux:header-panel-opened` -- so this file listens for that to take focus and
+owns no open state, exactly as the switcher and account panels own none.
+
+**WHAT IT SEARCHES IS THE HONEST PART.** The trips page that
+`screen-inventory.md` wants results to land on does not exist. Rather than an
+icon that opens a promise -- index.html says it two panels down, about the
+sign-in button: "a button with no handler is an affordance that lies" -- this
+searches the week already loaded and selects the bar. The haystack is each
+bar's own `textContent` plus its row's bus number, read off the rendered page,
+so the search can never claim a match the eye cannot then find. Driven:
+"dilley" one row, "paragon" one, "218" two, "dallas" seven, "zzzz" the empty
+note, "tx" twelve rows and "9 more match".
+
+**AND A RESULT CLICKS THE BAR RATHER THAN OPENING THE PANEL, which was wrong in
+the first draft and caught by measuring.** Selection is not this file's:
+`sch.js` owns it on its own delegated handler that moves `aria-pressed` between
+bars, and `openPanel` knows nothing about it. Calling `openPanel` from a result
+opened the editor on a bar the board did not show as selected, and the roster's
+"who is free THEN" column -- which `markAvailDay` keys off
+`.sch-bar[aria-pressed="true"]` -- stayed dark. Measured both ways: the direct
+call marked 0 bars and lit 0 roster cells; clicking the bar marks 1 and lights
+40, with the head on "Su", which is the day the trip it found actually runs.
+The guard is because that handler TOGGLES -- clicking an already-selected bar
+would deselect it, right for the board and wrong for "take me to this one".
+
+**A DRAFT RULE WAS INERT AND SAYING SO IS THE POINT.**
+`flex-direction: column` was put on `.rux--contained-list-item__content` to
+stack the two lines of a result. That element computes `inline-block`, so the
+direction applied to nothing and the lines stayed together -- a wrong
+`flex-direction` shows as no change at all, which is why it was found by reading
+the computed display rather than by looking. The spans are this app's own, so
+`display: block` on them stacks the rows and leaves Carbon's choice of display
+alone. **A claim of mine about that was also too strong and is corrected here**:
+I called it an AGENTS.md breach, and sch.css already carries four rules on
+`rux--*` classes -- `.sch-row-head .rux--popover-container` and three on
+`.sch-times` -- all scoped under an `sch-` ancestor to lay a Carbon component
+out inside an app component, which is a different thing from restyling it.
+
+**AND A 2px PANEL WAS A MEASUREMENT TAKEN MID-TRANSITION, not a defect.** The
+panel read 2px -- its two borders -- which looked like content with no width.
+`.rux--header-panel--expanded` is `inline-size: 16rem` with a `width 0.11s`
+transition; read once settled it is 256px. Recorded because the reading looked
+exactly like a real fault.
+
+**DRIVEN: ** icon first in `__global`; Cmd-K and Ctrl-K both open and focus the
+field; Cmd-K again closes; Escape closes; the clear button hides when the field
+empties; picking a result closes the panel, selects the bar, scrolls it into
+view and opens its editor.
+
+**NOT DONE.** It searches ONE WEEK -- the one on screen -- and says so in its
+placeholder; the trips page and a find across all dates are the next piece and
+this is the step under them. No keyboard navigation of the results: they are
+tab-reachable buttons and nothing binds arrow keys or Enter-to-first-match. No
+highlight of the matched substring. The results list is capped at 12 with a
+count of the rest, and the cap is not configurable. Not measured below md, where
+a 16rem panel over a 375px board is most of the screen.
+
 **2026-09-11 - two answers from rux, one closing a defect's remaining half and
 one declining a change.**
 

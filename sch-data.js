@@ -1192,6 +1192,11 @@
      because it measures its pane. Carbon's slide-in variant exists for
      exactly this and drops the shadow a floating panel would carry.
      ────────────────────────────────────────────────────────────────────────*/
+  /* HOW MANY RESULTS A PANEL SHOWS. The panel is 256px of header, not a page;
+     past a dozen rows it is a list to scroll rather than an answer, and the
+     right move is a narrower query. The count of what was dropped is printed
+     so the cap is never silent. */
+  const SEARCH_CAP = 12;
   let panelIndex = { trips: new Map(), buses: new Map(), driversById: new Map(), contacts: [] };
   let panelOpener = null;
   const panelDetails = document.getElementById('sch-panel-details');
@@ -4830,6 +4835,123 @@
   document.getElementById('sch-panel-close')?.addEventListener('click', () => closePanel());
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !panelEl.hidden) { e.preventDefault(); closePanel(); }
+  });
+
+  /* ── SEARCHING THE WEEK ON SCREEN ─────────────────────────────────────────
+     `screen-inventory.md` line 51 plans a trip finder -- a floating palette on
+     Cmd-K, "Header search from the shell, results in a data table on a page".
+     The page is not built. What is built here is the half that needs no page:
+     the header icon, the shortcut, and a search over the week already loaded
+     that SELECTS the bar it finds.
+
+     WHY NOT SHIP THE ICON ALONE. index.html says it two panels down, about the
+     sign-in button: "a button with no handler is an affordance that lies". An
+     icon that opens nothing, or opens an empty promise, is that button.
+
+     IT SEARCHES WHAT IS ON SCREEN, LITERALLY. The haystack is each bar's own
+     `textContent` plus its row's bus number -- destination, customer, times and
+     drivers, because that is what `barEl` already wrote into it. Reading the
+     rendered text rather than the trip row means the search can never claim a
+     match the eye cannot then find, and it needs no second opinion about which
+     of `trips`' columns are worth matching.
+
+     THE TOGGLE IS NOT WIRED HERE. `js/ui-shell.js` takes any
+     `__action[aria-expanded]`, finds the panel through `aria-controls`, sets
+     `--expanded` and `__action--active`, and fires `rux:header-panel-opened`.
+     So this listens for that event and does not own the open state -- the same
+     reason the switcher and the account panels have no code in this file. */
+  const searchTrigger = document.getElementById('sch-search-trigger');
+  const searchPanel = document.getElementById('rux-search-panel');
+  const searchInput = document.getElementById('sch-search-input');
+  const searchResults = document.getElementById('sch-search-results');
+  const searchClear = document.getElementById('sch-search-clear');
+
+  function searchHaystack(bar) {
+    const bus = bar.closest('.sch-row')?.querySelector('.sch-row-head__num')?.textContent || '';
+    return `${bar.textContent} ${bus}`.replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  function runSearch() {
+    if (!searchResults) return;
+    const q = (searchInput.value || '').trim().toLowerCase();
+    searchClear?.classList.toggle('rux--search-close--hidden', !q);
+    searchResults.replaceChildren();
+    if (!q) return;
+    const bars = [...gridEl.querySelectorAll('.sch-bar[data-trip-id]')].filter(b => searchHaystack(b).includes(q));
+    if (!bars.length) {
+      searchResults.appendChild(el('p', 'sch-search__empty', 'No trip on this week matches.'));
+      return;
+    }
+    const list = el('div', 'rux--contained-list rux--contained-list--inset-rulers');
+    for (const bar of bars.slice(0, SEARCH_CAP)) {
+      const row = el('div', 'rux--contained-list-item rux--contained-list-item--clickable');
+      const btn = el('button', 'rux--contained-list-item__content');
+      btn.type = 'button';
+      const bus = bar.closest('.sch-row')?.querySelector('.sch-row-head__num')?.textContent.trim();
+      const dest = bar.querySelector('.sch-bar__dest span')?.textContent || 'No destination';
+      const who = bar.querySelector('.sch-bar__client span')?.textContent || '';
+      btn.append(
+        el('span', 'sch-search__dest', dest),
+        el('span', 'sch-search__meta', [who, bus ? `Bus ${bus}` : 'No bus'].filter(Boolean).join(' · ')),
+      );
+      /* THE RESULT CARRIES THE ELEMENT, not an id to look one up by. Every bar
+         is replaced on a render, so a result list that outlived a redraw would
+         point at detached nodes -- which is exactly why the list is rebuilt from
+         the live grid on every keystroke and never cached.
+
+         AND IT CLICKS THE BAR RATHER THAN CALLING `openPanel`, which is the
+         whole of what makes a result behave like a bar. Selection is NOT this
+         file's: `sch.js` owns it, on its own delegated click handler that moves
+         `aria-pressed` between bars, and `openPanel` knows nothing about it.
+         Calling `openPanel` here opened the editor on a bar the board did not
+         show as selected -- and with it the roster's "who is free THEN" column,
+         which `markAvailDay` keys off `.sch-bar[aria-pressed="true"]`, stayed
+         dark. Driven both ways before this was changed: a real click marks one
+         bar pressed and lights 40 roster cells; the direct call marked none and
+         lit none.
+
+         THE GUARD IS BECAUSE THAT HANDLER TOGGLES. Clicking the bar that is
+         already selected would DESELECT it, which is right for a second click
+         on the board and wrong for "take me to this one". */
+      btn.addEventListener('click', () => {
+        searchTrigger?.click();            // ui-shell owns the close, as it owns the open
+        bar.scrollIntoView({ block: 'center', inline: 'center' });
+        if (bar.getAttribute('aria-pressed') === 'true') openPanel(bar);
+        else bar.click();
+      });
+      row.appendChild(btn);
+      list.appendChild(row);
+    }
+    searchResults.appendChild(list);
+    if (bars.length > SEARCH_CAP) {
+      searchResults.appendChild(el('p', 'sch-search__empty',
+        `${bars.length - SEARCH_CAP} more match. Narrow the search, or use the week you want.`));
+    }
+  }
+
+  searchInput?.addEventListener('input', runSearch);
+  searchClear?.addEventListener('click', () => { searchInput.value = ''; runSearch(); searchInput.focus(); });
+  /* THE PANEL ANNOUNCES ITS OWN OPENING and this takes the focus then rather
+     than on the trigger's click, because ui-shell sets the class and fires the
+     event in that order -- focusing earlier lands on an element still 0px tall. */
+  searchPanel?.addEventListener('rux:header-panel-opened', () => { searchInput.value = ''; runSearch(); searchInput.focus(); });
+
+  /* CMD-K, AND CTRL-K FOR THE SAME REASON EVERY EDITOR BINDS BOTH. It presses
+     the TRIGGER rather than opening the panel, so there is one path in and out
+     and `aria-expanded` cannot drift from what is on screen. Pressed while the
+     panel is open it closes it, which is what a toggle shortcut should do.
+
+     NOT WHILE TYPING SOMEWHERE ELSE is not a guard this needs: Cmd/Ctrl-K is
+     not a text-editing chord, and the trip editor's fields are plain inputs. */
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      searchTrigger?.click();
+    }
+    if (e.key === 'Escape' && searchTrigger?.getAttribute('aria-expanded') === 'true') {
+      e.preventDefault();
+      searchTrigger.click();
+    }
   });
   gridEl.addEventListener('click', e => {
     const bar = e.target.closest('.sch-bar');
