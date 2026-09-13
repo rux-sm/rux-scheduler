@@ -26,8 +26,8 @@ what follows is only what is this repository's own. Added 2026-09-11.
 - **Yours:** the pages at the root, `rux-theme.css` and `rux-overrides.css`
   (deltas only — empty is the normal state), `brand/`, `tools/`, this file.
 - **rux-ds's:** everything under `/rux-ds/`, served from its own repository
-  and never copied here. A missing component or rule is a request to rux-ds
-  with invented content, never a local rule.
+  and never copied here. A missing component or rule is added to rux-ds, in
+  the same session, with invented content — never a local rule here.
 - Every `rux--*` class comes from rux-ds's `css/rux.css`. A colour goes
   in `rux-theme.css` inside a `[data-theme]` block; a component rule in
   `rux-overrides.css` at Carbon's own specificity; never `!important`.
@@ -37,7 +37,7 @@ what follows is only what is this repository's own. Added 2026-09-11.
   variable carries a count or a position only. No rule on a `rux--*` class
   there. `check.mjs` fails on an invented token; it cannot
   see a bad `sch-` rule, so open the page. A `sch-` class is never a way to
-  restyle a Carbon part — that is a request to rux-ds (added 2026-09-06).
+  restyle a Carbon part — that is done in rux-ds.
 - The app list is the hub's `switcher.json`, and `/switcher.js` fills the
   panel at runtime. Nothing here lists apps.
 - **`rux-ui` is the old app, it is still live, and it is not checked out
@@ -52,6 +52,13 @@ what follows is only what is this repository's own. Added 2026-09-11.
   the `public` schema this app reads. `rux-backend/tools/check-drift.mjs` is
   the only thing watching that seam; run it before trusting
   `docs/backend-inventory.md`, which was read off rux-ui on 2026-09-06.
+
+## One session
+
+Since 2026-09-12 a task that needs something from rux-ds or from the schema
+does it there, in the same session, after reading that repository's own
+`AGENTS.md` — no memo, no reply, no second authorization. What is still
+unfinished across the family is the hub's `docs/status.md`.
 
 ## The one check
 

@@ -12,6 +12,11 @@ the next time it comes up, and so what was declined stays declined for a reason.
 Open requests are listed first. A request that lands is moved to **Settled**
 with the tag that carried it.
 
+**Since 2026-09-12 this is a record, not a queue.** A gap is fixed in rux-ds
+in the same session, with invented content; what is still open is listed in
+the hub's `docs/status.md`, one line each, pointing back here for the
+reasoning.
+
 ---
 
 ## Open — a toast is compiled with no way to place it, 2026-09-11

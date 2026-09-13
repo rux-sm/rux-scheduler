@@ -22,16 +22,12 @@ beside an append-only log is a second answer that goes stale.
 that finished the work says so in its own entry and never goes back to amend
 the earlier one. `--since` is how you narrow to what is certainly current.
 
-## What is waiting on someone else
+## What is still open elsewhere
 
-    node ../rux-ds/tools/exchange.mjs
-
-`docs/rux-ds-requests.md` and `docs/schema-requests.md` hold them, one `## Open`
-section each, and the sweep reads every repository's at once. **17 of the
-workspace's 19 open asks are this app's** — 15 to rux-ds, 2 to rux-backend.
-
-A gap found here becomes a section there and never a local workaround. That is
-the habit those files exist for.
+The hub's `docs/status.md` is the one list, across every app. Since
+2026-09-12 a gap in rux-ds or in the schema is fixed there in the same
+session; `docs/rux-ds-requests.md` and `docs/schema-requests.md` stay as the
+record of what was asked and why.
 
 ## What is blocked on a decision, not on work
 

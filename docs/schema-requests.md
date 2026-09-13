@@ -16,6 +16,11 @@ this is the list of what it is missing.
 
 Open requests are listed first.
 
+**Since 2026-09-12 this is a record, not a queue.** A schema change is
+prepared in rux-backend as a new migration in the same session as the app
+change; applying it to the live project stays a separate, deliberate step.
+What is still open is listed in the hub's `docs/status.md`.
+
 ---
 
 ## Open — an overpaid trip reports itself unconfirmed, 2026-09-10
